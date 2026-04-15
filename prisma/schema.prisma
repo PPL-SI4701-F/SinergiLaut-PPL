@@ -1,0 +1,487 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// PROFILES (extends auth.users from Supabase)
+// ============================================
+model profiles {
+  id                    String                    @id @db.Uuid
+  email                 String
+  full_name             String?
+  avatar_url            String?
+  phone                 String?
+  bio                   String?
+  role                  user_role                 @default(user)
+  is_active             Boolean                   @default(true)
+  volunteer_status      volunteer_verify_status   @default(pending)
+  date_of_birth         DateTime?                 @db.Date
+  nik                   String?
+  gender                String?
+  address               String?
+  ktp_url               String?
+  volunteer_verified_by String?                   @db.Uuid
+  volunteer_verified_at DateTime?                 @db.Timestamptz(6)
+  volunteer_reject_note String?
+  created_at            DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  owned_communities       communities[]             @relation("CommunityOwner")
+  donations               donations[]
+  feedbacks               feedbacks[]
+  notifications           notifications[]
+  volunteer_registrations volunteer_registrations[]
+  submitted_reports       reports[]                 @relation("ReportSubmitter")
+  reviewed_reports        reports[]                 @relation("ReportReviewer")
+  reviewed_activities     activities[]              @relation("ActivityReviewer")
+  reviewed_verifications  community_verifications[] @relation("VerificationReviewer")
+  disbursements_processed disbursements[]           @relation("DisbursementAdmin")
+  issued_sanctions        sanctions[]
+  audit_logs              audit_logs[]
+}
+
+// ============================================
+// COMMUNITIES
+// ============================================
+model communities {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  owner_id            String?             @db.Uuid
+  name                String
+  slug                String              @unique
+  description         String?
+  logo_url            String?
+  banner_url          String?
+  website             String?
+  location            String?
+  focus_areas         String[]            @default([])
+  member_count        Int                 @default(0)
+  is_verified         Boolean             @default(false)
+  verification_status verification_status @default(pending)
+  is_suspended        Boolean             @default(false)
+  bank_name           String?
+  bank_account_number String?
+  bank_account_name   String?
+  created_at          DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  owner         profiles?               @relation("CommunityOwner", fields: [owner_id], references: [id])
+  activities    activities[]
+  verifications community_verifications[]
+  disbursements disbursements[]
+  reports       reports[]
+  sanctions     sanctions[]
+}
+
+// ============================================
+// COMMUNITY VERIFICATIONS
+// ============================================
+model community_verifications {
+  id                   String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  community_id         String              @db.Uuid
+  status               verification_status @default(pending)
+  admin_note           String?
+  reviewed_by          String?             @db.Uuid
+  reviewed_at          DateTime?           @db.Timestamptz(6)
+  documents            String[]            @default([])
+  legal_name           String?
+  establishment_year   Int?
+  representative_name  String?
+  representative_email String?
+  representative_phone String?
+  created_at           DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  community communities @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  reviewer  profiles?   @relation("VerificationReviewer", fields: [reviewed_by], references: [id])
+}
+
+// ============================================
+// ACTIVITIES
+// ============================================
+model activities {
+  id               String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  community_id     String            @db.Uuid
+  title            String
+  slug             String
+  description      String
+  category         activity_category @default(other)
+  status           activity_status   @default(draft)
+  start_date       DateTime          @db.Timestamptz(6)
+  end_date         DateTime?         @db.Timestamptz(6)
+  execution_date   DateTime?         @db.Timestamptz(6)
+  location         String
+  latitude         Decimal?          @db.Decimal(9, 6)
+  longitude        Decimal?          @db.Decimal(9, 6)
+  volunteer_quota  Int               @default(0)
+  volunteer_count  Int               @default(0)
+  funding_goal     BigInt            @default(0)
+  funding_raised   BigInt            @default(0)
+  allow_item_donation Boolean        @default(false)
+  items_needed     Json?
+  receipt_urls     String[]          @default([])
+  cover_image_url  String?
+  images           String[]          @default([])
+  admin_note       String?
+  reviewed_by      String?           @db.Uuid
+  published_at     DateTime?         @db.Timestamptz(6)
+  created_at       DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime          @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  community               communities             @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  reviewer                profiles?               @relation("ActivityReviewer", fields: [reviewed_by], references: [id])
+  donations               donations[]
+  feedbacks               feedbacks[]
+  reports                 reports[]
+  volunteer_registrations volunteer_registrations[]
+  disbursements           disbursements[]
+
+  @@unique([community_id, slug])
+  @@index([community_id])
+  @@index([status])
+  @@index([category])
+  @@index([start_date])
+}
+
+// ============================================
+// VOLUNTEER REGISTRATIONS
+// ============================================
+model volunteer_registrations {
+  id                      String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  activity_id             String           @db.Uuid
+  user_id                 String           @db.Uuid
+  full_name               String
+  email                   String
+  phone                   String
+  reason                  String?
+  emergency_contact_name  String?
+  emergency_contact_phone String?
+  skills                  String[]         @default([])
+  t_shirt_size            String?
+  status                  volunteer_status @default(pending)
+  agreed_to_terms         Boolean          @default(false)
+  created_at              DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  activity activities @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+  user     profiles   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([activity_id, user_id])
+  @@index([activity_id])
+  @@index([user_id])
+  @@index([status])
+}
+
+// ============================================
+// DONATIONS
+// ============================================
+model donations {
+  id                      String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  activity_id             String          @db.Uuid
+  user_id                 String?         @db.Uuid
+  donor_name              String
+  donor_email             String
+  type                    donation_type   @default(money)
+  amount                  BigInt?
+  midtrans_order_id       String?         @unique
+  midtrans_snap_token     String?
+  midtrans_transaction_id String?
+  midtrans_payment_type   String?
+  midtrans_va_number      String?
+  midtrans_expiry_time    DateTime?       @db.Timestamptz(6)
+  status                  donation_status @default(pending)
+  note                    String?
+  is_anonymous            Boolean         @default(false)
+  created_at              DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime        @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  activity activities      @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+  user     profiles?       @relation(fields: [user_id], references: [id])
+  items    donation_items[]
+
+  @@index([activity_id])
+  @@index([user_id])
+  @@index([status])
+  @@index([midtrans_order_id])
+}
+
+// ============================================
+// DONATION ITEMS
+// ============================================
+model donation_items {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  donation_id    String    @db.Uuid
+  item_name      String
+  quantity       Int       @default(1)
+  item_condition String    @default("new")
+  description    String?
+  tracking_number String?
+  courier        String?
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  donation donations @relation(fields: [donation_id], references: [id], onDelete: Cascade)
+
+  @@index([donation_id])
+}
+
+// ============================================
+// DISBURSEMENTS
+// ============================================
+model disbursements {
+  id               String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  activity_id      String              @db.Uuid
+  community_id     String              @db.Uuid
+  amount           BigInt
+  platform_fee     BigInt              @default(0)
+  status           disbursement_status @default(pending)
+  bank_name        String
+  account_number   String
+  account_name     String
+  reference_number String?
+  notes            String?
+  disbursed_by     String              @db.Uuid
+  disbursed_at     DateTime?           @db.Timestamptz(6)
+  created_at       DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  activity  activities  @relation(fields: [activity_id], references: [id])
+  community communities @relation(fields: [community_id], references: [id])
+  admin     profiles    @relation("DisbursementAdmin", fields: [disbursed_by], references: [id])
+
+  @@index([activity_id])
+  @@index([community_id])
+  @@index([status])
+}
+
+// ============================================
+// REPORTS
+// ============================================
+model reports {
+  id                String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  activity_id       String        @db.Uuid
+  community_id      String        @db.Uuid
+  submitted_by      String        @db.Uuid
+  title             String
+  summary           String
+  fund_usage        Json          @default("[]")
+  status            report_status @default(draft)
+  admin_note        String?
+  reviewed_by       String?       @db.Uuid
+  reviewed_at       DateTime?     @db.Timestamptz(6)
+  completion_status String        @default("partial")
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  activity  activities   @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+  community communities  @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  submitter profiles     @relation("ReportSubmitter", fields: [submitted_by], references: [id])
+  reviewer  profiles?    @relation("ReportReviewer", fields: [reviewed_by], references: [id])
+  files     report_files[]
+
+  @@index([activity_id])
+}
+
+// ============================================
+// REPORT FILES
+// ============================================
+model report_files {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  report_id  String   @db.Uuid
+  file_url   String
+  file_name  String
+  file_type  String
+  file_size  Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  report reports @relation(fields: [report_id], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// JOURNEY MILESTONES
+// ============================================
+model journey_milestones {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  year         Int
+  title        String
+  description  String
+  impact_stat  String?
+  icon         String?  @default("Award")
+  order_index  Int      @default(0)
+  is_published Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([year])
+  @@index([order_index])
+}
+
+// ============================================
+// SANCTIONS
+// ============================================
+model sanctions {
+  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  community_id String        @db.Uuid
+  issued_by    String        @db.Uuid
+  type         sanction_type @default(warning)
+  reason       String
+  notes        String?
+  is_active    Boolean       @default(true)
+  expires_at   DateTime?     @db.Timestamptz(6)
+  created_at   DateTime      @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  community communities @relation(fields: [community_id], references: [id], onDelete: Cascade)
+  admin     profiles    @relation(fields: [issued_by], references: [id])
+}
+
+// ============================================
+// FEEDBACKS
+// ============================================
+model feedbacks {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  activity_id String     @db.Uuid
+  user_id     String     @db.Uuid
+  rating      Int
+  comment     String?
+  is_public   Boolean    @default(true)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  activity activities @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+  user     profiles   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([activity_id, user_id])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+model notifications {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  title      String
+  message    String
+  type       String   @default("info")
+  link       String?
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user profiles @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
+}
+
+// ============================================
+// AUDIT LOGS
+// ============================================
+model audit_logs {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id       String?   @db.Uuid
+  action        String
+  resource_type String
+  resource_id   String?   @db.Uuid
+  metadata      Json      @default("{}")
+  ip_address    String?
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user profiles? @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([created_at])
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum user_role {
+  admin
+  community
+  user
+}
+
+enum verification_status {
+  pending
+  approved
+  rejected
+}
+
+/// Status verifikasi volunteer (berbeda dari verification_status komunitas)
+enum volunteer_verify_status {
+  pending
+  approved
+  rejected
+}
+
+enum activity_status {
+  draft
+  pending_review
+  published
+  cancelled
+  completed
+}
+
+enum activity_category {
+  cleanup
+  restoration
+  education
+  research
+  event
+  other
+}
+
+enum donation_status {
+  pending
+  completed
+  refunded
+}
+
+enum donation_type {
+  money
+  item
+}
+
+enum volunteer_status {
+  pending
+  approved
+  rejected
+  attended
+}
+
+enum sanction_type {
+  warning
+  suspend
+  ban
+}
+
+enum report_status {
+  draft
+  submitted
+  validated
+  rejected
+}
+
+enum disbursement_status {
+  pending
+  processing
+  completed
+  failed
+}
