@@ -75,7 +75,6 @@ Kemudian isi `.env.local` dengan nilai dari Supabase Dashboard:
 ```bash
 # Supabase Dashboard → Settings → API
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
 
@@ -112,32 +111,13 @@ SET role = 'admin'
 WHERE email = 'admin@sinergilaut.id';
 ```
 
-### 8. Menjalankan Aplikasi
+### 8. Jalankan Development Server
 
-Kamu bisa menjalankan aplikasi dengan **Node/pnpm** atau **Docker**.
-
-#### Opsi A: Menggunakan pnpm (Development)
 ```bash
 pnpm dev
 ```
 
-#### Opsi B: Menggunakan Docker (Production / Standalone Desktop)
-Aplikasi ini sudah dipersiapkan menggunakan `Dockerfile` (standalone mode).
-
-1. Build & Run menggunakan Docker Compose:
-   ```bash
-   docker-compose up -d --build
-   ```
-2. Cek logs:
-   ```bash
-   docker-compose logs -f
-   ```
-3. Berhentikan aplikasi:
-   ```bash
-   docker-compose down
-   ```
-
-Setelah aplikasi berjalan, buka browser dan akses: [http://localhost:3000](http://localhost:3000)
+Buka [http://localhost:3000](http://localhost:3000)
 
 ---
 
@@ -266,9 +246,6 @@ Di Supabase Dashboard → **Authentication → Providers**:
 
 ### Error: `P1001: Can't reach database server`
 → Pastikan `DATABASE_URL` dan `DIRECT_URL` di `.env.local` sudah benar (cek password dan project ID).
-
-### Error: `FATAL: (ENOTFOUND) tenant/user... not found` saat `pnpm db:push`
-→ Buka Supabase Dashboard > Project Settings > Database > **Reset database password** menggunakan password yang sama. Supavisor connection pooler terkadang mengalami desinkronisasi cache saat environment diperbarui.
 
 ### RLS Error: `new row violates row-level security policy`
 → Pastikan sudah menjalankan `supabase/rls-policies.sql` di SQL Editor.
