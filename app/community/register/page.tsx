@@ -41,8 +41,8 @@ import {
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import { registerCommunity } from "@/lib/actions/auth.actions"
 
 const steps = [
   { id: 1, title: "Basic Info", icon: Building2 },
@@ -139,7 +139,6 @@ export default function CommunityRegisterPage() {
   }
 
   const router = useRouter()
-  const supabase = createClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async () => {
@@ -154,84 +153,32 @@ export default function CommunityRegisterPage() {
 
     setIsSubmitting(true)
     
-    // Upload Logo if exists
-    let logoUrl = null
+    const submitData = new FormData()
+    submitData.append("communityName", formData.communityName)
+    submitData.append("shortDescription", formData.shortDescription)
+    submitData.append("adminName", formData.adminName)
+    submitData.append("email", formData.email)
+    submitData.append("phone", formData.phone)
+    submitData.append("password", formData.password)
+    submitData.append("website", formData.website)
+    submitData.append("region", formData.region)
+    submitData.append("operationalArea", formData.operationalArea)
+    submitData.append("selectedActivities", JSON.stringify(formData.selectedActivities))
+    
     if (formData.logo) {
-      const fileExt = formData.logo.name.split(".").pop()
-      const filePath = `communities/logo-${Date.now()}.${fileExt}`
-      const { error: uploadError } = await supabase.storage
-        .from("sinergilaut-assets")
-        .upload(filePath, formData.logo, { upsert: true })
-
-      if (!uploadError) {
-        const { data } = supabase.storage.from("sinergilaut-assets").getPublicUrl(filePath)
-        logoUrl = data.publicUrl
-      }
+      submitData.append("logo", formData.logo)
     }
-
-    // Sign up the admin
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        data: {
-          full_name: formData.adminName,
-          role: "community",
-          phone: formData.phone,
-        },
-      },
+    
+    formData.legalDocuments.forEach(doc => {
+      submitData.append("legalDocuments", doc)
     })
 
-    if (signUpError) {
-      toast.error(signUpError.message)
+    const result = await registerCommunity(submitData)
+
+    if (result?.error) {
+      toast.error(result.error)
       setIsSubmitting(false)
       return
-    }
-
-    if (authData.user) {
-      // Create community record
-      const slug = formData.communityName
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/[\s_-]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-
-      const { data: communityData, error: commError } = await supabase.from("communities").insert({
-        owner_id: authData.user.id,
-        name: formData.communityName,
-        slug,
-        description: formData.shortDescription,
-        logo_url: logoUrl,
-        website: formData.website,
-        location: formData.region + (formData.operationalArea ? ` - ${formData.operationalArea}` : ""),
-        focus_areas: formData.selectedActivities,
-        verification_status: "pending",
-      }).select("id").single()
-
-      if (!commError && communityData && formData.legalDocuments.length > 0) {
-        // Upload legal documents and create verifications
-        const docUrls: string[] = []
-        for (const doc of formData.legalDocuments) {
-          const docExt = doc.name.split(".").pop()
-          const docPath = `verifications/${communityData.id}/doc-${Date.now()}.${docExt}`
-          const { error: docUploadError } = await supabase.storage
-            .from("sinergilaut-assets")
-            .upload(docPath, doc, { upsert: true })
-            
-          if (!docUploadError) {
-            const { data: docObj } = supabase.storage.from("sinergilaut-assets").getPublicUrl(docPath)
-            docUrls.push(docObj.publicUrl)
-          }
-        }
-
-        await supabase.from("community_verifications").insert({
-          community_id: communityData.id,
-          documents: docUrls,
-          representative_name: formData.adminName,
-          representative_email: formData.email,
-          representative_phone: formData.phone,
-        })
-      }
     }
 
     setIsSubmitted(true)
