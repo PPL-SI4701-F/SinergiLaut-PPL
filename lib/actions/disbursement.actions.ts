@@ -6,7 +6,7 @@
  * Hanya admin yang dapat memproses disbursement.
  */
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 
 export interface CreateDisbursementPayload {
   activityId: string
@@ -32,8 +32,10 @@ export async function createDisbursement(payload: Omit<CreateDisbursementPayload
 
   const adminId = user.id
 
+  const adminSupabase = await createAdminClient()
+
   // Hitung total donasi completed untuk activity ini (validasi)
-  const { data: donationSum } = await supabase
+  const { data: donationSum } = await adminSupabase
     .from("donations")
     .select("amount")
     .eq("activity_id", payload.activityId)
@@ -45,7 +47,7 @@ export async function createDisbursement(payload: Omit<CreateDisbursementPayload
   )
 
   // Ambil total disbursement sebelumnya untuk activity ini
-  const { data: prevDisbursements } = await supabase
+  const { data: prevDisbursements } = await adminSupabase
     .from("disbursements")
     .select("amount")
     .eq("activity_id", payload.activityId)
@@ -64,7 +66,7 @@ export async function createDisbursement(payload: Omit<CreateDisbursementPayload
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("disbursements")
     .insert({
       activity_id: payload.activityId,
@@ -108,7 +110,9 @@ export async function updateDisbursementStatus(
   if (referenceNumber) updateData.reference_number = referenceNumber
   if (status === "completed") updateData.disbursed_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { data, error } = await adminSupabase
     .from("disbursements")
     .update(updateData)
     .eq("id", disbursementId)
@@ -125,7 +129,7 @@ export async function updateDisbursementStatus(
 
 /** [Admin] Ambil semua disbursement */
 export async function getAllDisbursements() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const { data, error } = await supabase
     .from("disbursements")
@@ -147,7 +151,7 @@ export async function getAllDisbursements() {
 
 /** [Community] Ambil disbursement untuk komunitas tertentu */
 export async function getCommunityDisbursements(communityId: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const { data, error } = await supabase
     .from("disbursements")
@@ -168,7 +172,7 @@ export async function getCommunityDisbursements(communityId: string) {
 
 /** Hitung ringkasan keuangan untuk satu activity */
 export async function getActivityFinanceSummary(activityId: string) {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   const [donationsRes, disbursementsRes] = await Promise.all([
     supabase

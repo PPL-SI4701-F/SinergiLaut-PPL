@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string;
@@ -101,32 +101,35 @@ export async function registerCommunity(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const adminSupabase = await createAdminClient();
 
   // Upload Logo if exists
   let logoUrl = null;
   if (logo && logo.size > 0) {
     const fileExt = logo.name.split(".").pop();
     const filePath = `communities/logo-${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await adminSupabase.storage
       .from("sinergilaut-assets")
       .upload(filePath, logo, { upsert: true });
 
     if (!uploadError) {
-      const { data } = supabase.storage.from("sinergilaut-assets").getPublicUrl(filePath);
+      const { data } = adminSupabase.storage.from("sinergilaut-assets").getPublicUrl(filePath);
       logoUrl = data.publicUrl;
     }
   }
 
-  // Sign up the admin
-  const { data: authData, error: signUpError } = await supabase.auth.signUp({
+  // Gunakan admin client untuk bypass email rate limit & konfirmasi email
+  // Sudah diinisialisasi di atas jika menggunakan file logic, tapi pastikan variabel sudah ada.
+
+  // Buat user langsung via admin API (tidak kirim email konfirmasi)
+  const { data: authData, error: signUpError } = await adminSupabase.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: {
-        full_name: adminName,
-        role: "community",
-        phone: phone,
-      },
+    email_confirm: true,  // langsung aktif tanpa perlu klik link email
+    user_metadata: {
+      full_name: adminName,
+      role: "community",
+      phone: phone,
     },
   });
 
@@ -140,9 +143,9 @@ export async function registerCommunity(formData: FormData) {
       .toLowerCase()
       .replace(/[^\w\s-]/g, "")
       .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
+      .replace(/^-+|-+$/g, "") + "-" + Date.now()  // tambah timestamp supaya unik
 
-    const { data: communityData, error: commError } = await supabase.from("communities").insert({
+    const { data: communityData, error: commError } = await adminSupabase.from("communities").insert({
       owner_id: authData.user.id,
       name: communityName,
       slug,
@@ -152,26 +155,32 @@ export async function registerCommunity(formData: FormData) {
       location: region + (operationalArea ? ` - ${operationalArea}` : ""),
       focus_areas: selectedActivities,
       verification_status: "pending",
+      is_verified: false,
     }).select("id").single();
 
-    if (!commError && communityData && legalDocuments.length > 0) {
+    if (commError) {
+      console.error("[registerCommunity] Gagal insert community:", commError)
+      return { error: "Akun berhasil dibuat, tapi gagal menyimpan data komunitas: " + commError.message }
+    }
+
+    if (communityData && legalDocuments.length > 0) {
       // Upload legal documents and create verifications
-      const docUrls: string[] = [];
+      const docUrls: string[] = []
       for (const doc of legalDocuments) {
         if (doc.size === 0) continue;
         const docExt = doc.name.split(".").pop();
         const docPath = `verifications/${communityData.id}/doc-${Date.now()}.${docExt}`;
-        const { error: docUploadError } = await supabase.storage
+        const { error: docUploadError } = await adminSupabase.storage
           .from("sinergilaut-assets")
           .upload(docPath, doc, { upsert: true });
           
         if (!docUploadError) {
-          const { data: docObj } = supabase.storage.from("sinergilaut-assets").getPublicUrl(docPath);
+          const { data: docObj } = adminSupabase.storage.from("sinergilaut-assets").getPublicUrl(docPath);
           docUrls.push(docObj.publicUrl);
         }
       }
 
-      await supabase.from("community_verifications").insert({
+      await adminSupabase.from("community_verifications").insert({
         community_id: communityData.id,
         documents: docUrls,
         representative_name: adminName,

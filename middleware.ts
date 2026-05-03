@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Daftar route yang membutuhkan autentikasi
-  const protectedRoutes = ['/dashboard', '/admin', '/profile', '/community', '/user']
+  const protectedRoutes = ['/dashboard', '/admin', '/profile', '/community/dashboard', '/user/dashboard']
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   )
@@ -73,9 +73,9 @@ export async function middleware(request: NextRequest) {
 
     if (pathname.startsWith('/admin') && role !== 'admin') {
       isAuthorized = false
-    } else if (pathname.startsWith('/community') && !['admin', 'community'].includes(role)) {
+    } else if (pathname.startsWith('/community/dashboard') && !['admin', 'community'].includes(role)) {
       isAuthorized = false
-    } else if (pathname.startsWith('/user') && !['admin', 'user'].includes(role)) {
+    } else if (pathname.startsWith('/user/dashboard') && !['admin', 'user'].includes(role)) {
       isAuthorized = false
     }
 

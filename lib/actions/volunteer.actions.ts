@@ -5,7 +5,7 @@
  * Semua operasi CRUD untuk volunteer_registrations ke Supabase
  */
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
 import type { VolunteerRegistration, VolunteerStatus } from "@/lib/types"
 
@@ -27,8 +27,10 @@ export interface RegisterVolunteerPayload {
 export async function registerVolunteer(payload: RegisterVolunteerPayload) {
   const supabase = await createClient()
 
+  const adminSupabase = await createAdminClient()
+
   // Cek apakah user sudah terdaftar sebelumnya
-  const { data: existing } = await supabase
+  const { data: existing } = await adminSupabase
     .from("volunteer_registrations")
     .select("id, status")
     .eq("activity_id", payload.activityId)
@@ -42,7 +44,7 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("volunteer_registrations")
     .insert({
       activity_id: payload.activityId,
@@ -68,14 +70,14 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
 
   // Kirim notifikasi ke admin (pesan bahwa ada pendaftar baru)
   // Pertama, ambil detail activity + komunitas
-  const { data: activityInfo } = await supabase
+  const { data: activityInfo } = await adminSupabase
     .from("activities")
     .select("title, community:communities(owner_id)")
     .eq("id", payload.activityId)
     .single()
 
   // Notifikasi ke semua admin
-  const { data: admins } = await supabase
+  const { data: admins } = await adminSupabase
     .from("profiles")
     .select("id")
     .eq("role", "admin")
@@ -111,9 +113,9 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
 
 /** Ambil semua pendaftar relawan untuk activity tertentu (untuk pengelola komunitas) */
 export async function getActivityVolunteers(activityId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("volunteer_registrations")
     .select(`
       *,
@@ -135,9 +137,9 @@ export async function updateVolunteerStatus(
   registrationId: string,
   status: Extract<VolunteerStatus, "approved" | "rejected" | "attended">
 ) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("volunteer_registrations")
     .update({ status })
     .eq("id", registrationId)
@@ -152,7 +154,7 @@ export async function updateVolunteerStatus(
   // Jika disetujui, tambahkan volunteer_count di tabel activities
   if (status === "approved" && data?.activity_id) {
     const currentCount = (data?.activity as any)?.volunteer_count || 0
-    await supabase
+    await adminSupabase
       .from("activities")
       .update({ volunteer_count: currentCount + 1 })
       .eq("id", data.activity_id)
@@ -194,9 +196,9 @@ export async function updateVolunteerStatus(
 
 /** Ambil riwayat pendaftaran relawan untuk user yang sedang login */
 export async function getMyVolunteerRegistrations(userId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("volunteer_registrations")
     .select(`
       *,

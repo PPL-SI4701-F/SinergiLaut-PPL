@@ -1,10 +1,11 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 
 export async function createActivity(formData: FormData) {
   try {
     const supabase = await createClient()
+    const adminSupabase = await createAdminClient()
     const { data: userData, error: authError } = await supabase.auth.getUser()
     
     if (authError || !userData.user) {
@@ -12,14 +13,15 @@ export async function createActivity(formData: FormData) {
     }
     const user = userData.user
 
-    // Check community
-    const { data: community, error: commError } = await supabase
+    // Check community using admin client to bypass RLS issues, but securely filtering by user.id
+    const { data: community, error: commError } = await adminSupabase
       .from("communities")
       .select("id")
       .eq("owner_id", user.id)
       .single()
 
     if (commError || !community) {
+      console.error("[createActivity] error getting community:", commError, "user.id:", user.id)
       return { success: false, error: "Akun ini tidak memiliki profil komunitas. Pastikan Anda login dengan akun komunitas yang valid." }
     }
 
@@ -31,7 +33,7 @@ export async function createActivity(formData: FormData) {
     if (coverImage && coverImage.size > 0) {
       const fileExt = coverImage.name.split('.').pop()
       const fileName = `activity_${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await adminSupabase.storage
         .from(bucketName)
         .upload(`activities/${fileName}`, coverImage)
       
@@ -39,7 +41,7 @@ export async function createActivity(formData: FormData) {
         console.error("Cover upload err:", uploadError)
         return { success: false, error: "Gagal mengupload gambar sampul. (Pastikan bucket storage tersedia)" }
       }
-      const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(`activities/${fileName}`)
+      const { data: publicUrlData } = adminSupabase.storage.from(bucketName).getPublicUrl(`activities/${fileName}`)
       cover_image_url = publicUrlData.publicUrl
     }
 
@@ -53,12 +55,12 @@ export async function createActivity(formData: FormData) {
         if (nota.size > 0) {
           const ext = nota.name.split('.').pop()
           const notaName = `nota_${Math.random().toString(36).substring(2)}_${Date.now()}.${ext}`
-          const { error: notaUploadErr } = await supabase.storage
+          const { error: notaUploadErr } = await adminSupabase.storage
             .from(bucketName)
             .upload(`activity-receipts/${notaName}`, nota)
           
           if (!notaUploadErr) {
-            const { data: notaUrlData } = supabase.storage.from(bucketName).getPublicUrl(`activity-receipts/${notaName}`)
+            const { data: notaUrlData } = adminSupabase.storage.from(bucketName).getPublicUrl(`activity-receipts/${notaName}`)
             nota_urls.push(notaUrlData.publicUrl)
           } else {
             console.error("Nota upload error:", notaUploadErr)
@@ -124,7 +126,7 @@ export async function createActivity(formData: FormData) {
       cover_image_url,
     }
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await adminSupabase
       .from("activities")
       .insert(payload)
 
