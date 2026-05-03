@@ -67,7 +67,8 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
   const [statusFilter, setStatusFilter] = useState("all")
 
   const filteredVolunteers = volunteers.filter((v) => {
-    const matchesSearch = v.activity?.title.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
+    const matchesSearch = searchQuery.trim() === "" || 
+      (v.activity?.title?.toLowerCase()?.includes(searchQuery.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === "all" || v.status === statusFilter;
     return matchesSearch && matchesStatus;
   })
