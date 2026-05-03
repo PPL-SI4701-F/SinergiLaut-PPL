@@ -6,9 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  Users, Heart, Calendar, MapPin, Banknote, Package
+  Users, Heart, Calendar, MapPin, Banknote, Package, Search, Filter
 } from "lucide-react"
 import { formatCurrency, formatDateShort } from "@/lib/utils/helpers"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type UserTab = "overview" | "volunteer" | "donations"
 
@@ -55,6 +63,14 @@ interface DashboardClientProps {
 
 export function DashboardClient({ volunteers, donations }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState<UserTab>("overview")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+
+  const filteredVolunteers = volunteers.filter((v) => {
+    const matchesSearch = v.activity?.title.toLowerCase().includes(searchQuery.toLowerCase()) ?? false;
+    const matchesStatus = statusFilter === "all" || v.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  })
 
   const tabs = [
     { id: "overview",   label: "Ringkasan" },
@@ -182,17 +198,45 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {volunteers.length === 0 ? (
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari kegiatan..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <SelectValue placeholder="Status" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="approved">Disetujui</SelectItem>
+                  <SelectItem value="pending">Menunggu</SelectItem>
+                  <SelectItem value="rejected">Ditolak</SelectItem>
+                  <SelectItem value="completed">Selesai</SelectItem>
+                  <SelectItem value="attended">Hadir</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {filteredVolunteers.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-8 w-8 mx-auto text-muted-foreground mb-3 opacity-40" />
-                <p className="text-muted-foreground">Belum ada riwayat pendaftaran relawan.</p>
+                <p className="text-muted-foreground">Tidak ada riwayat kegiatan yang sesuai.</p>
                 <Button asChild className="mt-4">
-                  <Link href="/activities">Cari Kegiatan</Link>
+                  <Link href="/activities">Cari Kegiatan Lain</Link>
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
-                {volunteers.map((v) => (
+                {filteredVolunteers.map((v) => (
                   <div
                     key={v.id}
                     className="p-4 border border-border rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4"

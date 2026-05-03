@@ -73,9 +73,9 @@ export async function middleware(request: NextRequest) {
 
     if (pathname.startsWith('/admin') && role !== 'admin') {
       isAuthorized = false
-    } else if (pathname.startsWith('/community/dashboard') && !['admin', 'community'].includes(role)) {
+    } else if (pathname.startsWith('/community/dashboard') && role !== 'community') {
       isAuthorized = false
-    } else if (pathname.startsWith('/user/dashboard') && !['admin', 'user'].includes(role)) {
+    } else if (pathname.startsWith('/user/dashboard') && role !== 'user') {
       isAuthorized = false
     }
 
