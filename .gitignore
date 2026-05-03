@@ -31,4 +31,24 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
-JIRA HABIBI BUDIMAN/
+
+# Logs & Cache Tambahan
+pnpm-debug.log*
+.turbo/
+.cache/
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary & AI Agents Folders
+.agents/
+.gemini/
+
+# Dokumentasi Internal / Sisa Fitur
+JIRA*/

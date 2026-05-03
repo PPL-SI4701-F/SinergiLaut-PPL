@@ -245,7 +245,7 @@ export default function EditActivityPage() {
                   />
                   {form.latitude && (
                     <p className="text-[10px] text-muted-foreground">
-                      Koordinat: {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+                      Koordinat: {form.latitude.toFixed(6)}, {form.longitude!.toFixed(6)}
                     </p>
                   )}
                 </div>

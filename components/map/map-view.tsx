@@ -22,7 +22,7 @@ export default function MapView({ lat, lng, label }: MapViewProps) {
       style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY || 'get_your_own_free_key_at_maptiler'}`,
       center: [lng, lat],
       zoom: 15,
-      scrollWheelZoom: false, // Optional: disable scroll zoom on detail view
+      scrollZoom: false, // Optional: disable scroll zoom on detail view
     })
 
     // Add navigation controls

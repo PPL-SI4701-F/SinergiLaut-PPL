@@ -1,257 +1,339 @@
-# 🌊 SinergiLaut — PPL Project
+# 🌊 SinergiLaut
 
-Platform digital untuk koordinasi komunitas konservasi laut, penggalangan dana transparan, dan manajemen relawan di Indonesia.
+**Platform Konservasi Laut Indonesia** — Menghubungkan komunitas, relawan, dan donatur untuk menjaga ekosistem laut Nusantara.
 
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Database | PostgreSQL via **Supabase** |
-| ORM | **Prisma** |
-| Auth | Supabase Auth |
-| Storage | Supabase Storage |
-| Payment | Midtrans Snap |
-| Package Manager | pnpm |
+> Proyek Pengembangan Perangkat Lunak (PPL) — SI4701 — Telkom University
 
 ---
 
-## 🚀 Setup dari Awal
+## 📋 Daftar Isi
 
-### 1. Clone & Install Dependencies
-
-```bash
-# Di folder PPL_SinergiLaut ini
-pnpm install
-```
-
-### 2. Setup Supabase Project
-
-1. Buka [https://supabase.com](https://supabase.com) dan buat akun / login
-2. Klik **"New Project"** dan isi:
-   - **Name**: `ppl-sinergilaut`
-   - **Database Password**: buat password yang kuat (simpan!)
-   - **Region**: Southeast Asia (Singapore)
-3. Tunggu project selesai dibuat (~1–2 menit)
-
-### 3. Jalankan Schema Database
-
-Buka **Supabase Dashboard → SQL Editor** dan jalankan file berikut secara berurutan:
-
-#### Step 1 — Schema utama
-```
-Salin isi file: supabase/schema.sql
-Paste di SQL Editor → Run
-```
-
-#### Step 2 — Row Level Security (RLS)
-```
-Salin isi file: supabase/rls-policies.sql
-Paste di SQL Editor → Run
-```
-
-### 4. Setup Supabase Storage
-
-Di Supabase Dashboard → **Storage**, buat bucket baru:
-
-| Bucket Name | Public? | Keterangan |
-|------------|---------|-----------|
-| `sinergilaut-assets` | ✅ Yes | Gambar cover, logo, banner komunitas |
-| `ktp-uploads` | ❌ No | Foto KTP relawan (private) |
-| `report-files` | ❌ No | File laporan kegiatan (private) |
-| `verification-docs` | ❌ No | Dokumen verifikasi komunitas (private) |
-
-### 5. Konfigurasi Environment Variables
-
-```bash
-# Copy template
-cp .env.example .env.local
-```
-
-Kemudian isi `.env.local` dengan nilai dari Supabase Dashboard:
-
-```bash
-# Supabase Dashboard → Settings → API
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
-
-# Supabase Dashboard → Settings → Database → Connection string
-# Pilih "Transaction" mode (port 6543) untuk DATABASE_URL
-DATABASE_URL="postgres://postgres.xxxx:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-# Pilih "Session" mode (port 5432) untuk DIRECT_URL
-DIRECT_URL="postgres://postgres.xxxx:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
-```
-
-### 6. Generate Prisma Client & Push Schema
-
-```bash
-# Generate Prisma client dari schema
-pnpm db:generate
-
-# (Opsional) Push schema Prisma ke database
-# Catatan: schema.sql sudah dijalankan via SQL Editor,
-# jadi ini hanya untuk mengupdate client
-pnpm db:push
-```
-
-### 7. Buat Admin Account Pertama
-
-Di Supabase Dashboard → **Authentication → Users**, klik **"Add User"**:
-- Email: `admin@sinergilaut.id`
-- Password: (buat password)
-- Centang `Auto Confirm User`
-
-Kemudian di **SQL Editor**, jalankan:
-```sql
-UPDATE profiles
-SET role = 'admin'
-WHERE email = 'admin@sinergilaut.id';
-```
-
-### 8. Jalankan Development Server
-
-```bash
-pnpm dev
-```
-
-Buka [http://localhost:3000](http://localhost:3000)
+- [Tentang Proyek](#tentang-proyek)
+- [Tech Stack](#tech-stack)
+- [Arsitektur](#arsitektur)
+- [Fitur Utama](#fitur-utama)
+- [Struktur Folder](#struktur-folder)
+- [Getting Started](#getting-started)
+- [Akun Seed (Testing)](#akun-seed-testing)
+- [Environment Variables](#environment-variables)
+- [Deployment](#deployment)
+- [Tim Pengembang](#tim-pengembang)
 
 ---
 
-## 📁 Struktur Proyek
+## Tentang Proyek
 
-```
-PPL_SinergiLaut/
-├── app/                      # Next.js App Router
-│   ├── layout.tsx            # Root layout
-│   ├── page.tsx              # Home page
-│   ├── globals.css           # Global styles
-│   ├── (auth)/               # Auth pages (login, register)
-│   ├── dashboard/            # Community/Admin dashboard
-│   ├── activities/           # Activity pages
-│   └── api/                  # API Routes
-│       └── midtrans/         # Midtrans webhook
-├── components/               # Reusable UI components
-│   └── ui/                   # shadcn/ui components
-├── lib/
-│   ├── supabase/
-│   │   ├── client.ts         # Browser Supabase client
-│   │   └── server.ts         # Server Supabase client + Admin client
-│   ├── prisma.ts             # Prisma singleton
-│   └── actions/              # Server Actions
-├── prisma/
-│   ├── schema.prisma         # Database schema (Prisma)
-│   └── seed.ts               # Database seed script
-├── supabase/
-│   ├── schema.sql            # ⭐ Database schema SQL (jalankan PERTAMA)
-│   └── rls-policies.sql      # ⭐ Row Level Security (jalankan KEDUA)
-├── middleware.ts             # Auth middleware
-├── tailwind.config.ts        # Tailwind configuration
-├── .env.example              # Template environment variables
-└── package.json
-```
+SinergiLaut adalah platform web yang memfasilitasi kolaborasi antara komunitas konservasi laut, relawan, dan donatur. Platform ini menyediakan fitur manajemen kegiatan konservasi, pendaftaran relawan, donasi (uang & barang), pelaporan kegiatan, serta dashboard analitik untuk setiap peran pengguna.
 
----
-
-## 🗄️ Database Schema
-
-### Tabel Utama
-
-| Tabel | Deskripsi |
-|-------|-----------|
-| `profiles` | User profiles (extends Supabase auth.users) |
-| `communities` | Komunitas konservasi laut |
-| `community_verifications` | Data verifikasi komunitas |
-| `activities` | Kegiatan konservasi laut |
-| `volunteer_registrations` | Pendaftaran relawan |
-| `donations` | Donasi uang & barang |
-| `donation_items` | Item donasi barang |
-| `disbursements` | Pencairan dana ke komunitas |
-| `reports` | Laporan pertanggungjawaban kegiatan |
-| `report_files` | File lampiran laporan |
-| `journey_milestones` | Perjalanan & pencapaian SinergiLaut |
-| `sanctions` | Sanksi komunitas |
-| `feedbacks` | Ulasan & rating kegiatan |
-| `notifications` | Notifikasi pengguna |
-| `audit_logs` | Log aktivitas sistem |
-
-### Role Pengguna
+### Peran Pengguna (RBAC)
 
 | Role | Akses |
 |------|-------|
-| `admin` | Full access — kelola semua data, verifikasi, disbursement |
-| `community` | Kelola kegiatan, relawan, dan laporan komunitas sendiri |
-| `user` | Donasi, daftar relawan, lihat kegiatan publik |
+| **Admin** | Dashboard admin, moderasi komunitas & kegiatan, validasi laporan, manajemen pengguna |
+| **Community** | Dashboard komunitas, CRUD kegiatan, manajemen relawan & donatur, upload laporan |
+| **User** | Dashboard user, daftar relawan, donasi, riwayat aktivitas |
 
 ---
 
-## 🔑 Scripts Tersedia
+## Tech Stack
 
-```bash
-pnpm dev           # Jalankan dev server (localhost:3000)
-pnpm build         # Build production
-pnpm start         # Jalankan production server
-pnpm lint          # Lint code
+| Layer | Teknologi |
+|-------|-----------|
+| **Framework** | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) |
+| **Language** | TypeScript |
+| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
+| **UI Components** | [shadcn/ui](https://ui.shadcn.com/) (Radix UI + CVA) |
+| **Database** | PostgreSQL (via [Supabase](https://supabase.com/)) |
+| **ORM** | [Prisma](https://www.prisma.io/) (schema management) |
+| **Auth** | Supabase Auth + `@supabase/ssr` |
+| **Storage** | Supabase Storage |
+| **Payment** | [Midtrans](https://midtrans.com/) (Snap) |
+| **Maps** | [MapLibre GL](https://maplibre.org/) + MapTiler |
+| **Icons** | [Lucide React](https://lucide.dev/) |
+| **Package Manager** | pnpm |
+| **Deployment** | Docker / Vercel |
 
-pnpm db:generate   # Generate Prisma client
-pnpm db:push       # Push schema ke database
-pnpm db:seed       # Jalankan seed data
-pnpm db:studio     # Buka Prisma Studio (GUI database)
-pnpm db:reset      # Reset database + seed ulang
+---
+
+## Arsitektur
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Browser (Client)                  │
+│  React Components + Auth Context + Supabase Client   │
+├─────────────────────────────────────────────────────┤
+│                 Next.js App Router                    │
+│  ┌──────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │  Pages    │  │ Server       │  │ API Routes    │  │
+│  │  (RSC +   │  │ Actions      │  │ /api/midtrans │  │
+│  │  Client)  │  │ (lib/actions)│  │               │  │
+│  └──────────┘  └──────────────┘  └───────────────┘  │
+├─────────────────────────────────────────────────────┤
+│                    Middleware                         │
+│         Session Refresh + RBAC Route Guard           │
+├─────────────────────────────────────────────────────┤
+│                  Supabase (BaaS)                     │
+│  ┌────────┐  ┌─────────┐  ┌─────────┐  ┌────────┐  │
+│  │  Auth   │  │Database │  │ Storage │  │  RLS   │  │
+│  │(JWT+SSR)│  │(Postgres)│  │ (Files) │  │Policies│  │
+│  └────────┘  └─────────┘  └─────────┘  └────────┘  │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ⚙️ Konfigurasi Supabase Auth
+## Fitur Utama
 
-### Email Templates
-Di Supabase Dashboard → **Authentication → Email Templates**, sesuaikan template email untuk:
-- Confirm signup
-- Reset password
-- Magic link
+### 🏠 Halaman Publik
+- **Homepage** — Landing page dengan statistik platform
+- **Kegiatan** — Katalog kegiatan konservasi (filter, search, detail)
+- **Dana Abadi (Endowment)** — Informasi program dana abadi
+- **Tentang** — Informasi tentang SinergiLaut
+- **FAQ** — Pertanyaan yang sering ditanya
+- **Kontak** — Formulir kontak
 
-### Auth Settings
-Di Supabase Dashboard → **Authentication → Providers**:
-- Pastikan **Email** provider aktif
-- Nonaktifkan "Confirm email" untuk development (opsional)
-- Set **Site URL**: `http://localhost:3000`
-- Set **Redirect URLs**: `http://localhost:3000/**`
+### 🔐 Autentikasi
+- Login / Register (user biasa & komunitas)
+- Forgot password
+- Session management via Supabase SSR
+- Middleware RBAC (route protection per role)
+
+### 👨‍💼 Dashboard Admin (`/admin`)
+- Statistik platform (komunitas, pengguna, kegiatan, endowment)
+- Moderasi komunitas (approve/reject)
+- Moderasi kegiatan (approve/reject)
+- Validasi laporan kegiatan
+- Manajemen pengguna
+- Perjalanan pengguna (journey tracking)
+
+### 🏢 Dashboard Komunitas (`/community/dashboard`)
+- Statistik komunitas (kegiatan, relawan, donasi, laporan)
+- CRUD kegiatan konservasi
+- Manajemen relawan (approve/reject/hadir)
+- Manajemen donatur (uang via Midtrans + barang)
+- Edit kegiatan (deskripsi, lokasi, peta, thumbnail)
+
+### 👤 Dashboard User (`/user/dashboard`)
+- Statistik pribadi (kegiatan diikuti, donasi)
+- Riwayat pendaftaran relawan
+- Riwayat donasi
+- Profil & verifikasi volunteer (KTP)
+
+### 💰 Donasi
+- Donasi uang via Midtrans Snap (VA, e-wallet, kartu kredit)
+- Donasi barang (multi-item, tracking pengiriman)
+- Konfirmasi penerimaan barang oleh komunitas
+
+### 📍 Peta Interaktif
+- Pin lokasi kegiatan via MapLibre GL
+- Geocoding lokasi
+- Map picker untuk input koordinat
 
 ---
 
-## 💳 Setup Midtrans (Opsional)
+## Struktur Folder
 
-1. Daftar di [sandbox.midtrans.com](https://sandbox.midtrans.com)
-2. Ambil **Server Key** dan **Client Key** dari Settings → Access Keys
-3. Daftarkan Notification URL: `https://yourdomain.com/api/midtrans/webhook`
-4. Isi di `.env.local`:
-   ```bash
-   MIDTRANS_SERVER_KEY=SB-Mid-server-xxxx
-   NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=SB-Mid-client-xxxx
-   MIDTRANS_IS_PRODUCTION=false
-   ```
+```
+PPL_SinergiLaut/
+├── app/                          # Next.js App Router
+│   ├── about/                    # Halaman Tentang
+│   ├── activities/               # Katalog & Detail Kegiatan
+│   ├── admin/                    # Dashboard Admin
+│   │   ├── activities/           #   Moderasi kegiatan
+│   │   ├── communities/          #   Moderasi komunitas
+│   │   ├── dashboard/            #   Dashboard utama admin
+│   │   ├── journey/              #   Journey tracking
+│   │   ├── reports/              #   Validasi laporan
+│   │   └── users/                #   Manajemen pengguna
+│   ├── api/                      # API Routes
+│   │   └── midtrans/             #   Webhook & create transaction
+│   ├── auth/                     # Auth callback
+│   ├── community/                # Dashboard Komunitas
+│   │   ├── dashboard/            #   Dashboard utama
+│   │   │   └── activities/       #   CRUD kegiatan
+│   │   │       ├── create/       #     Buat kegiatan baru
+│   │   │       └── [id]/         #     Detail kegiatan
+│   │   │           ├── donors/   #       Manajemen donatur
+│   │   │           ├── edit/     #       Edit kegiatan
+│   │   │           └── volunteers/ #     Manajemen relawan
+│   │   └── register/             #   Registrasi komunitas
+│   ├── contact/                  # Halaman Kontak
+│   ├── endowment/                # Dana Abadi
+│   ├── faq/                      # FAQ
+│   ├── forgot-password/          # Lupa Password
+│   ├── login/                    # Halaman Login
+│   ├── register/                 # Halaman Register
+│   ├── unauthorized/             # Halaman 403
+│   └── user/                     # Dashboard User
+│       ├── dashboard/            #   Dashboard utama user
+│       └── profile/              #   Profil & verifikasi
+├── components/                   # React Components
+│   ├── map/                      #   MapPicker & MapView
+│   ├── ui/                       #   shadcn/ui components (57 file)
+│   ├── footer.tsx                #   Footer
+│   └── navigation.tsx            #   Navbar
+├── contexts/                     # React Context
+│   └── auth-context.tsx          #   Auth provider (user, profile, role)
+├── lib/                          # Libraries & Utilities
+│   ├── actions/                  #   Server Actions
+│   │   ├── auth.actions.ts       #     Login, register, logout
+│   │   ├── dashboard.actions.ts  #     Stats & data (admin/community/user)
+│   │   ├── disbursement.actions.ts #   Pencairan dana
+│   │   ├── donation.actions.ts   #     CRUD donasi (uang & barang)
+│   │   ├── endowment.actions.ts  #     Dana abadi
+│   │   ├── feedback.actions.ts   #     Feedback kegiatan
+│   │   ├── journey.actions.ts    #     Journey tracking
+│   │   ├── notification.actions.ts #   Notifikasi
+│   │   ├── volunteer.actions.ts  #     CRUD pendaftaran relawan
+│   │   └── volunteer-verification.actions.ts # Verifikasi volunteer
+│   ├── supabase/                 #   Supabase clients (server & browser)
+│   ├── types/                    #   TypeScript type definitions
+│   ├── utils/                    #   Helper functions
+│   └── constants.ts              #   App constants
+├── prisma/                       # Prisma ORM
+│   ├── schema.prisma             #   Database schema
+│   └── seed.ts                   #   Prisma seed script
+├── public/                       # Static assets
+├── scripts/                      # Utility scripts
+│   ├── seed-admin.mjs            #   Seed akun admin
+│   └── seed-community.mjs        #   Seed akun komunitas
+├── styles/                       # Global styles
+├── middleware.ts                  # Auth + RBAC middleware
+├── Dockerfile                    # Docker production build
+├── docker-compose.yml            # Docker Compose config
+└── package.json                  # Dependencies & scripts
+```
 
 ---
 
-## 🐛 Troubleshooting
+## Getting Started
 
-### Error: `relation "profiles" does not exist`
-→ Pastikan sudah menjalankan `supabase/schema.sql` di SQL Editor Supabase.
+### Prasyarat
 
-### Error: `Invalid API key`
-→ Pastikan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_ANON_KEY` sudah diisi dengan benar di `.env.local`.
+- **Node.js** >= 20
+- **pnpm** >= 9
+- Akun [Supabase](https://supabase.com/) (database + auth + storage)
+- (Opsional) Akun [Midtrans Sandbox](https://dashboard.sandbox.midtrans.com/) untuk donasi
+- (Opsional) API key [MapTiler](https://www.maptiler.com/) untuk peta
 
-### Error: `P1001: Can't reach database server`
-→ Pastikan `DATABASE_URL` dan `DIRECT_URL` di `.env.local` sudah benar (cek password dan project ID).
+### Instalasi
 
-### RLS Error: `new row violates row-level security policy`
-→ Pastikan sudah menjalankan `supabase/rls-policies.sql` di SQL Editor.
+```bash
+# 1. Clone repository
+git clone https://github.com/<org>/PPL_SinergiLaut.git
+cd PPL_SinergiLaut
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Setup environment variables
+cp .env.example .env
+# Edit .env dan isi dengan credentials Supabase, Midtrans, dll.
+
+# 4. Generate Prisma client
+pnpm db:generate
+
+# 5. Push schema ke database (jika pertama kali)
+pnpm db:push
+
+# 6. Seed akun testing (opsional)
+node scripts/seed-admin.mjs
+node scripts/seed-community.mjs
+
+# 7. Jalankan development server
+pnpm dev
+```
+
+Aplikasi berjalan di **http://localhost:3000**
+
+### NPM Scripts
+
+| Command | Deskripsi |
+|---------|-----------|
+| `pnpm dev` | Jalankan dev server (Turbopack) |
+| `pnpm build` | Build production |
+| `pnpm start` | Jalankan production server |
+| `pnpm lint` | Jalankan ESLint |
+| `pnpm db:generate` | Generate Prisma client |
+| `pnpm db:push` | Push schema ke database |
+| `pnpm db:studio` | Buka Prisma Studio (GUI database) |
+| `pnpm db:reset` | Reset database + seed |
 
 ---
 
-## 👥 Tim
+## Akun Seed (Testing)
 
-Proyek ini dibuat untuk mata kuliah **Pemrograman Perangkat Lunak (PPL)** — Telkom University Semester 6.
+Jalankan seed scripts untuk membuat akun testing:
+
+```bash
+# Akun Admin
+node scripts/seed-admin.mjs
+# 📧 admin@sinergilaut.com
+# 🔑 Admin1234!
+
+# Akun Komunitas (terverifikasi, dengan 2 kegiatan sample)
+node scripts/seed-community.mjs
+# 📧 komunitas.test@sinergilaut.com
+# 🔑 Test1234!
+```
+
+---
+
+## Environment Variables
+
+Salin `.env.example` ke `.env` dan isi:
+
+| Variable | Deskripsi | Required |
+|----------|-----------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase | ✅ |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) | ✅ |
+| `DATABASE_URL` | PostgreSQL connection (pooler) | ✅ |
+| `DIRECT_URL` | PostgreSQL connection (direct, untuk migration) | ✅ |
+| `NEXT_PUBLIC_BASE_URL` | Base URL aplikasi | ✅ |
+| `MIDTRANS_SERVER_KEY` | Midtrans server key | ⚠️ |
+| `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` | Midtrans client key | ⚠️ |
+| `NEXT_PUBLIC_MAPTILER_KEY` | MapTiler API key | ⚠️ |
+
+> ⚠️ = Diperlukan untuk fitur tertentu (donasi / peta)
+
+---
+
+## Deployment
+
+### Docker
+
+```bash
+# Build image
+docker build -t sinergilaut .
+
+# Atau gunakan Docker Compose
+docker-compose up -d
+```
+
+### Vercel
+
+1. Connect repository ke Vercel
+2. Set environment variables di Vercel dashboard
+3. Deploy otomatis pada setiap push ke branch `main`
+
+---
+
+## Tim Pengembang
+
+| Nama | Peran | NIM |
+|------|-------|-----|
+| Adilio Adaha | Dashboard Komunitas | - |
+| Habibi Budiman | Homepage & Autentikasi Login | - |
+| Keysha Aulia | Autentikasi & Login Komunitas | - |
+| Malvin | Manajemen Hak Akses (RBAC) | - |
+
+**Mata Kuliah:** Pengembangan Perangkat Lunak (PPL) — SI4701  
+**Universitas:** Telkom University  
+**Semester:** 6 (Genap 2025/2026)
+
+---
+
+## Lisensi
+
+Proyek ini dikembangkan untuk keperluan akademis mata kuliah PPL di Telkom University.
