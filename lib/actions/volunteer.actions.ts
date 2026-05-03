@@ -141,12 +141,21 @@ export async function updateVolunteerStatus(
     .from("volunteer_registrations")
     .update({ status })
     .eq("id", registrationId)
-    .select("user_id, full_name, activity:activities(title)")
+    .select("user_id, full_name, activity_id, activity:activities(title, volunteer_count)")
     .single()
 
   if (error) {
     console.error("[updateVolunteerStatus] error:", error)
     return { success: false, error: "Gagal mengubah status relawan." }
+  }
+
+  // Jika disetujui, tambahkan volunteer_count di tabel activities
+  if (status === "approved" && data?.activity_id) {
+    const currentCount = (data?.activity as any)?.volunteer_count || 0
+    await supabase
+      .from("activities")
+      .update({ volunteer_count: currentCount + 1 })
+      .eq("id", data.activity_id)
   }
 
   // Kirim notifikasi ke user berdasarkan status baru
