@@ -220,7 +220,7 @@ export default function CommunityProfilePage({
                   <CardContent className="p-6">
                     <h2 className="text-lg font-semibold text-foreground mb-4">About</h2>
                     <p className="text-muted-foreground leading-relaxed">
-                      {community.longDescription}
+                      {community.description}
                     </p>
                   </CardContent>
                 </Card>

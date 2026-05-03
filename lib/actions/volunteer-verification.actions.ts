@@ -50,9 +50,9 @@ export async function submitVolunteerVerification(payload: {
 
 /** Ambil daftar volunteer yang menunggu verifikasi (untuk admin) */
 export async function getVolunteersPendingVerification(statusFilter?: VerificationStatus) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  let query = supabase
+  let query = adminSupabase
     .from("profiles")
     .select("*")
     .eq("role", "user")
@@ -87,7 +87,9 @@ export async function approveVolunteerVerification(userId: string) {
 
   const adminId = user.id
 
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { data, error } = await adminSupabase
     .from("profiles")
     .update({
       volunteer_status: "approved",
@@ -129,7 +131,9 @@ export async function rejectVolunteerVerification(userId: string, reason: string
 
   const adminId = user.id
 
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { data, error } = await adminSupabase
     .from("profiles")
     .update({
       volunteer_status: "rejected",

@@ -5,7 +5,7 @@
  * Hanya volunteer dengan status 'attended' yang bisa submit rating & feedback.
  */
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 
 export interface SubmitFeedbackPayload {
   activityId: string
@@ -19,10 +19,10 @@ export interface SubmitFeedbackPayload {
  * Guard: user harus punya volunteer_registration dengan status 'attended'.
  */
 export async function submitFeedback(payload: SubmitFeedbackPayload) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
   // Guard: hanya volunteer dengan status attended yang bisa submit
-  const { data: reg } = await supabase
+  const { data: reg } = await adminSupabase
     .from("volunteer_registrations")
     .select("id, status")
     .eq("activity_id", payload.activityId)
@@ -45,7 +45,7 @@ export async function submitFeedback(payload: SubmitFeedbackPayload) {
   }
 
   // Upsert: insert or update jika sudah pernah review
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("feedbacks")
     .upsert(
       {
@@ -73,9 +73,9 @@ export async function submitFeedback(payload: SubmitFeedbackPayload) {
  * Digunakan untuk pre-fill form saat edit.
  */
 export async function getMyFeedback(activityId: string, userId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("feedbacks")
     .select("id, rating, comment")
     .eq("activity_id", activityId)
