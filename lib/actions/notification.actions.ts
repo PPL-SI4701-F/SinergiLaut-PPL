@@ -50,7 +50,9 @@ export async function getMyNotifications() {
   } = await supabase.auth.getUser()
   if (!user) return { success: false, data: [] }
 
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { data, error } = await adminSupabase
     .from("notifications")
     .select("*")
     .eq("user_id", user.id)
@@ -74,7 +76,9 @@ export async function getUnreadCount() {
   } = await supabase.auth.getUser()
   if (!user) return 0
 
-  const { count } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { count } = await adminSupabase
     .from("notifications")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id)
@@ -93,7 +97,9 @@ export async function markNotificationRead(notificationId: string) {
   } = await supabase.auth.getUser()
   if (!user) return { success: false }
 
-  const { error } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { error } = await adminSupabase
     .from("notifications")
     .update({ is_read: true })
     .eq("id", notificationId)
@@ -116,7 +122,9 @@ export async function markAllNotificationsRead() {
   } = await supabase.auth.getUser()
   if (!user) return { success: false }
 
-  const { error } = await supabase
+  const adminSupabase = await createAdminClient()
+
+  const { error } = await adminSupabase
     .from("notifications")
     .update({ is_read: true })
     .eq("user_id", user.id)

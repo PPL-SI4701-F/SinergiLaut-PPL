@@ -320,7 +320,7 @@ export function Navigation() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/user/profile">
+                      <Link href={role === "community" ? "/community/dashboard/profile" : "/user/profile"}>
                         <User className="h-4 w-4 mr-2" /> Profil
                       </Link>
                     </DropdownMenuItem>

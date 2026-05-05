@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Daftar route yang membutuhkan autentikasi
-  const protectedRoutes = ['/dashboard', '/admin', '/profile', '/community']
+  const protectedRoutes = ['/dashboard', '/admin', '/profile', '/community/dashboard', '/user/dashboard']
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   )
@@ -50,8 +50,44 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Jika user login, jalankan logic RBAC (Role-Based Access Control)
+  if (user) {
+    const role = user.user_metadata?.role || 'user'
+    const pathname = request.nextUrl.pathname
+
+    // 1. Redirect /dashboard ke dashboard masing-masing role
+    if (pathname === '/dashboard') {
+      const redirectUrl = request.nextUrl.clone()
+      if (role === 'admin') {
+        redirectUrl.pathname = '/admin/dashboard'
+      } else if (role === 'community') {
+        redirectUrl.pathname = '/community/dashboard'
+      } else {
+        redirectUrl.pathname = '/user/dashboard'
+      }
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    // 2. Proteksi rute berdasarkan Role
+    let isAuthorized = true
+
+    if (pathname.startsWith('/admin') && role !== 'admin') {
+      isAuthorized = false
+    } else if (pathname.startsWith('/community/dashboard') && role !== 'community') {
+      isAuthorized = false
+    } else if (pathname.startsWith('/user/dashboard') && role !== 'user') {
+      isAuthorized = false
+    }
+
+    if (!isAuthorized) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/unauthorized'
+      return NextResponse.redirect(redirectUrl)
+    }
+  }
+
   // Redirect ke dashboard jika sudah login dan mengakses halaman auth
-  const authRoutes = ['/login', '/register']
+  const authRoutes = ['/login', '/register', '/forgot-password']
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   )

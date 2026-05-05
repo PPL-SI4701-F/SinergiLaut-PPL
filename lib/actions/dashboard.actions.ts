@@ -1,26 +1,26 @@
 "use server"
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
 import { getEndowmentStats } from "@/lib/actions/endowment.actions"
 
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
   // Total communities
-  const { count: totalCommunities } = await supabase
+  const { count: totalCommunities } = await adminSupabase
     .from("communities")
     .select("*", { count: "exact", head: true })
 
   // Active users
-  const { count: totalUsers } = await supabase
+  const { count: totalUsers } = await adminSupabase
     .from("profiles")
     .select("*", { count: "exact", head: true })
 
   // Active activities
-  const { count: totalActivities } = await supabase
+  const { count: totalActivities } = await adminSupabase
     .from("activities")
     .select("*", { count: "exact", head: true })
     .in("status", ["published", "completed"])
@@ -38,8 +38,8 @@ export async function getAdminDashboardStats() {
 }
 
 export async function getPendingCommunities() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
     .from("communities")
     .select("*")
     .eq("verification_status", "pending")
@@ -50,8 +50,8 @@ export async function getPendingCommunities() {
 }
 
 export async function getPendingActivities() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
     .from("activities")
     .select("*, community:communities(name)")
     .eq("status", "pending_review")
@@ -62,8 +62,8 @@ export async function getPendingActivities() {
 }
 
 export async function getOngoingActivities() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
     .from("activities")
     .select("*, community:communities(name)")
     .in("status", ["published", "completed"])
@@ -74,8 +74,8 @@ export async function getOngoingActivities() {
 }
 
 export async function getPendingReports() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
     .from("reports")
     .select("*, community:communities(name), activity:activities(title)")
     .eq("status", "submitted")
@@ -86,8 +86,8 @@ export async function getPendingReports() {
 }
 
 export async function getAllCommunities() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
     .from("communities")
     .select("*, verifications:community_verifications(*), owner:profiles(email)")
     .order("created_at", { ascending: false })
@@ -102,8 +102,8 @@ export async function getAllCommunities() {
 // --- ADMIN MODERATION ACTIONS ---
 
 export async function approveCommunityAction(id: string) {
-  const supabase = await createClient()
-  const { data: community, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data: community, error } = await adminSupabase
     .from("communities")
     .update({ is_verified: true, verification_status: "approved" })
     .eq("id", id)
@@ -124,8 +124,8 @@ export async function approveCommunityAction(id: string) {
 }
 
 export async function rejectCommunityAction(id: string) {
-  const supabase = await createClient()
-  const { data: community, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data: community, error } = await adminSupabase
     .from("communities")
     .update({ is_verified: false, verification_status: "rejected" })
     .eq("id", id)
@@ -146,8 +146,8 @@ export async function rejectCommunityAction(id: string) {
 }
 
 export async function approveActivityAction(id: string) {
-  const supabase = await createClient()
-  const { data: activity, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data: activity, error } = await adminSupabase
     .from("activities")
     .update({ status: "published", published_at: new Date().toISOString() })
     .eq("id", id)
@@ -169,8 +169,8 @@ export async function approveActivityAction(id: string) {
 }
 
 export async function rejectActivityAction(id: string) {
-  const supabase = await createClient()
-  const { data: activity, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data: activity, error } = await adminSupabase
     .from("activities")
     .update({ status: "draft", admin_note: "Ditolak oleh admin" })
     .eq("id", id)
@@ -192,8 +192,8 @@ export async function rejectActivityAction(id: string) {
 }
 
 export async function approveReportAction(id: string) {
-  const supabase = await createClient()
-  const { data: report, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data: report, error } = await adminSupabase
     .from("reports")
     .update({ status: "validated" })
     .eq("id", id)
@@ -214,8 +214,8 @@ export async function approveReportAction(id: string) {
 }
 
 export async function rejectReportAction(id: string) {
-  const supabase = await createClient()
-  const { data: report, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data: report, error } = await adminSupabase
     .from("reports")
     .update({ status: "rejected" })
     .eq("id", id)
@@ -238,10 +238,10 @@ export async function rejectReportAction(id: string) {
 // --- COMMUNITY DASHBOARD ---
 
 export async function getCommunityDashboardStats(userId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
   // First fetch the community owned by the user
-  const { data: community } = await supabase
+  const { data: community } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
@@ -254,12 +254,12 @@ export async function getCommunityDashboardStats(userId: string) {
   const communityId = community.id
 
   // Stats
-  const { count: totalActivities } = await supabase
+  const { count: totalActivities } = await adminSupabase
     .from("activities")
     .select("*", { count: "exact", head: true })
     .eq("community_id", communityId)
 
-  const { data: acts } = await supabase
+  const { data: acts } = await adminSupabase
     .from("activities")
     .select("volunteer_count, funding_raised")
     .eq("community_id", communityId)
@@ -272,12 +272,12 @@ export async function getCommunityDashboardStats(userId: string) {
   })
 
   // Reports
-  const { count: totalReports } = await supabase
+  const { count: totalReports } = await adminSupabase
     .from("reports")
     .select("*", { count: "exact", head: true })
     .eq("community_id", communityId)
 
-  const { count: verifiedReports } = await supabase
+  const { count: verifiedReports } = await adminSupabase
     .from("reports")
     .select("*", { count: "exact", head: true })
     .eq("community_id", communityId)
@@ -292,9 +292,9 @@ export async function getCommunityDashboardStats(userId: string) {
 }
 
 export async function getCommunityActivities(userId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
   
-  const { data: community } = await supabase
+  const { data: community } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
@@ -303,7 +303,7 @@ export async function getCommunityActivities(userId: string) {
   if (!community) return []
 
   // Left join to find if activity has a report
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("activities")
     .select("*, reports(status)")
     .eq("community_id", community.id)
@@ -314,8 +314,8 @@ export async function getCommunityActivities(userId: string) {
 }
 
 export async function getRegisteredCommunities() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
     .from("communities")
     .select("*")
     .eq("is_verified", true)
@@ -328,23 +328,23 @@ export async function getRegisteredCommunities() {
 // --- USER DASHBOARD ---
 
 export async function getUserDashboardStats(userId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
   // Jumlah kegiatan yang didaftarkan sebagai relawan
-  const { count: totalActivities } = await supabase
+  const { count: totalActivities } = await adminSupabase
     .from("volunteer_registrations")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
 
   // Jumlah kegiatan aktif (approved / attended)
-  const { count: activeActivities } = await supabase
+  const { count: activeActivities } = await adminSupabase
     .from("volunteer_registrations")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
     .in("status", ["approved", "attended"])
 
   // Total donasi uang yang berhasil
-  const { data: donations } = await supabase
+  const { data: donations } = await adminSupabase
     .from("donations")
     .select("amount")
     .eq("user_id", userId)
@@ -360,3 +360,124 @@ export async function getUserDashboardStats(userId: string) {
     avgRating: null as number | null, // placeholder — bisa dikembangkan jika ada tabel ratings
   }
 }
+
+// --- COMMUNITY PROFILE ---
+
+export async function getCommunityProfile() {
+  const adminSupabase = await createAdminClient()
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: "Sesi tidak valid. Silakan login kembali.", data: null }
+  }
+
+  const { data, error } = await adminSupabase
+    .from("communities")
+    .select("*")
+    .eq("owner_id", user.id)
+    .single()
+
+  if (error || !data) {
+    console.error("[getCommunityProfile] error:", error)
+    return { success: false, error: "Data komunitas tidak ditemukan.", data: null }
+  }
+
+  return { success: true, data, error: null }
+}
+
+export async function updateCommunityProfile(communityId: string, payload: {
+  name: string
+  description: string
+  location: string
+  website: string | null
+  phone: string | null
+  email: string | null
+  instagram: string | null
+  facebook: string | null
+  twitter: string | null
+  focus_areas: string[]
+}) {
+  const adminSupabase = await createAdminClient()
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+  }
+
+  // Verifikasi bahwa komunitas ini milik user yang sedang login
+  const { data: existing, error: checkErr } = await adminSupabase
+    .from("communities")
+    .select("id")
+    .eq("id", communityId)
+    .eq("owner_id", user.id)
+    .single()
+
+  if (checkErr || !existing) {
+    return { success: false, error: "Akses ditolak. Komunitas ini bukan milik akun Anda." }
+  }
+
+  const { error: updateError } = await adminSupabase
+    .from("communities")
+    .update({
+      name: payload.name.trim(),
+      description: payload.description.trim(),
+      location: payload.location.trim(),
+      website: payload.website?.trim() || null,
+      phone: payload.phone?.trim() || null,
+      email: payload.email?.trim() || null,
+      instagram: payload.instagram?.trim() || null,
+      facebook: payload.facebook?.trim() || null,
+      twitter: payload.twitter?.trim() || null,
+      focus_areas: payload.focus_areas,
+    })
+    .eq("id", communityId)
+
+  if (updateError) {
+    console.error("[updateCommunityProfile] error:", updateError)
+    return { success: false, error: updateError.message || "Gagal menyimpan perubahan." }
+  }
+
+  return { success: true, error: null }
+}
+
+export async function uploadCommunityImage(
+  communityId: string,
+  file: File,
+  type: "logo" | "cover"
+) {
+  const adminSupabase = await createAdminClient()
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: "Sesi tidak valid.", url: null }
+  }
+
+  const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.replace(" ", "") || "sinergilaut-assets"
+  const ext = file.name.split(".").pop()
+  const folder = type === "logo" ? "community-logos" : "community-covers"
+  const path = `${folder}/${communityId}/${type}-${Date.now()}.${ext}`
+
+  const { error: uploadErr } = await adminSupabase.storage.from(bucketName).upload(path, file, { upsert: true })
+  if (uploadErr) {
+    return { success: false, error: uploadErr.message, url: null }
+  }
+
+  const { data: urlData } = adminSupabase.storage.from(bucketName).getPublicUrl(path)
+  const column = type === "logo" ? "logo_url" : "cover_url"
+
+  const { error: updateErr } = await adminSupabase
+    .from("communities")
+    .update({ [column]: urlData.publicUrl })
+    .eq("id", communityId)
+    .eq("owner_id", user.id)
+
+  if (updateErr) {
+    return { success: false, error: updateErr.message, url: null }
+  }
+
+  return { success: true, url: urlData.publicUrl, error: null }
+}
+

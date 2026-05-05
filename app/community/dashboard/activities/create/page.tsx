@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { createActivity } from "@/lib/actions/activity.actions"
 import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -185,95 +186,51 @@ export default function CreateActivityPage() {
         throw new Error("Tanggal Pelaksanaan tidak boleh sebelum masa pengumpulan dana dimulai.")
       }
 
-      const supabase = createClient()
-      const { data: userData, error: authError } = await supabase.auth.getUser()
-      if (authError || !userData.user) throw new Error("Gagal mengambil sesi pengguna. Pastikan Anda sudah login.")
+      // Build FormData
+      const formData = new FormData()
+      formData.append("title", form.title)
+      formData.append("description", form.description)
+      formData.append("category", form.category)
+      formData.append("startDate", form.startDate)
+      formData.append("endDate", form.endDate)
+      formData.append("executionDate", form.executionDate)
+      formData.append("location", form.location)
+      
+      if (form.latitude !== null) formData.append("latitude", form.latitude.toString())
+      if (form.longitude !== null) formData.append("longitude", form.longitude.toString())
+      
+      formData.append("volunteerQuota", form.volunteerQuota)
+      formData.append("fundingGoal", form.fundingGoal)
+      formData.append("allowItemDonation", form.allowItemDonation.toString())
+      formData.append("isDraft", isDraft.toString())
 
-      const user = userData.user
-
-      // Check community
-      const { data: community, error: commError } = await supabase
-        .from("communities")
-        .select("id")
-        .eq("owner_id", user.id)
-        .single()
-
-      if (commError || !community) {
-        throw new Error("Akun ini tidak memiliki profil komunitas. Pastikan Anda login dengan akun komunitas yang valid.")
-      }
-
-      const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.replace(" ", "") || "sinergilaut-assets"
-
-      // Upload cover image
-      let cover_image_url = null
       if (coverImage) {
-        const fileExt = coverImage.name.split('.').pop()
-        const fileName = `activity_${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-        const { error: uploadError } = await supabase.storage
-          .from(bucketName)
-          .upload(`activities/${fileName}`, coverImage)
-        if (uploadError) throw new Error("Gagal mengupload gambar sampul. (Pastikan bucket storage tersedia)")
-        const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(`activities/${fileName}`)
-        cover_image_url = publicUrlData.publicUrl
+        formData.append("coverImage", coverImage)
       }
 
-      // Upload nota images
-      const nota_urls: string[] = []
-      if (form.allowItemDonation && notaFiles.length > 0) {
-        for (const nota of notaFiles) {
-          const ext = nota.name.split('.').pop()
-          const notaName = `nota_${Math.random().toString(36).substring(2)}_${Date.now()}.${ext}`
-          const { error: notaUploadErr } = await supabase.storage
-            .from(bucketName)
-            .upload(`activity-receipts/${notaName}`, nota)
-          if (notaUploadErr) {
-            console.error("Nota upload error:", notaUploadErr)
-            toast.warning(`Gagal mengupload nota "${nota.name}", dilewati.`)
-            continue
-          }
-          const { data: notaUrlData } = supabase.storage.from(bucketName).getPublicUrl(`activity-receipts/${notaName}`)
-          nota_urls.push(notaUrlData.publicUrl)
-        }
-      }
-
-      // Build items_needed JSON
-      const items_needed = form.allowItemDonation
-        ? neededItems
-            .filter(item => item.item_name.trim() !== "")
-            .map(item => ({
-              item_name: item.item_name.trim(),
-              target: Math.max(1, Number(item.target)),
-              unit_price: Math.max(0, Number(item.unit_price)),
-              donated: 0,
-            }))
-        : []
-
-      const slug = form.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now()
-
-      const { error: insertError } = await supabase
-        .from("activities")
-        .insert({
-          community_id: community.id,
-          title: form.title,
-          slug,
-          description: form.description,
-          category: form.category,
-          status: isDraft ? 'draft' : 'pending_review',
-          start_date: new Date(form.startDate).toISOString(),
-          end_date: form.endDate ? new Date(form.endDate).toISOString() : null,
-          execution_date: new Date(form.executionDate).toISOString(),
-          location: form.location,
-          latitude: form.latitude,
-          longitude: form.longitude,
-          volunteer_quota: parseInt(form.volunteerQuota) || 0,
-          funding_goal: parseInt(form.fundingGoal) || 0,
-          allow_item_donation: form.allowItemDonation,
-          items_needed: items_needed.length > 0 ? items_needed : null,
-          receipt_urls: nota_urls.length > 0 ? nota_urls : null,
-          cover_image_url,
+      if (form.allowItemDonation) {
+        notaFiles.forEach((file) => {
+          formData.append("notaFiles", file)
         })
+        
+        const itemsToSubmit = neededItems
+          .filter(item => item.item_name.trim() !== "")
+          .map(item => ({
+            item_name: item.item_name.trim(),
+            target: Math.max(1, Number(item.target)),
+            unit_price: Math.max(0, Number(item.unit_price)),
+            donated: 0,
+          }))
+          
+        formData.append("itemsNeeded", JSON.stringify(itemsToSubmit))
+      }
 
-      if (insertError) throw insertError
+      // Call Server Action
+      const result = await createActivity(formData)
+      
+      if (!result.success) {
+        throw new Error(result.error)
+      }
 
       if (isDraft) {
         toast.success("Kegiatan disimpan sebagai draft.")

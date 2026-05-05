@@ -6,7 +6,7 @@
  * Donasi barang: Langsung tercatat + tracking pengiriman
  */
 
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 
 // ─── Type Definitions ───────────────────────────────────────────
 
@@ -83,8 +83,10 @@ async function createMidtransTransaction(payload: {
 export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
   const supabase = await createClient()
 
+  const adminSupabase = await createAdminClient()
+
   // 1. Ambil judul activity untuk Midtrans item details
-  const { data: activity } = await supabase
+  const { data: activity } = await adminSupabase
     .from("activities")
     .select("title")
     .eq("id", payload.activityId)
@@ -93,7 +95,7 @@ export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
   const orderId = generateOrderId()
 
   // 2. Buat record donation di DB dengan status pending
-  const { data: donation, error: insertError } = await supabase
+  const { data: donation, error: insertError } = await adminSupabase
     .from("donations")
     .insert({
       activity_id: payload.activityId,
@@ -139,7 +141,7 @@ export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
   }
 
   // 4. Update record dengan snap token
-  await supabase
+  await adminSupabase
     .from("donations")
     .update({
       midtrans_snap_token: midtrans.snapToken,
@@ -168,8 +170,10 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
     return { success: false, error: "Harus ada minimal 1 item untuk donasi barang." }
   }
 
+  const adminSupabase = await createAdminClient()
+
   // 1. Insert donation header
-  const { data: donation, error: insertError } = await supabase
+  const { data: donation, error: insertError } = await adminSupabase
     .from("donations")
     .insert({
       activity_id: payload.activityId,
@@ -201,14 +205,14 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
     courier: item.courier ?? null,
   }))
 
-  const { error: itemsError } = await supabase
+  const { error: itemsError } = await adminSupabase
     .from("donation_items")
     .insert(itemsToInsert)
 
   if (itemsError) {
     console.error("[createItemDonation] items insert error:", itemsError)
     // Rollback: hapus donation header
-    await supabase.from("donations").delete().eq("id", donation.id)
+    await adminSupabase.from("donations").delete().eq("id", donation.id)
     return { success: false, error: "Gagal menyimpan data barang donasi." }
   }
 
@@ -223,9 +227,9 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
  * Ambil semua donasi untuk suatu activity (untuk komunitas/admin)
  */
 export async function getActivityDonations(activityId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("donations")
     .select(`
       *,
@@ -247,9 +251,9 @@ export async function getActivityDonations(activityId: string) {
  * Ambil riwayat donasi milik user yang sedang login
  */
 export async function getMyDonations(userId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("donations")
     .select(`
       id,
@@ -277,9 +281,9 @@ export async function getMyDonations(userId: string) {
  * Konfirmasi penerimaan donasi barang oleh komunitas → ubah status menjadi completed
  */
 export async function confirmItemDonationReceived(donationId: string) {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("donations")
     .update({ status: "completed" })
     .eq("id", donationId)
