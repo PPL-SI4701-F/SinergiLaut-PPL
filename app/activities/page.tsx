@@ -31,24 +31,14 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { formatDate } from "@/lib/utils/helpers"
 
-const locations = ["All Locations", "Jakarta", "Raja Ampat", "Bali", "Surabaya", "Makassar", "Online"]
-const activityTypes = ["All Types", "Cleanup", "Restoration", "Education", "Event"]
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
 export default function ActivitiesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedLocation, setSelectedLocation] = useState("All Locations")
   const [selectedType, setSelectedType] = useState("All Types")
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [supabaseActivities, setSupabaseActivities] = useState<any[]>([])
+  const [availableLocations, setAvailableLocations] = useState<string[]>(["All Locations"])
+  const [availableTypes, setAvailableTypes] = useState<string[]>(["All Types"])
 
   useEffect(() => {
     async function fetchActivities() {
@@ -73,9 +63,18 @@ export default function ActivitiesPage() {
           icon: Leaf,
           fundingGoal: d.funding_goal || 0,
           fundingRaised: d.funding_raised || 0,
-          itemsNeeded: [] // Fallback for real activities lacking detailed item arrays
+          itemsNeeded: [] 
         }))
         setSupabaseActivities(mapped)
+
+        // Derive unique locations
+        const locs = Array.from(new Set(data.map((d: any) => d.location || "Online")))
+        setAvailableLocations(["All Locations", ...locs.sort()])
+
+        // Derive unique categories
+        const types = Array.from(new Set(data.map((d: any) => d.category || "other")))
+        const capitalizedTypes = types.map(t => t.charAt(0).toUpperCase() + t.slice(1))
+        setAvailableTypes(["All Types", ...capitalizedTypes.sort()])
       }
     }
     fetchActivities()
@@ -135,7 +134,7 @@ export default function ActivitiesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[160px]">
-                    {locations.map((location) => (
+                    {availableLocations.map((location) => (
                       <DropdownMenuItem 
                         key={location}
                         onClick={() => setSelectedLocation(location)}
@@ -157,7 +156,7 @@ export default function ActivitiesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[140px]">
-                    {activityTypes.map((type) => (
+                    {availableTypes.map((type) => (
                       <DropdownMenuItem 
                         key={type}
                         onClick={() => setSelectedType(type)}

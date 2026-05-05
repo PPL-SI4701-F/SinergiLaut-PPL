@@ -13,6 +13,7 @@ import {
   Anchor, Shield, Sparkles, Fish
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 interface JourneyMilestone {
   id: string
@@ -45,13 +46,6 @@ const values = [
   { icon: Globe, title: "Inklusif", description: "Platform kami terbuka untuk semua — dari nelayan tradisional hingga korporat besar.", color: "#06958a", bg: "rgba(6,149,138,0.08)" },
 ]
 
-const stats = [
-  { value: "2.4K+", label: "Relawan Aktif", icon: Users },
-  { value: "180+", label: "Komunitas", icon: Globe },
-  { value: "560+", label: "Kegiatan", icon: Award },
-  { value: "Rp 5M+", label: "Dana Terhimpun", icon: Banknote },
-]
-
 const fallbackMilestones: JourneyMilestone[] = [
   { id: "1", year: 2020, title: "SinergiLaut Didirikan", description: "Platform lahir dari keresahan sulitnya koordinasi komunitas konservasi laut di Indonesia.", impact_stat: "Misi dimulai", icon: "Waves", order_index: 1, is_published: true, created_at: "", updated_at: "" },
   { id: "2", year: 2021, title: "Komunitas Pertama Bergabung", description: "10 komunitas dari Jawa, Bali, Sulawesi bergabung. 500 relawan aktif terdaftar.", impact_stat: "10 komunitas, 500+ relawan", icon: "Users", order_index: 2, is_published: true, created_at: "", updated_at: "" },
@@ -65,17 +59,49 @@ async function getMilestones(): Promise<JourneyMilestone[]> {
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
-      .from("journey_milestones").select("*")
-      .eq("is_published", true).order("order_index", { ascending: true })
-    if (error || !data || data.length === 0) return fallbackMilestones
+      .from("journey_milestones")
+      .select("*")
+      .eq("is_published", true)
+      .order("order_index", { ascending: true })
+    
+    if (error || !data || data.length === 0) {
+      return fallbackMilestones
+    }
     return data as JourneyMilestone[]
-  } catch {
+  } catch (err) {
+    console.error("Failed to fetch milestones:", err)
     return fallbackMilestones
   }
 }
 
 export default async function AboutPage() {
   const milestones = await getMilestones()
+  const homeStats = await getHomePageStats()
+
+  const stats = [
+    { 
+      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}+`, 
+      label: "Relawan Aktif", 
+      icon: Users 
+    },
+    { 
+      value: `${homeStats.ongoingActivities}+`, 
+      label: "Kegiatan", 
+      icon: Award 
+    },
+    { 
+      value: `${homeStats.protectedAreas}+`, 
+      label: "Area Terlindungi", 
+      icon: Globe 
+    },
+    { 
+      value: homeStats.totalDonations >= 1000000 
+        ? `Rp ${(homeStats.totalDonations / 1000000).toFixed(1)}Jt+`
+        : `Rp ${homeStats.totalDonations.toLocaleString("id-ID")}`, 
+      label: "Dana Terhimpun", 
+      icon: Banknote 
+    },
+  ]
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
@@ -850,12 +876,7 @@ export default async function AboutPage() {
           </div>
         </section>
 
-      </main>
-      <Footer />
-    </div>
-  )
-}
-  <section className="about-cta">
+        <section className="about-cta">
           <div className="about-cta-bg" />
           <div className="about-cta-glow" />
           <div className="about-cta-content">
@@ -880,10 +901,6 @@ export default async function AboutPage() {
 
       </main>
       <Footer />
-    </div>
-  )
-}
- />
     </div>
   )
 }
