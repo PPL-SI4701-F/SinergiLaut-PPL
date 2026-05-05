@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -26,6 +26,9 @@ export default function UserProfilePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmittingVerification, setIsSubmittingVerification] = useState(false)
   const [isUploadingKtp, setIsUploadingKtp] = useState(false)
+
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   // Basic profile form
   const [form, setForm] = useState({
@@ -73,24 +76,79 @@ export default function UserProfilePage() {
     setVerifyForm({ ...verifyForm, [e.target.name]: e.target.value })
   }
 
+  // Handle avatar upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user || !profile) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Ukuran foto maksimal 2MB.")
+      return
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar (JPG, PNG, dll).")
+      return
+    }
+
+    setIsUploadingAvatar(true)
+    const fileExt = file.name.split(".").pop()
+    const filePath = `avatars/${user.id}/avatar-${Date.now()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from("sinergilaut-assets")
+      .upload(filePath, file, { upsert: true })
+
+    if (uploadError) {
+      console.error("Avatar upload error:", uploadError)
+      toast.error("Gagal mengupload foto profil.")
+      setIsUploadingAvatar(false)
+      return
+    }
+
+    const { data: urlData } = supabase.storage.from("sinergilaut-assets").getPublicUrl(filePath)
+    
+    // Update profile
+    const { error: updateError } = await supabase.from("profiles").update({
+      avatar_url: urlData.publicUrl
+    }).eq("id", profile.id)
+
+    if (updateError) {
+      toast.error("Gagal menyimpan foto profil.")
+    } else {
+      toast.success("Foto profil berhasil diperbarui!")
+      await refreshProfile()
+    }
+    
+    setIsUploadingAvatar(false)
+  }
+
   // Handle basic profile update
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!profile) return
     setIsLoading(true)
-    const { error } = await supabase.from("profiles").update({
-      full_name: form.full_name,
-      phone: form.phone,
-      bio: form.bio,
-    }).eq("id", profile.id)
+    
+    try {
+      const { error } = await supabase.from("profiles").update({
+        full_name: form.full_name,
+        phone: form.phone,
+        bio: form.bio,
+      }).eq("id", profile.id)
 
-    if (error) {
-      toast.error("Gagal memperbarui profil.")
-    } else {
-      toast.success("Profil berhasil diperbarui!")
-      await refreshProfile()
+      if (error) {
+        console.error("Profile update error:", error)
+        toast.error("Gagal memperbarui profil: " + error.message)
+      } else {
+        toast.success("Profil berhasil diperbarui!")
+        await refreshProfile()
+      }
+    } catch (err: any) {
+      console.error("Unexpected error during profile update:", err)
+      toast.error("Terjadi kesalahan sistem saat menyimpan.")
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   // Handle KTP upload
@@ -228,16 +286,34 @@ export default function UserProfilePage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center gap-6">
-                  <div className="relative">
+                  <div className="relative group">
                     {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
+                      <img src={profile.avatar_url} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-background" />
                     ) : (
-                      <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold">
+                      <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold border-2 border-background">
                         {getInitials(profile?.full_name ?? profile?.email ?? "?")}
                       </div>
                     )}
-                    <button type="button" className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center text-primary-foreground">
-                      <Camera className="h-3.5 w-3.5" />
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 bg-background/50 rounded-full flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    )}
+                    <input 
+                      type="file" 
+                      ref={avatarInputRef} 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={handleAvatarUpload} 
+                      disabled={isUploadingAvatar}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center text-primary-foreground shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                    >
+                      <Camera className="h-4 w-4" />
                     </button>
                   </div>
                   <div>
