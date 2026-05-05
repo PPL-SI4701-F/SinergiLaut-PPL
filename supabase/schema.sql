@@ -525,3 +525,13 @@ SELECT * FROM (VALUES
    'Fitur lengkap & real-time', 'Zap', 6, true)
 ) AS v(year, title, description, impact_stat, icon, order_index, is_published)
 WHERE NOT EXISTS (SELECT 1 FROM journey_milestones LIMIT 1);
+
+-- ============================================
+-- STORAGE BUCKETS & POLICIES
+-- ============================================
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('sinergilaut-assets', 'sinergilaut-assets', true) 
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access to SinergiLaut Assets" 
+ON storage.objects FOR SELECT USING ( bucket_id = 'sinergilaut-assets' );
