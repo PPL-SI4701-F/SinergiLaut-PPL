@@ -25,26 +25,26 @@ import {
 const publicNavLinks = [
   { href: "/activities", label: "Kegiatan" },
   { href: "/community", label: "Komunitas" },
-  { href: "/endowment", label: "Dana Abadi" },
+
   { href: "/about", label: "Tentang" },
 ]
 
 const userNavLinks = [
   { href: "/activities", label: "Kegiatan" },
   { href: "/community", label: "Komunitas" },
-  { href: "/endowment", label: "Dana Abadi" },
+
   { href: "/user/dashboard", label: "Dashboard" },
 ]
 
 const communityNavLinks = [
   { href: "/activities", label: "Kegiatan" },
-  { href: "/endowment", label: "Dana Abadi" },
+
   { href: "/community/dashboard", label: "Dashboard Komunitas" },
 ]
 
 const adminNavLinks = [
   { href: "/admin/dashboard", label: "Dashboard Admin" },
-  { href: "/endowment", label: "Dana Abadi" },
+
 ]
 
 // Tipe data notifikasi

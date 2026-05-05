@@ -850,8 +850,12 @@ export default async function AboutPage() {
           </div>
         </section>
 
-        {/* ── CTA ── */}
-        <section className="about-cta">
+      </main>
+      <Footer />
+    </div>
+  )
+}
+  <section className="about-cta">
           <div className="about-cta-bg" />
           <div className="about-cta-glow" />
           <div className="about-cta-content">
@@ -876,6 +880,10 @@ export default async function AboutPage() {
 
       </main>
       <Footer />
+    </div>
+  )
+}
+ />
     </div>
   )
 }
