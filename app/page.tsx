@@ -8,11 +8,6 @@ import {
   Sparkles, Fish, Waves, Anchor, Zap, ShieldCheck,
   TrendingUp, Globe, Star
 } from "lucide-react"
-const stats = [
-  { icon: Users, value: "15,000+", label: "Relawan Aktif" },
-  { icon: Globe, value: "250+", label: "Kegiatan Berlangsung" },
-  { icon: Anchor, value: "50+", label: "Area Pesisir Terlindungi" },
-  { icon: Heart, value: "Rp 2,5M+", label: "Dana Terkumpul" },
 ]
 
 const pillars = [
@@ -50,8 +45,36 @@ const donationSteps = [
 import { createClient } from "@/lib/supabase/server"
 import { formatDate } from "@/lib/utils/helpers"
 import { Navigation } from "@/components/navigation"
+import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 export default async function HomePage() {
+  const homeStats = await getHomePageStats()
+  
+  const stats = [
+    { 
+      icon: Users, 
+      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}${homeStats.totalVolunteers > 10 ? "+" : ""}`, 
+      label: "Relawan Aktif" 
+    },
+    { 
+      icon: Globe, 
+      value: `${homeStats.ongoingActivities}${homeStats.ongoingActivities > 5 ? "+" : ""}`, 
+      label: "Kegiatan Berlangsung" 
+    },
+    { 
+      icon: Anchor, 
+      value: `${homeStats.protectedAreas}${homeStats.protectedAreas > 5 ? "+" : ""}`, 
+      label: "Area Pesisir Terlindungi" 
+    },
+    { 
+      icon: Heart, 
+      value: homeStats.totalDonations >= 1000000 
+        ? `Rp ${(homeStats.totalDonations / 1000000).toFixed(1)}Jt+`
+        : `Rp ${homeStats.totalDonations.toLocaleString("id-ID")}`, 
+      label: "Dana Terkumpul" 
+    },
+  ]
+
   const supabase = await createClient()
   const { data: realActivities } = await supabase
     .from("activities")

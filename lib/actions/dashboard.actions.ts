@@ -235,6 +235,46 @@ export async function rejectReportAction(id: string) {
   return { success: true }
 }
 
+export async function getHomePageStats() {
+  const supabase = await createClient()
+
+  // 1. Relawan Aktif: Count of profiles with volunteer_status = 'approved'
+  const { count: totalVolunteers } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("volunteer_status", "approved")
+
+  // 2. Kegiatan Berlangsung: Count of activities with status = 'published'
+  const { count: ongoingActivities } = await supabase
+    .from("activities")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "published")
+
+  // 3. Area Pesisir Terlindungi: Count of unique locations from published/completed activities
+  const { data: locations } = await supabase
+    .from("activities")
+    .select("location")
+    .in("status", ["published", "completed"])
+  
+  const uniqueLocations = new Set(locations?.map(l => l.location)).size
+
+  // 4. Dana Terkumpul: Sum of amount from donations with status = 'completed'
+  const { data: donations } = await supabase
+    .from("donations")
+    .select("amount")
+    .eq("status", "completed")
+    .eq("type", "money")
+
+  const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
+
+  return {
+    totalVolunteers: totalVolunteers || 0,
+    ongoingActivities: ongoingActivities || 0,
+    protectedAreas: uniqueLocations || 0,
+    totalDonations: totalDonations || 0
+  }
+}
+
 // --- COMMUNITY DASHBOARD ---
 
 export async function getCommunityDashboardStats(userId: string) {

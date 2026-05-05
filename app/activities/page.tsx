@@ -176,15 +176,20 @@ export default function ActivitiesPage() {
         <section className="py-12 lg:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <p className="text-muted-foreground">
-                Showing <span className="font-semibold text-foreground">{filteredActivities.length}</span> activities
-              </p>
+              {selectedLocation !== "All Locations" && (
+                <p className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{filteredActivities.length}</span> kegiatan ditemukan
+                </p>
+              )}
             </div>
 
             {filteredActivities.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 {filteredActivities.map((activity) => (
-                  <Card key={activity.id} className="overflow-hidden group hover:shadow-lg transition-shadow">
+                  <Card key={activity.id} className="overflow-hidden group hover:shadow-lg transition-shadow relative">
+                    <Link href={`/activities/${activity.id}`} className="absolute inset-0 z-10">
+                      <span className="sr-only">View activity details</span>
+                    </Link>
                     <div className="relative h-48 overflow-hidden">
                       <Image
                         src={activity.image}
