@@ -8,7 +8,6 @@ import {
   Sparkles, Fish, Waves, Anchor, Zap, ShieldCheck,
   TrendingUp, Globe, Star
 } from "lucide-react"
-]
 
 const pillars = [
   {

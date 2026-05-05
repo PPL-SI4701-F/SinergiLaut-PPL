@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
-import { formatDate } from "@/lib/utils/helpers"
+import { formatDate, formatCurrency } from "@/lib/utils/helpers"
 
 export default function ActivitiesPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -68,11 +68,11 @@ export default function ActivitiesPage() {
         setSupabaseActivities(mapped)
 
         // Derive unique locations
-        const locs = Array.from(new Set(data.map((d: any) => d.location || "Online")))
+        const locs = Array.from(new Set(data.map((d: any) => d.location || "Online"))) as string[]
         setAvailableLocations(["All Locations", ...locs.sort()])
 
         // Derive unique categories
-        const types = Array.from(new Set(data.map((d: any) => d.category || "other")))
+        const types = Array.from(new Set(data.map((d: any) => d.category || "other"))) as string[]
         const capitalizedTypes = types.map(t => t.charAt(0).toUpperCase() + t.slice(1))
         setAvailableTypes(["All Types", ...capitalizedTypes.sort()])
       }

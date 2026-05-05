@@ -415,13 +415,6 @@ export default function CommunityPage() {
             )}
           </div>
         </section>
-      </main>
-
-      <Footer />
-    </div>
-  )
-}
-tion>
 
         {/* Testimonials */}
         <section className="py-20 lg:py-28 bg-secondary">
