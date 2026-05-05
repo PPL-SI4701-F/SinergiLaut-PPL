@@ -113,19 +113,24 @@ export async function POST(req: NextRequest) {
         .eq("id", donation.activity_id)
         .single()
 
-      if (activity?.communities && Array.isArray(activity.communities) ? activity.communities[0]?.owner_id : (activity?.communities as any)?.owner_id) {
-        const communityOwner = Array.isArray(activity.communities) ? activity.communities[0].owner_id : (activity.communities as any).owner_id
-        const formattedAmount = new Intl.NumberFormat("id-ID", {
-          style: "currency", currency: "IDR", minimumFractionDigits: 0,
-        }).format(donation.amount ?? 0)
+      if (activity && activity.communities) {
+        const ownerId = Array.isArray(activity.communities) 
+          ? activity.communities[0]?.owner_id 
+          : (activity.communities as any)?.owner_id
 
-        await supabase.from("notifications").insert({
-          user_id: communityOwner,
-          title: "Donasi Berhasil Diterima! 🎉",
-          message: `${donation.donor_name} berhasil mendonasikan ${formattedAmount} untuk kegiatan "${activity?.title}".`,
-          type: "success",
-          link: `/community/dashboard`,
-        })
+        if (ownerId) {
+          const formattedAmount = new Intl.NumberFormat("id-ID", {
+            style: "currency", currency: "IDR", minimumFractionDigits: 0,
+          }).format(donation.amount ?? 0)
+
+          await supabase.from("notifications").insert({
+            user_id: ownerId,
+            title: "Donasi Berhasil Diterima! 🎉",
+            message: `${donation.donor_name} berhasil mendonasikan ${formattedAmount} untuk kegiatan "${activity.title}".`,
+            type: "success",
+            link: `/community/dashboard`,
+          })
+        }
       }
     }
 

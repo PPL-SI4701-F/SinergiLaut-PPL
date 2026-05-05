@@ -5,7 +5,7 @@
  * Mengelola data "Perjalanan Kami" dari tabel journey_milestones
  */
 
-import { createClient } from "@/lib/supabase/client"
+import { createAdminClient } from "@/lib/supabase/server"
 
 export interface JourneyMilestone {
   id: string
@@ -33,7 +33,7 @@ export interface UpsertMilestonePayload {
 
 /** Ambil semua milestone yang dipublish, diurutkan berdasarkan order_index */
 export async function getPublishedMilestones(): Promise<JourneyMilestone[]> {
-  const supabase = createClient()
+  const supabase = await createAdminClient()
 
   const { data, error } = await supabase
     .from("journey_milestones")
@@ -51,7 +51,7 @@ export async function getPublishedMilestones(): Promise<JourneyMilestone[]> {
 
 /** [Admin] Ambil semua milestone termasuk yang belum dipublish */
 export async function getAllMilestones() {
-  const supabase = createClient()
+  const supabase = await createAdminClient()
 
   const { data, error } = await supabase
     .from("journey_milestones")
@@ -68,7 +68,7 @@ export async function getAllMilestones() {
 
 /** [Admin] Buat milestone baru */
 export async function createMilestone(payload: UpsertMilestonePayload) {
-  const supabase = createClient()
+  const supabase = await createAdminClient()
 
   const { data, error } = await supabase
     .from("journey_milestones")
@@ -94,7 +94,7 @@ export async function createMilestone(payload: UpsertMilestonePayload) {
 
 /** [Admin] Update milestone yang sudah ada */
 export async function updateMilestone(id: string, payload: Partial<UpsertMilestonePayload>) {
-  const supabase = createClient()
+  const supabase = await createAdminClient()
 
   const { data, error } = await supabase
     .from("journey_milestones")
@@ -121,7 +121,7 @@ export async function updateMilestone(id: string, payload: Partial<UpsertMilesto
 
 /** [Admin] Hapus milestone */
 export async function deleteMilestone(id: string) {
-  const supabase = createClient()
+  const supabase = await createAdminClient()
 
   const { error } = await supabase
     .from("journey_milestones")

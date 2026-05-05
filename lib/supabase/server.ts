@@ -27,27 +27,19 @@ export async function createClient() {
   )
 }
 
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+
 /** Service-role client (admin, bypasses RLS). Use only in trusted server context. */
 export async function createAdminClient() {
-  const cookieStore = await cookies()
-  return createServerClient(
+  // Gunakan raw supabase-js client TANPA session/cookies agar token user tidak menimpa service role
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // ignore in Server Components
-          }
-        },
-      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      }
     }
   )
 }
