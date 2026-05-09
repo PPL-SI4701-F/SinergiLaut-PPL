@@ -109,7 +109,7 @@ export default async function AboutPage() {
           min-height: 92vh;
           display: flex;
           flex-direction: column;
-          justify-content: flex-end;
+          justify-content: center;
           overflow: hidden;
         }
         .about-hero-bg {

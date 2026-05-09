@@ -165,11 +165,6 @@ export default function CommunityPage() {
             <p className="mt-6 text-lg text-card/90 max-w-2xl mx-auto leading-relaxed">
               Discover and join registered conservation communities, or apply to register your own organization and start making an impact.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto bg-card/10 text-card border-card/30 hover:bg-card/20 hover:text-card" asChild>
-                <Link href="#communities">Browse Communities</Link>
-              </Button>
-            </div>
           </div>
         </section>
 
