@@ -83,12 +83,12 @@ export default function ActivitiesPage() {
   const allActivities = supabaseActivities
 
   const filteredActivities = allActivities.filter((activity) => {
-    const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         activity.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = (activity.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (activity.description || "").toLowerCase().includes(searchQuery.toLowerCase())
     const matchesLocation = selectedLocation === "All Locations" || 
-                          activity.location.toLowerCase().includes(selectedLocation.toLowerCase())
+                          (activity.location || "").toLowerCase() === selectedLocation.toLowerCase()
     const matchesType = selectedType === "All Types" || 
-                       activity.type === selectedType.toLowerCase()
+                       (activity.type || "").toLowerCase() === selectedType.toLowerCase()
     return matchesSearch && matchesLocation && matchesType
   })
 

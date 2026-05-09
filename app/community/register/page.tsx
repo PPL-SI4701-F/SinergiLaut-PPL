@@ -190,8 +190,13 @@ export default function CommunityRegisterPage() {
     switch (currentStep) {
       case 1:
         return formData.communityName && formData.shortDescription
-      case 2:
-        return formData.adminName && formData.email && formData.phone && formData.password && formData.confirmPassword
+      case 2: {
+        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+        const isValidPhone = /^[\d\+\-\s]+$/.test(formData.phone) && formData.phone.replace(/\D/g, '').length >= 9
+        const isValidPassword = formData.password.length >= 8
+        const isPasswordMatch = formData.password === formData.confirmPassword
+        return !!(formData.adminName && isValidEmail && isValidPhone && isValidPassword && isPasswordMatch)
+      }
       case 3:
         return formData.region && formData.selectedActivities.length > 0
       case 4:
@@ -874,15 +879,27 @@ export default function CommunityRegisterPage() {
 
               {/* Navigation Buttons */}
               <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Previous
-                </Button>
+                {currentStep === 1 ? (
+                  <Button
+                    variant="outline"
+                    asChild
+                    className="gap-2"
+                  >
+                    <Link href="/community">
+                      <ArrowLeft className="w-4 h-4" />
+                      Kembali
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    className="gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                )}
 
                 {currentStep < 5 ? (
                   <Button onClick={nextStep} disabled={!canProceed()} className="gap-2">

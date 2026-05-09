@@ -77,7 +77,7 @@ export default function AdminDashboardPage() {
   const alertCards = [
     { label: `${pendingCommunities.length} komunitas`, sub: "Menunggu verifikasi", color: "bg-yellow-50 border-yellow-200 text-yellow-800", icon: "🏢", href: "/admin/communities" },
     { label: `${pendingActivities.length} kegiatan`, sub: "Menunggu persetujuan", color: "bg-blue-50 border-blue-200 text-blue-800", icon: "📋", href: "/admin/activities" },
-    { label: `${pendingReports.length} laporan`, sub: "Menunggu validasi", color: "bg-green-50 border-green-200 text-green-800", icon: "📄", href: "/admin/activities" },
+    { label: `${pendingReports.length} laporan`, sub: "Menunggu validasi", color: "bg-green-50 border-green-200 text-green-800", icon: "📄", href: "/admin/reports" },
     { label: `${pendingVolunteers} pengguna`, sub: "Menunggu verifikasi data diri", color: "bg-purple-50 border-purple-200 text-purple-800", icon: "👤", href: "/admin/users" },
   ]
 

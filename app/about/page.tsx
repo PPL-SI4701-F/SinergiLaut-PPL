@@ -625,14 +625,6 @@ export default async function AboutPage() {
             <p className="about-hero-desc">
               Platform digital yang mempertemukan komunitas, relawan, dan donatur dalam satu ekosistem terintegrasi untuk melindungi lautan Indonesia.
             </p>
-            <div className="about-hero-btns">
-              <Link href="/activities" className="about-hero-btn-primary">
-                Lihat Kegiatan <ArrowRight style={{ width: 16, height: 16 }} />
-              </Link>
-              <Link href="/register" className="about-hero-btn-ghost">
-                Bergabung Gratis
-              </Link>
-            </div>
           </div>
 
           {/* Wave divider */}

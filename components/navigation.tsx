@@ -103,7 +103,7 @@ export function Navigation() {
   const handleSignOut = async () => {
     await signOut()
     toast.success("Berhasil keluar.")
-    router.push("/")
+    window.location.href = "/"
   }
 
   // ─── Notifications ────────────────────────────────────────────────────────
