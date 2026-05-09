@@ -267,11 +267,18 @@ export async function getHomePageStats() {
 
   const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
 
+  // 5. Jumlah Komunitas: Count of verified communities
+  const { count: totalCommunities } = await supabase
+    .from("communities")
+    .select("*", { count: "exact", head: true })
+    .eq("is_verified", true)
+
   return {
     totalVolunteers: totalVolunteers || 0,
     ongoingActivities: ongoingActivities || 0,
     protectedAreas: uniqueLocations || 0,
-    totalDonations: totalDonations || 0
+    totalDonations: totalDonations || 0,
+    totalCommunities: totalCommunities || 0
   }
 }
 
