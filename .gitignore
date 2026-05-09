@@ -52,3 +52,15 @@ pnpm-debug.log*
 
 # Dokumentasi Internal / Sisa Fitur
 JIRA*/
+*.pdf
+scripts/diagnose-db.ts
+scripts/apply-supabase-sql.ts
+scripts/fix-storage-rls.sql
+scripts/grant-permissions.ts
+scripts/toggle-rls.ts
+
+# AI Agent Rules
+.clinerules/
+.cursor/
+.windsurf/
+AGENTS.md
