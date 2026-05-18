@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createNotification } from "@/lib/actions/notification.actions"
 
 export async function createActivity(formData: FormData) {
   try {
@@ -135,6 +136,43 @@ export async function createActivity(formData: FormData) {
     if (insertError) {
       console.error("DB Insert err:", insertError)
       return { success: false, error: insertError.message || "Gagal menyimpan kegiatan ke database." }
+    }
+
+    // Notifikasi konfirmasi ke komunitas
+    if (!isDraft) {
+      await createNotification(
+        user.id,
+        "Kegiatan Diajukan untuk Review 📋",
+        `Kegiatan "${title}" berhasil diajukan dan sedang menunggu persetujuan admin. Kami akan memberitahumu setelah direview.`,
+        "info",
+        "/community/dashboard"
+      )
+
+      // Notifikasi ke semua admin bahwa ada kegiatan baru pending review
+      const { data: admins } = await adminSupabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin")
+
+      if (admins && admins.length > 0) {
+        for (const admin of admins) {
+          await createNotification(
+            admin.id,
+            "Kegiatan Baru Menunggu Review 📋",
+            `Kegiatan "${title}" telah diajukan oleh komunitas dan menunggu persetujuan admin.`,
+            "info",
+            "/admin/activities"
+          )
+        }
+      }
+    } else {
+      await createNotification(
+        user.id,
+        "Kegiatan Disimpan sebagai Draft 📝",
+        `Kegiatan "${title}" berhasil disimpan sebagai draft. Kamu bisa melanjutkan dan mengajukannya kapan saja.`,
+        "info",
+        "/community/dashboard"
+      )
     }
 
     return { success: true }

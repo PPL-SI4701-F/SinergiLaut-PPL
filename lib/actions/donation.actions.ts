@@ -7,6 +7,7 @@
  */
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createNotification } from "@/lib/actions/notification.actions"
 
 // ─── Type Definitions ───────────────────────────────────────────
 
@@ -216,10 +217,46 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
     return { success: false, error: "Gagal menyimpan data barang donasi." }
   }
 
+  // Ambil judul activity + owner komunitas untuk notifikasi
+  const { data: activity } = await adminSupabase
+    .from("activities")
+    .select("title, communities(owner_id)")
+    .eq("id", payload.activityId)
+    .single()
+
+  const activityTitle = activity?.title ?? "kegiatan"
+  const itemCount = payload.items.length
+  const communityOwnerId = Array.isArray(activity?.communities)
+    ? activity.communities[0]?.owner_id
+    : (activity?.communities as any)?.owner_id
+
+  // Notifikasi konfirmasi ke user donor
+  if (payload.userId) {
+    await createNotification(
+      payload.userId,
+      "Donasi Barang Terkirim 📦",
+      `${itemCount} jenis barang untuk kegiatan "${activityTitle}" berhasil dicatat. Komunitas akan mengkonfirmasi penerimaan barang.`,
+      "info",
+      "/user/dashboard"
+    )
+  }
+
+  // Notifikasi ke komunitas bahwa ada donasi barang masuk
+  if (communityOwnerId) {
+    const donorLabel = payload.isAnonymous ? "Donatur Anonim" : payload.donorName
+    await createNotification(
+      communityOwnerId,
+      "Donasi Barang Masuk 📦",
+      `${donorLabel} mengirimkan ${itemCount} jenis barang untuk kegiatan "${activityTitle}". Segera konfirmasi penerimaan.`,
+      "info",
+      "/community/dashboard"
+    )
+  }
+
   return {
     success: true,
     donationId: donation.id,
-    itemCount: payload.items.length,
+    itemCount,
   }
 }
 
