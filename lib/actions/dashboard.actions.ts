@@ -285,7 +285,9 @@ export async function getCommunityDashboardStats(userId: string) {
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (!community) {
     return { totalActivities: 0, totalVolunteers: 0, totalDonations: 0, verifiedReports: "0/0" }
@@ -333,12 +335,14 @@ export async function getCommunityDashboardStats(userId: string) {
 
 export async function getCommunityActivities(userId: string) {
   const adminSupabase = await createAdminClient()
-  
+
   const { data: community } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (!community) return []
 
@@ -416,7 +420,9 @@ export async function getCommunityProfile() {
     .from("communities")
     .select("*")
     .eq("owner_id", user.id)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (error || !data) {
     console.error("[getCommunityProfile] error:", error)
@@ -452,7 +458,7 @@ export async function updateCommunityProfile(communityId: string, payload: {
     .select("id")
     .eq("id", communityId)
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (checkErr || !existing) {
     return { success: false, error: "Akses ditolak. Komunitas ini bukan milik akun Anda." }

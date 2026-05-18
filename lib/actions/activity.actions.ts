@@ -18,11 +18,13 @@ export async function createActivity(formData: FormData) {
       .from("communities")
       .select("id")
       .eq("owner_id", user.id)
-      .single()
+      .eq("is_verified", true)
+      .limit(1)
+      .maybeSingle()
 
     if (commError || !community) {
       console.error("[createActivity] error getting community:", commError, "user.id:", user.id)
-      return { success: false, error: "Akun ini tidak memiliki profil komunitas. Pastikan Anda login dengan akun komunitas yang valid." }
+      return { success: false, error: "Akun ini tidak memiliki komunitas terverifikasi. Pastikan komunitas Anda sudah disetujui oleh admin." }
     }
 
     const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.replace(" ", "") || "sinergilaut-assets"
