@@ -25,15 +25,15 @@ export async function login(formData: FormData) {
   
   if (data?.user) {
     const role = data.user.user_metadata?.role || "user";
+    let redirectTo = "/user/dashboard";
     if (role === "admin") {
-      redirect("/admin/dashboard");
+      redirectTo = "/admin/dashboard";
     } else if (role === "community") {
-      redirect("/community/dashboard");
-    } else {
-      redirect("/user/dashboard");
+      redirectTo = "/community/dashboard";
     }
+    return { success: true, redirectTo };
   } else {
-    redirect("/");
+    return { error: "Login failed" };
   }
 }
 
