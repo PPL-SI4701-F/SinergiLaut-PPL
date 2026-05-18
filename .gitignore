@@ -49,6 +49,7 @@ pnpm-debug.log*
 # Temporary & AI Agents Folders
 .agents/
 .gemini/
+.claude/
 
 # Dokumentasi Internal / Sisa Fitur
 JIRA*/
@@ -58,6 +59,10 @@ scripts/apply-supabase-sql.ts
 scripts/fix-storage-rls.sql
 scripts/grant-permissions.ts
 scripts/toggle-rls.ts
+
+# Legacy seed scripts (digantikan prisma/seed.ts, mengandung hardcoded credentials)
+scripts/seed-admin.mjs
+scripts/seed-community.mjs
 
 # AI Agent Rules
 .clinerules/

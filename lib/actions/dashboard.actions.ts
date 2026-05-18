@@ -2,38 +2,31 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
-import { getEndowmentStats } from "@/lib/actions/endowment.actions"
 
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
   const adminSupabase = await createAdminClient()
 
-  // Total communities
-  const { count: totalCommunities } = await adminSupabase
-    .from("communities")
-    .select("*", { count: "exact", head: true })
+  const [
+    { count: totalCommunities },
+    { count: totalUsers },
+    { count: totalActivities },
+    { data: donationRows },
+  ] = await Promise.all([
+    adminSupabase.from("communities").select("*", { count: "exact", head: true }),
+    adminSupabase.from("profiles").select("*", { count: "exact", head: true }),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).in("status", ["published", "completed"]),
+    adminSupabase.from("donations").select("amount").eq("type", "money").eq("status", "completed"),
+  ])
 
-  // Active users
-  const { count: totalUsers } = await adminSupabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-
-  // Active activities
-  const { count: totalActivities } = await adminSupabase
-    .from("activities")
-    .select("*", { count: "exact", head: true })
-    .in("status", ["published", "completed"])
-
-  // Endowment stats
-  const { totalRaised } = await getEndowmentStats()
-  const totalEndowment = totalRaised
+  const totalDonations = donationRows?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
 
   return {
     totalCommunities: totalCommunities || 0,
     totalUsers: totalUsers || 0,
     totalActivities: totalActivities || 0,
-    totalEndowment
+    totalDonations,
   }
 }
 

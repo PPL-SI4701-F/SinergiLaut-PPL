@@ -32,7 +32,19 @@ async function main() {
   await prisma.communities.deleteMany({})
   await prisma.journey_milestones.deleteMany({})
   await prisma.profiles.deleteMany({})
-  console.log('   ✅ Database dibersihkan.')
+  console.log('   ✅ Tabel database dibersihkan.')
+
+  // Hapus semua auth users
+  console.log('🔐 Membersihkan auth users...')
+  const { data: authList } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  if (authList?.users?.length) {
+    for (const u of authList.users) {
+      await supabase.auth.admin.deleteUser(u.id)
+    }
+    console.log(`   ✅ ${authList.users.length} auth user dihapus.`)
+  } else {
+    console.log('   ℹ️  Tidak ada auth user.')
+  }
 
   async function createAuthUser(email: string, fullName: string, role: user_role) {
     const password = 'Password@2026'
@@ -82,6 +94,7 @@ async function main() {
 
   const userApproved1 = await createAuthUser('approved1@user.com', 'Relawan Aktif 1', 'user')
   const userApproved2 = await createAuthUser('approved2@user.com', 'Relawan Aktif 2', 'user')
+  await prisma.profiles.updateMany({ where: { id: { in: [userApproved1.id, userApproved2.id] } }, data: { volunteer_status: 'approved' } })
 
   const userRejected1 = await createAuthUser('rejected1@user.com', 'Relawan Gagal 1', 'user')
   const userRejected2 = await createAuthUser('rejected2@user.com', 'Relawan Gagal 2', 'user')

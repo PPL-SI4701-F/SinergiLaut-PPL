@@ -22,7 +22,7 @@ import {
 import { getVolunteersPendingVerification } from "@/lib/actions/volunteer-verification.actions"
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({ totalCommunities: 0, totalUsers: 0, totalActivities: 0, totalEndowment: 0 })
+  const [stats, setStats] = useState({ totalCommunities: 0, totalUsers: 0, totalActivities: 0, totalDonations: 0 })
   const [pendingCommunities, setPendingCommunities] = useState<any[]>([])
   const [pendingActivities, setPendingActivities] = useState<any[]>([])
   const [pendingReports, setPendingReports] = useState<any[]>([])
@@ -71,7 +71,7 @@ export default function AdminDashboardPage() {
     { label: "Total Komunitas", value: stats.totalCommunities, icon: Building2, color: "text-primary" },
     { label: "Pengguna Aktif", value: stats.totalUsers, icon: Users, color: "text-blue-600" },
     { label: "Kegiatan Aktif", value: stats.totalActivities, icon: Activity, color: "text-green-600" },
-    { label: "Total Dana Abadi", value: formatCurrency(stats.totalEndowment), icon: Banknote, color: "text-amber-600" },
+    { label: "Total Donasi Terkumpul", value: formatCurrency(stats.totalDonations), icon: Banknote, color: "text-amber-600" },
   ]
 
   const alertCards = [
