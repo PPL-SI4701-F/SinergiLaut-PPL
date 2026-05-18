@@ -108,6 +108,15 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
     )
   }
 
+  // Notifikasi konfirmasi ke user yang mendaftar
+  await createNotification(
+    payload.userId,
+    "Pendaftaran Volunteer Dikirim 📋",
+    `Pendaftaran Anda sebagai relawan untuk kegiatan "${activityTitle}" sedang diproses. Tunggu konfirmasi dari komunitas.`,
+    "info",
+    "/user/dashboard"
+  )
+
   return { success: true, data }
 }
 
