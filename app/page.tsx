@@ -6,14 +6,8 @@ import {
   ArrowRight, Users, Heart, Leaf, Calendar, MapPin,
   CheckCircle, Search, Gift, LineChart, FileText,
   Sparkles, Fish, Waves, Anchor, Zap, ShieldCheck,
-  TrendingUp, Globe, Star
+  TrendingUp, Globe, Star, Building
 } from "lucide-react"
-const stats = [
-  { icon: Users, value: "15,000+", label: "Relawan Aktif" },
-  { icon: Globe, value: "250+", label: "Kegiatan Berlangsung" },
-  { icon: Anchor, value: "50+", label: "Area Pesisir Terlindungi" },
-  { icon: Heart, value: "Rp 2,5M+", label: "Dana Terkumpul" },
-]
 
 const pillars = [
   {
@@ -50,8 +44,29 @@ const donationSteps = [
 import { createClient } from "@/lib/supabase/server"
 import { formatDate } from "@/lib/utils/helpers"
 import { Navigation } from "@/components/navigation"
+import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 export default async function HomePage() {
+  const homeStats = await getHomePageStats()
+  
+  const stats = [
+    { 
+      icon: Users, 
+      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}${homeStats.totalVolunteers > 10 ? "+" : ""}`, 
+      label: "Relawan Aktif" 
+    },
+    { 
+      icon: Globe, 
+      value: `${homeStats.ongoingActivities}${homeStats.ongoingActivities > 5 ? "+" : ""}`, 
+      label: "Kegiatan Berlangsung" 
+    },
+    { 
+      icon: Building, 
+      value: `${homeStats.totalCommunities.toLocaleString("id-ID")}${homeStats.totalCommunities > 5 ? "+" : ""}`, 
+      label: "Jumlah Komunitas" 
+    },
+  ]
+
   const supabase = await createClient()
   const { data: realActivities } = await supabase
     .from("activities")
@@ -948,40 +963,6 @@ export default async function HomePage() {
               <Link href="/activities" className="home-view-all">
                 Mulai Berdonasi Sekarang <ArrowRight style={{ width: 16, height: 16 }} />
               </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* ── CTA ── */}
-        <section className="home-cta">
-          <div className="home-cta-bg" />
-          <div className="home-cta-glow" />
-          <div className="home-cta-inner">
-            <div className="home-cta-badge">
-              <Zap style={{ width: 12, height: 12 }} />
-              Bergabung Sekarang
-            </div>
-            <h2 className="home-cta-title">
-              Jadilah Bagian dari<br />Gerakan Laut Bersih
-            </h2>
-            <p className="home-cta-desc">
-              Daftarkan diri atau komunitasmu dan mulai berkontribusi nyata bagi kelestarian ekosistem laut Indonesia hari ini.
-            </p>
-            <div className="home-cta-btns">
-              <Link href="/register" className="home-cta-btn-primary">
-                Daftar Gratis <ArrowRight style={{ width: 16, height: 16 }} />
-              </Link>
-              <Link href="/activities" className="home-cta-btn-ghost">
-                Lihat Kegiatan
-              </Link>
-            </div>
-            <div className="home-trust">
-              {["100% Transparan", "Komunitas Terverifikasi", "Dampak Nyata", "Gratis Bergabung"].map(t => (
-                <div key={t} className="home-trust-item">
-                  <CheckCircle style={{ width: 14, height: 14, color: "#67e8f9" }} />
-                  {t}
-                </div>
-              ))}
             </div>
           </div>
         </section>

@@ -29,19 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
-import { formatDate } from "@/lib/utils/helpers"
-
-const locations = ["All Locations", "Jakarta", "Raja Ampat", "Bali", "Surabaya", "Makassar", "Online"]
-const activityTypes = ["All Types", "Cleanup", "Restoration", "Education", "Event"]
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+import { formatDate, formatCurrency } from "@/lib/utils/helpers"
 
 export default function ActivitiesPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -49,6 +37,8 @@ export default function ActivitiesPage() {
   const [selectedType, setSelectedType] = useState("All Types")
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [supabaseActivities, setSupabaseActivities] = useState<any[]>([])
+  const [availableLocations, setAvailableLocations] = useState<string[]>(["All Locations"])
+  const [availableTypes, setAvailableTypes] = useState<string[]>(["All Types"])
 
   useEffect(() => {
     async function fetchActivities() {
@@ -73,9 +63,18 @@ export default function ActivitiesPage() {
           icon: Leaf,
           fundingGoal: d.funding_goal || 0,
           fundingRaised: d.funding_raised || 0,
-          itemsNeeded: [] // Fallback for real activities lacking detailed item arrays
+          itemsNeeded: [] 
         }))
         setSupabaseActivities(mapped)
+
+        // Derive unique locations
+        const locs = Array.from(new Set(data.map((d: any) => d.location || "Online"))) as string[]
+        setAvailableLocations(["All Locations", ...locs.sort()])
+
+        // Derive unique categories
+        const types = Array.from(new Set(data.map((d: any) => d.category || "other"))) as string[]
+        const capitalizedTypes = types.map(t => t.charAt(0).toUpperCase() + t.slice(1))
+        setAvailableTypes(["All Types", ...capitalizedTypes.sort()])
       }
     }
     fetchActivities()
@@ -84,12 +83,12 @@ export default function ActivitiesPage() {
   const allActivities = supabaseActivities
 
   const filteredActivities = allActivities.filter((activity) => {
-    const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         activity.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = (activity.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (activity.description || "").toLowerCase().includes(searchQuery.toLowerCase())
     const matchesLocation = selectedLocation === "All Locations" || 
-                          activity.location.toLowerCase().includes(selectedLocation.toLowerCase())
+                          (activity.location || "").toLowerCase() === selectedLocation.toLowerCase()
     const matchesType = selectedType === "All Types" || 
-                       activity.type === selectedType.toLowerCase()
+                       (activity.type || "").toLowerCase() === selectedType.toLowerCase()
     return matchesSearch && matchesLocation && matchesType
   })
 
@@ -135,7 +134,7 @@ export default function ActivitiesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[160px]">
-                    {locations.map((location) => (
+                    {availableLocations.map((location) => (
                       <DropdownMenuItem 
                         key={location}
                         onClick={() => setSelectedLocation(location)}
@@ -157,7 +156,7 @@ export default function ActivitiesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[140px]">
-                    {activityTypes.map((type) => (
+                    {availableTypes.map((type) => (
                       <DropdownMenuItem 
                         key={type}
                         onClick={() => setSelectedType(type)}
@@ -176,15 +175,20 @@ export default function ActivitiesPage() {
         <section className="py-12 lg:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <p className="text-muted-foreground">
-                Showing <span className="font-semibold text-foreground">{filteredActivities.length}</span> activities
-              </p>
+              {selectedLocation !== "All Locations" && (
+                <p className="text-muted-foreground">
+                  <span className="font-semibold text-foreground">{filteredActivities.length}</span> kegiatan ditemukan
+                </p>
+              )}
             </div>
 
             {filteredActivities.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 {filteredActivities.map((activity) => (
-                  <Card key={activity.id} className="overflow-hidden group hover:shadow-lg transition-shadow">
+                  <Card key={activity.id} className="overflow-hidden group hover:shadow-lg transition-shadow relative">
+                    <Link href={`/activities/${activity.id}`} className="absolute inset-0 z-10">
+                      <span className="sr-only">View activity details</span>
+                    </Link>
                     <div className="relative h-48 overflow-hidden">
                       <Image
                         src={activity.image}

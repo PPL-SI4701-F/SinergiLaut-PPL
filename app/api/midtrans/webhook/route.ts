@@ -15,7 +15,7 @@
  * Format URL: https://yourdomain.com/api/midtrans/webhook
  */
 
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { order_id, transaction_status, fraud_status, payment_type, transaction_id, va_numbers } = notification
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     // 2. Resolve status
     const newStatus = resolveDonationStatus(transaction_status, fraud_status)
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       .from("donations")
       .update(updatePayload)
       .eq("midtrans_order_id", order_id)
-      .select("id, activity_id, donor_name, amount, status")
+      .select("id, activity_id, user_id, donor_name, amount, status")
       .single()
 
     if (updateError || !donation) {
@@ -104,33 +104,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Donation not found, skipped." })
     }
 
-    // 4. Kirim notifikasi ke komunitas jika pembayaran berhasil
-    if (newStatus === "completed") {
-      // Ambil community_id dari activity
-      const { data: activity } = await supabase
-        .from("activities")
-        .select("community_id, title, communities(owner_id)")
-        .eq("id", donation.activity_id)
-        .single()
+    // 4. Kirim notifikasi setelah status berubah
+    const { data: activity } = await supabase
+      .from("activities")
+      .select("title, communities(owner_id)")
+      .eq("id", donation.activity_id)
+      .single()
 
-      if (activity && activity.communities) {
-        const ownerId = Array.isArray(activity.communities) 
-          ? activity.communities[0]?.owner_id 
+    const activityTitle = activity?.title ?? "kegiatan"
+    const formattedAmount = new Intl.NumberFormat("id-ID", {
+      style: "currency", currency: "IDR", minimumFractionDigits: 0,
+    }).format(donation.amount ?? 0)
+
+    if (newStatus === "completed") {
+      // Notifikasi ke user donor
+      if (donation.user_id) {
+        await supabase.from("notifications").insert({
+          user_id: donation.user_id,
+          title: "Donasi Berhasil! 🎉",
+          message: `Donasi ${formattedAmount} untuk kegiatan "${activityTitle}" berhasil diterima. Terima kasih atas kontribusimu!`,
+          type: "success",
+          link: "/user/dashboard",
+        })
+      }
+
+      // Notifikasi ke komunitas
+      if (activity?.communities) {
+        const ownerId = Array.isArray(activity.communities)
+          ? activity.communities[0]?.owner_id
           : (activity.communities as any)?.owner_id
 
         if (ownerId) {
-          const formattedAmount = new Intl.NumberFormat("id-ID", {
-            style: "currency", currency: "IDR", minimumFractionDigits: 0,
-          }).format(donation.amount ?? 0)
-
           await supabase.from("notifications").insert({
             user_id: ownerId,
             title: "Donasi Berhasil Diterima! 🎉",
-            message: `${donation.donor_name} berhasil mendonasikan ${formattedAmount} untuk kegiatan "${activity.title}".`,
+            message: `${donation.donor_name} berhasil mendonasikan ${formattedAmount} untuk kegiatan "${activityTitle}".`,
             type: "success",
-            link: `/community/dashboard`,
+            link: "/community/dashboard",
           })
         }
+      }
+    }
+
+    if (newStatus === "refunded") {
+      // Notifikasi ke user donor jika donasi gagal/expired
+      if (donation.user_id) {
+        const isExpired = transaction_status === "expire"
+        await supabase.from("notifications").insert({
+          user_id: donation.user_id,
+          title: isExpired ? "Donasi Kedaluwarsa ⏰" : "Donasi Gagal ❌",
+          message: isExpired
+            ? `Donasi ${formattedAmount} untuk kegiatan "${activityTitle}" kedaluwarsa karena tidak dibayar tepat waktu. Silakan coba kembali.`
+            : `Donasi ${formattedAmount} untuk kegiatan "${activityTitle}" gagal diproses. Silakan coba kembali.`,
+          type: "error",
+          link: "/user/dashboard",
+        })
       }
     }
 
