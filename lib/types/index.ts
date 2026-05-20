@@ -96,6 +96,7 @@ export interface Activity {
   allow_item_donation: boolean
   cover_image_url: string | null
   images: string[]
+  execution_date: string | null
   created_at: string
   updated_at: string
   published_at: string | null
