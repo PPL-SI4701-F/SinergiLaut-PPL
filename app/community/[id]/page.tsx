@@ -29,7 +29,7 @@ import {
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
-import { formatDate } from "@/lib/utils/helpers"
+import { formatDate, calcPercentage } from "@/lib/utils/helpers"
 
 export default function CommunityProfilePage({
   params,
@@ -378,7 +378,7 @@ export default function CommunityProfilePage({
                                   </span>
                                 </div>
                                 <Progress
-                                  value={activity.volunteer_quota > 0 ? ((activity.volunteer_count || 0) / activity.volunteer_quota) * 100 : 0}
+                                  value={calcPercentage(activity.volunteer_count || 0, activity.volunteer_quota || 0)}
                                   className="h-2"
                                 />
                               </div>
@@ -391,7 +391,7 @@ export default function CommunityProfilePage({
                                   </span>
                                 </div>
                                 <Progress
-                                  value={activity.funding_goal > 0 ? ((activity.funding_raised || 0) / activity.funding_goal) * 100 : 0}
+                                  value={calcPercentage(activity.funding_raised || 0, activity.funding_goal || 0)}
                                   className="h-2"
                                 />
                               </div>
