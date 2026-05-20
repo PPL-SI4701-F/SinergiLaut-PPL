@@ -47,7 +47,7 @@ const MapView = dynamic(() => import("@/components/map/map-view"), {
   loading: () => <div className="h-[300px] w-full bg-secondary animate-pulse rounded-xl flex items-center justify-center text-muted-foreground">Memuat peta...</div>
 })
 
-type TabType = "detail" | "volunteer" | "donate" | "items" | "reports" | "feedback"
+type TabType = "detail" | "volunteer" | "donate" | "items" | "reports" | "feedback" | "info_community"
 
 const MARKUP_PERCENT = 10 // 10% markup on item prices
 /** Calculate marked-up price using integer math to avoid floating point errors */
@@ -547,7 +547,9 @@ export default function ActivityDetailPage() {
                   { id: "detail", label: "Detail" } as const,
                   { id: "volunteer", label: profile?.role === "community" ? "Kelola Relawan" : "Daftar Relawan" } as const,
                   ...(profile?.role === "community" && activity.items_needed && activity.items_needed.length > 0 ? [{ id: "items", label: "Kelola Barang" } as const] : []),
-                  ...(profile?.role !== "community" ? [{ id: "donate", label: "Donasi" } as const] : []),
+                  ...(profile?.role !== "community"
+                    ? [{ id: "donate", label: "Donasi" } as const]
+                    : [{ id: "info_community", label: "ℹ️ Donasi" } as const]),
                   { id: "reports", label: "Laporan" } as const,
                   { id: "feedback", label: "Ulasan" } as const,
                 ].map((tab) => (
@@ -1073,6 +1075,21 @@ export default function ActivityDetailPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* ── Tab: Info Donasi untuk Komunitas ─── */}
+              {activeTab === "info_community" && (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Heart className="h-7 w-7 text-amber-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground mb-2">Akun Komunitas Tidak Dapat Berdonasi</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                      Fitur donasi hanya tersedia untuk akun relawan/pengguna individual. Akun komunitas digunakan untuk mengorganisir kegiatan, bukan berdonasi.
+                    </p>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
