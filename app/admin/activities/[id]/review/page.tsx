@@ -85,10 +85,10 @@ export default function AdminActivityReviewPage() {
       return
     }
     setIsSubmitting(true)
-    const result = await rejectActivityAction(activity.id)
+    const result = await rejectActivityAction(activity.id, rejectNote.trim())
     if (result.success) {
       toast.info("Kegiatan telah ditolak.")
-      router.push("/admin/dashboard?tab=activities")
+      router.push("/admin/activities")
     } else {
       toast.error(result.error ?? "Gagal menolak kegiatan.")
     }

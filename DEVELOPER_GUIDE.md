@@ -28,18 +28,22 @@ Semua sistem login, register, dan proteksi halaman diatur di sini. Sistem membag
 ---
 
 ## 🏢 3. Dashboard Komunitas
-*(Fitur dari Adilio Adaha)*
+*(Fitur dari Adilio Adaha — FR-05 Manajemen Kegiatan Konservasi)*
 
-Tempat komunitas mengelola kegiatan, melihat pendaftar relawan, dan mencatat donasi.
+Tempat komunitas mengelola kegiatan, melihat pendaftar relawan, dan mencatat donasi. Dashboard komunitas menggunakan **sidebar layout** (bukan Navigation bar) yang konsisten dengan pola admin dan user dashboard.
+
+> **Pola Layout:** `app/community/dashboard/layout.tsx` membungkus semua halaman di bawah `/community/dashboard/*` dengan `CommunitySidebar`. Tambahkan halaman baru cukup buat file `page.tsx` di dalam folder tersebut — sidebar otomatis muncul.
 
 | Komponen / Fitur | Lokasi File Kode | Penjelasan |
 |------------------|------------------|------------|
+| **Sidebar Navigasi** | `components/community-sidebar.tsx` | Sidebar kiri dengan menu Dashboard, Buat Kegiatan, Profil Komunitas. Mengikuti pola yang sama dengan `admin-sidebar.tsx` dan `user-sidebar.tsx`. |
+| **Layout Wrapper** | `app/community/dashboard/layout.tsx` | Membungkus semua halaman dashboard komunitas dengan sidebar layout. |
 | **Halaman Utama Dashboard** | `app/community/dashboard/page.tsx` | Menampilkan 4 kartu statistik (Total Kegiatan, Relawan, dll) dan list kegiatan komunitas. |
 | **Buat Kegiatan Baru** | `app/community/dashboard/activities/create/page.tsx` | Form panjang untuk membuat kegiatan baru (judul, deskripsi, kuota relawan, target donasi). |
 | **Edit Kegiatan** | `app/community/dashboard/activities/[id]/edit/page.tsx` | Form untuk mengubah data kegiatan yang sudah ada. |
 | **Manajemen Relawan** | `app/community/dashboard/activities/[id]/volunteers/page.tsx` | Tabel yang menampilkan siapa saja yang daftar jadi relawan. Komunitas bisa klik "Terima" (Approve) atau "Tolak" (Reject). |
 | **Manajemen Donatur** | `app/community/dashboard/activities/[id]/donors/page.tsx` | Menampilkan riwayat donasi uang dan konfirmasi penerimaan donasi barang. |
-| **Logika Data Komunitas** | `lib/actions/dashboard.actions.ts` | Fungsi `getCommunityDashboardStats()` dan `getCommunityActivities()` ada di sini. |
+| **Logika Data Komunitas** | `lib/actions/dashboard.actions.ts` | Fungsi `getCommunityDashboardStats()` dan `getCommunityActivities()` ada di sini. Fungsi `rejectActivityAction(id, adminNote?)` kini menerima catatan penolakan opsional yang disimpan ke kolom `admin_note` di database. |
 | **Logika Relawan & Donasi**| `lib/actions/volunteer.actions.ts` & `lib/actions/donation.actions.ts` | Fungsi untuk mengambil data pendaftar dan fungsi untuk update status relawan. |
 
 ---

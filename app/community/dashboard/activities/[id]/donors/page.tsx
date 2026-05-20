@@ -9,7 +9,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -101,9 +100,8 @@ export default function DonorsManagementPage() {
   const totalItems = donations.filter(d => d.type === "item").reduce((s, d) => s + (d.items?.length ?? 0), 0)
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navigation />
-      <main className="pt-16">
+    <div className="flex-1 bg-slate-50">
+      <main>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-6">

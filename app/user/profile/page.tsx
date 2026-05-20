@@ -28,10 +28,7 @@ export default function UserProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const [optimisticAvatar, setOptimisticAvatar] = useState<string | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   const avatarInputRef = useRef<HTMLInputElement>(null)
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   // Basic profile form
   const [form, setForm] = useState({
@@ -77,53 +74,6 @@ export default function UserProfilePage() {
 
   const handleVerifyChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setVerifyForm({ ...verifyForm, [e.target.name]: e.target.value })
-  }
-
-  // Handle avatar upload
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user || !profile) return
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Ukuran foto maksimal 2MB.")
-      return
-    }
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("File harus berupa gambar (JPG, PNG, dll).")
-      return
-    }
-
-    setIsUploadingAvatar(true)
-    const fileExt = file.name.split(".").pop()
-    const filePath = `avatars/${user.id}/avatar-${Date.now()}.${fileExt}`
-
-    const { error: uploadError } = await supabase.storage
-      .from("sinergilaut-assets")
-      .upload(filePath, file, { upsert: true })
-
-    if (uploadError) {
-      console.error("Avatar upload error:", uploadError)
-      toast.error("Gagal mengupload foto profil.")
-      setIsUploadingAvatar(false)
-      return
-    }
-
-    const { data: urlData } = supabase.storage.from("sinergilaut-assets").getPublicUrl(filePath)
-    
-    // Update profile
-    const { error: updateError } = await supabase.from("profiles").update({
-      avatar_url: urlData.publicUrl
-    }).eq("id", profile.id)
-
-    if (updateError) {
-      toast.error("Gagal menyimpan foto profil.")
-    } else {
-      toast.success("Foto profil berhasil diperbarui!")
-      await refreshProfile()
-    }
-    
-    setIsUploadingAvatar(false)
   }
 
   // Handle basic profile update

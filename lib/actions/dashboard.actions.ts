@@ -161,11 +161,11 @@ export async function approveActivityAction(id: string) {
   return { success: true }
 }
 
-export async function rejectActivityAction(id: string) {
+export async function rejectActivityAction(id: string, adminNote?: string) {
   const adminSupabase = await createAdminClient()
   const { data: activity, error } = await adminSupabase
     .from("activities")
-    .update({ status: "draft", admin_note: "Ditolak oleh admin" })
+    .update({ status: "draft", admin_note: adminNote?.trim() || "Ditolak oleh admin" })
     .eq("id", id)
     .select("title, community_id, community:communities(owner_id)")
     .single()
