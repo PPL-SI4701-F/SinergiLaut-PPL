@@ -242,7 +242,7 @@ export default function ActivityDetailPage() {
     if (alreadyRegistered?.status !== "attended") return
 
     async function loadFeedback() {
-      const feedback = await getMyFeedback(params.id as string, user!.id)
+      const feedback = await getMyFeedback(params.id as string)
       if (feedback) {
         setExistingFeedback(feedback)
         setFeedbackRating(feedback.rating)
@@ -298,7 +298,6 @@ export default function ActivityDetailPage() {
     setIsSubmittingFeedback(true)
     const result = await submitFeedback({
       activityId: activity.id,
-      userId: user.id,
       rating: feedbackRating,
       comment: feedbackComment.trim() || undefined,
     })

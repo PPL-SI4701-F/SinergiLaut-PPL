@@ -5,11 +5,11 @@
  * Hanya volunteer dengan status 'attended' yang bisa submit rating & feedback.
  */
 
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 
 export interface SubmitFeedbackPayload {
   activityId: string
-  userId: string
+  // userId DIHAPUS dari payload — diambil dari server session untuk cegah IDOR
   rating: number
   comment?: string
 }
@@ -17,16 +17,24 @@ export interface SubmitFeedbackPayload {
 /**
  * Submit atau update feedback untuk kegiatan.
  * Guard: user harus punya volunteer_registration dengan status 'attended'.
+ * userId diambil dari server session — tidak bisa dimanipulasi client (cegah IDOR).
  */
 export async function submitFeedback(payload: SubmitFeedbackPayload) {
-  const adminSupabase = await createAdminClient()
+  const supabase = await createClient()
+
+  // Ambil userId dari server session — tidak bisa dimanipulasi oleh client
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: "Anda harus login untuk memberikan ulasan." }
+  }
+  const userId = user.id
 
   // Guard: hanya volunteer dengan status attended yang bisa submit
-  const { data: reg } = await adminSupabase
+  const { data: reg } = await supabase
     .from("volunteer_registrations")
     .select("id, status")
     .eq("activity_id", payload.activityId)
-    .eq("user_id", payload.userId)
+    .eq("user_id", userId)
     .single()
 
   if (!reg) {
@@ -45,12 +53,12 @@ export async function submitFeedback(payload: SubmitFeedbackPayload) {
   }
 
   // Upsert: insert or update jika sudah pernah review
-  const { data, error } = await adminSupabase
+  const { data, error } = await supabase
     .from("feedbacks")
     .upsert(
       {
         activity_id: payload.activityId,
-        user_id: payload.userId,
+        user_id: userId, // server-verified
         rating: payload.rating,
         comment: payload.comment ?? null,
         is_public: true,
@@ -69,17 +77,21 @@ export async function submitFeedback(payload: SubmitFeedbackPayload) {
 }
 
 /**
- * Ambil feedback milik user untuk kegiatan tertentu.
- * Digunakan untuk pre-fill form saat edit.
+ * Ambil feedback milik user yang sedang login untuk kegiatan tertentu.
+ * userId diambil dari session server — tidak dari parameter client.
  */
-export async function getMyFeedback(activityId: string, userId: string) {
-  const adminSupabase = await createAdminClient()
+export async function getMyFeedback(activityId: string) {
+  const supabase = await createClient()
 
-  const { data, error } = await adminSupabase
+  // Ambil userId dari server session
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
     .from("feedbacks")
     .select("id, rating, comment")
     .eq("activity_id", activityId)
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .maybeSingle()
 
   if (error) {
