@@ -186,9 +186,15 @@ export async function rejectActivityAction(id: string, adminNote?: string) {
 
 export async function approveReportAction(id: string) {
   const adminSupabase = await createAdminClient()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: report, error } = await adminSupabase
     .from("reports")
-    .update({ status: "validated" })
+    .update({
+      status: "validated",
+      reviewed_by: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select("title, community_id, community:communities(owner_id)")
     .single()
@@ -206,11 +212,18 @@ export async function approveReportAction(id: string) {
   return { success: true }
 }
 
-export async function rejectReportAction(id: string) {
+export async function rejectReportAction(id: string, adminNote?: string) {
   const adminSupabase = await createAdminClient()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: report, error } = await adminSupabase
     .from("reports")
-    .update({ status: "rejected" })
+    .update({
+      status: "rejected",
+      admin_note: adminNote?.trim() || null,
+      reviewed_by: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select("title, community_id, community:communities(owner_id)")
     .single()
