@@ -5,8 +5,7 @@ import { format } from "date-fns"
 import { id as localeID } from "date-fns/locale"
 import {
   Banknote, RefreshCw, Plus, CheckCircle2, XCircle, Clock,
-  AlertTriangle, Loader2, X, CreditCard, Building2, ArrowRight,
-  ChevronDown, Info
+  AlertTriangle, Loader2, CreditCard, Building2, ArrowRight, Info
 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
