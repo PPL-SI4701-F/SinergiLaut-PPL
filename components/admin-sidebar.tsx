@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   LayoutDashboard, Building2, Activity, FileText,
-  Users, BookOpen, LogOut, Menu, X, ChevronRight,
+  Users, BookOpen, LogOut, Menu, X, ChevronRight, ShieldAlert,
 } from "lucide-react"
 import { getPendingCommunities, getPendingActivities, getPendingReports } from "@/lib/actions/dashboard.actions"
 import { getVolunteersPendingVerification } from "@/lib/actions/volunteer-verification.actions"
@@ -20,6 +20,7 @@ const navItems = [
   { href: "/admin/activities",  label: "Kegiatan",     icon: Activity,        description: "Moderasi kegiatan"     },
   { href: "/admin/reports",     label: "Laporan",      icon: FileText,        description: "Validasi laporan"      },
   { href: "/admin/users",       label: "Pengguna",     icon: Users,           description: "Verifikasi relawan"    },
+  { href: "/admin/monitoring",  label: "Monitoring",   icon: ShieldAlert,     description: "Audit & sanksi"        },
   { href: "/admin/journey",     label: "Perjalanan",   icon: BookOpen,        description: "Milestone SinergiLaut" },
 ]
 
