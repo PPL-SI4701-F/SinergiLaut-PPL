@@ -5,7 +5,6 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { createActivity } from "@/lib/actions/activity.actions"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -247,9 +246,8 @@ export default function CreateActivityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navigation />
-      <main className="pt-16">
+    <div className="flex-1 bg-slate-50">
+      <main>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
           <div className="mb-6">
             <Link href="/community/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
