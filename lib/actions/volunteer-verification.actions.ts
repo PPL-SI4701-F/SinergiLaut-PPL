@@ -45,6 +45,24 @@ export async function submitVolunteerVerification(payload: {
     return { success: false, error: "Gagal mengirim data verifikasi: " + error.message }
   }
 
+  // Notifikasi ke semua admin bahwa ada data diri baru yang perlu diverifikasi
+  const { data: admins } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin")
+
+  if (admins && admins.length > 0) {
+    for (const admin of admins) {
+      await createNotification(
+        admin.id,
+        "Verifikasi Data Diri Baru 🪪",
+        `${payload.fullName} mengajukan verifikasi data diri dan menunggu persetujuan admin.`,
+        "info",
+        "/admin/users"
+      )
+    }
+  }
+
   return { success: true, data }
 }
 

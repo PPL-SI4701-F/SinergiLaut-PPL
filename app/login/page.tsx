@@ -43,6 +43,8 @@ function LoginContent() {
         ? "Email atau password salah. Silakan coba lagi."
         : result.error)
       setIsLoading(false)
+    } else if (result?.success && result?.redirectTo) {
+      window.location.href = result.redirectTo;
     }
   }
 

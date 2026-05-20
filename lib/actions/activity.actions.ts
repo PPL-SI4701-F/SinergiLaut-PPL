@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createNotification } from "@/lib/actions/notification.actions"
 
 export async function createActivity(formData: FormData) {
   try {
@@ -18,11 +19,13 @@ export async function createActivity(formData: FormData) {
       .from("communities")
       .select("id")
       .eq("owner_id", user.id)
-      .single()
+      .eq("is_verified", true)
+      .limit(1)
+      .maybeSingle()
 
     if (commError || !community) {
       console.error("[createActivity] error getting community:", commError, "user.id:", user.id)
-      return { success: false, error: "Akun ini tidak memiliki profil komunitas. Pastikan Anda login dengan akun komunitas yang valid." }
+      return { success: false, error: "Akun ini tidak memiliki komunitas terverifikasi. Pastikan komunitas Anda sudah disetujui oleh admin." }
     }
 
     const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.replace(" ", "") || "sinergilaut-assets"
@@ -133,6 +136,43 @@ export async function createActivity(formData: FormData) {
     if (insertError) {
       console.error("DB Insert err:", insertError)
       return { success: false, error: insertError.message || "Gagal menyimpan kegiatan ke database." }
+    }
+
+    // Notifikasi konfirmasi ke komunitas
+    if (!isDraft) {
+      await createNotification(
+        user.id,
+        "Kegiatan Diajukan untuk Review 📋",
+        `Kegiatan "${title}" berhasil diajukan dan sedang menunggu persetujuan admin. Kami akan memberitahumu setelah direview.`,
+        "info",
+        "/community/dashboard"
+      )
+
+      // Notifikasi ke semua admin bahwa ada kegiatan baru pending review
+      const { data: admins } = await adminSupabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin")
+
+      if (admins && admins.length > 0) {
+        for (const admin of admins) {
+          await createNotification(
+            admin.id,
+            "Kegiatan Baru Menunggu Review 📋",
+            `Kegiatan "${title}" telah diajukan oleh komunitas dan menunggu persetujuan admin.`,
+            "info",
+            "/admin/activities"
+          )
+        }
+      }
+    } else {
+      await createNotification(
+        user.id,
+        "Kegiatan Disimpan sebagai Draft 📝",
+        `Kegiatan "${title}" berhasil disimpan sebagai draft. Kamu bisa melanjutkan dan mengajukannya kapan saja.`,
+        "info",
+        "/community/dashboard"
+      )
     }
 
     return { success: true }

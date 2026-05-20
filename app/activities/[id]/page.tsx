@@ -33,7 +33,12 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { createClient } from "@/lib/supabase/client"
 import { registerVolunteer } from "@/lib/actions/volunteer.actions"
-import { createMoneyDonation, createItemDonation } from "@/lib/actions/donation.actions"
+import {
+  createMoneyDonation,
+  createItemDonation,
+  completeMoneyDonation,
+  completeFulfillmentDonation,
+} from "@/lib/actions/donation.actions"
 import { submitFeedback, getMyFeedback } from "@/lib/actions/feedback.actions"
 import type { Activity, VolunteerRegistration, Donation } from "@/lib/types"
 
@@ -134,48 +139,25 @@ export default function ActivityDetailPage() {
 
     try {
       if (paymentSim.donationType === "money") {
-        // Tandai donasi uang sebagai 'completed' → trigger DB otomatis tambah funding_raised
-        await supabase
-          .from('donations')
-          .update({ status: 'completed' })
-          .eq('id', paymentSim.donationId);
-
-        // Refresh funding_raised dari DB
-        const { data: updated } = await supabase
-          .from('activities')
-          .select('funding_raised')
-          .eq('id', activity.id)
-          .single();
-        if (updated) {
-          setActivity(prev => prev ? { ...prev, funding_raised: updated.funding_raised } : prev);
+        const result = await completeMoneyDonation(paymentSim.donationId);
+        if (result.success) {
+          setActivity(prev => prev ? { ...prev, funding_raised: result.funding_raised } : prev);
         }
       } else {
-        // Donasi barang: tandai sebagai completed + update items_needed di activities
-        await supabase
-          .from('donations')
-          .update({ status: 'completed' })
-          .eq('id', paymentSim.donationId);
-
-        // Update items_needed dengan qty yang dipenuhi dari fulfillmentCart
         const updatedItems = activity.items_needed?.map((item, index) => ({
           ...item,
-          donated: (item.donated || 0) + (fulfillmentCart[index] || 0)
+          donated: (item.donated || 0) + (fulfillmentCart[index] || 0),
         })) || [];
 
-        const { error } = await supabase
-          .from('activities')
-          .update({ items_needed: updatedItems })
-          .eq('id', activity.id);
-
-        if (!error) {
+        const result = await completeFulfillmentDonation(paymentSim.donationId, activity.id, updatedItems);
+        if (result.success) {
           setActivity(prev => prev ? { ...prev, items_needed: updatedItems } : prev);
         }
       }
     } catch (err) {
-      console.error('[handlePaymentSuccess] error:', err);
+      console.error("[handlePaymentSuccess] error:", err);
     }
 
-    // Reset fulfillment cart
     setFulfillmentCart(prev => prev.map(() => 0));
   };
 
@@ -199,7 +181,6 @@ export default function ActivityDetailPage() {
         .single()
 
       if (error || !data) {
-        console.error("DEBUG fetchActivity - params.id:", params.id, "error:", error, "data:", data);
         toast.error("Kegiatan tidak ditemukan.")
         router.push("/activities")
         return

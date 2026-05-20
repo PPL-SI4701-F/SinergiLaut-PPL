@@ -263,18 +263,21 @@ Aplikasi berjalan di **http://localhost:3000**
 
 ## Akun Seed (Testing)
 
-Jalankan seed scripts untuk membuat akun testing:
+Semua akun testing menggunakan password: `Password@2026`
 
+| Role | Email | Deskripsi |
+|------|-------|-----------|
+| **Admin** | `admin1@sinergilaut.id` | Admin Utama |
+| **Admin** | `admin2@sinergilaut.id` | Admin Reviewer |
+| **Community** | `owner1@example.com` | Owner Komunitas 1 |
+| **Community** | `owner2@example.com` | Owner Komunitas 2 |
+| **User** | `approved1@user.com` | Relawan Aktif |
+| **User** | `pending1@user.com` | Relawan (Status Pending) |
+| **User** | `rejected1@user.com` | Relawan (Status Terblokir/Rejected) |
+
+Jalankan seed script untuk mereset dan mengisi database:
 ```bash
-# Akun Admin
-node scripts/seed-admin.mjs
-# 📧 admin@sinergilaut.com
-# 🔑 Admin1234!
-
-# Akun Komunitas (terverifikasi, dengan 2 kegiatan sample)
-node scripts/seed-community.mjs
-# 📧 komunitas.test@sinergilaut.com
-# 🔑 Test1234!
+pnpm db:seed
 ```
 
 ---

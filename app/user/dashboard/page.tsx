@@ -7,7 +7,7 @@ import { getUserDashboardStats } from "@/lib/actions/dashboard.actions"
 import { getMyVolunteerRegistrations } from "@/lib/actions/volunteer.actions"
 import { getMyDonations } from "@/lib/actions/donation.actions"
 import { formatCurrency } from "@/lib/utils/helpers"
-import { Calendar, Heart, CheckCircle2, ArrowRight, User } from "lucide-react"
+import { Calendar, Heart, CheckCircle2, ArrowRight, User, AlertCircle, XCircle } from "lucide-react"
 import { DashboardClient } from "./dashboard-client"
 
 export default async function UserDashboardPage() {
@@ -24,7 +24,7 @@ export default async function UserDashboardPage() {
   // Ambil nama dari profil
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, volunteer_status")
     .eq("id", userId)
     .single()
 
@@ -47,9 +47,20 @@ export default async function UserDashboardPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                Selamat datang, {firstName}! 👋
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  Selamat datang, {firstName}! 👋
+                </h1>
+                {profile?.volunteer_status === 'approved' && (
+                  <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full flex items-center gap-1 shrink-0"><CheckCircle2 className="w-3 h-3"/> Terverifikasi</span>
+                )}
+                {profile?.volunteer_status === 'pending' && (
+                  <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full flex items-center gap-1 shrink-0"><AlertCircle className="w-3 h-3"/> Menunggu Verifikasi</span>
+                )}
+                {profile?.volunteer_status === 'rejected' && (
+                  <span className="px-2 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full flex items-center gap-1 shrink-0"><XCircle className="w-3 h-3"/> Ditolak</span>
+                )}
+              </div>
               <p className="text-muted-foreground mt-1">
                 Pantau partisipasi dan riwayat Anda di SinergiLaut
               </p>

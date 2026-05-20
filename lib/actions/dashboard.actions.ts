@@ -2,38 +2,31 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
-import { getEndowmentStats } from "@/lib/actions/endowment.actions"
 
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
   const adminSupabase = await createAdminClient()
 
-  // Total communities
-  const { count: totalCommunities } = await adminSupabase
-    .from("communities")
-    .select("*", { count: "exact", head: true })
+  const [
+    { count: totalCommunities },
+    { count: totalUsers },
+    { count: totalActivities },
+    { data: donationRows },
+  ] = await Promise.all([
+    adminSupabase.from("communities").select("*", { count: "exact", head: true }),
+    adminSupabase.from("profiles").select("*", { count: "exact", head: true }),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).in("status", ["published", "completed"]),
+    adminSupabase.from("donations").select("amount").eq("type", "money").eq("status", "completed"),
+  ])
 
-  // Active users
-  const { count: totalUsers } = await adminSupabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-
-  // Active activities
-  const { count: totalActivities } = await adminSupabase
-    .from("activities")
-    .select("*", { count: "exact", head: true })
-    .in("status", ["published", "completed"])
-
-  // Endowment stats
-  const { totalRaised } = await getEndowmentStats()
-  const totalEndowment = totalRaised
+  const totalDonations = donationRows?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
 
   return {
     totalCommunities: totalCommunities || 0,
     totalUsers: totalUsers || 0,
     totalActivities: totalActivities || 0,
-    totalEndowment
+    totalDonations,
   }
 }
 
@@ -235,6 +228,53 @@ export async function rejectReportAction(id: string) {
   return { success: true }
 }
 
+export async function getHomePageStats() {
+  const supabase = await createClient()
+
+  // 1. Relawan Aktif: Count of profiles with volunteer_status = 'approved'
+  const { count: totalVolunteers } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("volunteer_status", "approved")
+
+  // 2. Kegiatan Berlangsung: Count of activities with status = 'published'
+  const { count: ongoingActivities } = await supabase
+    .from("activities")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "published")
+
+  // 3. Area Pesisir Terlindungi: Count of unique locations from published/completed activities
+  const { data: locations } = await supabase
+    .from("activities")
+    .select("location")
+    .in("status", ["published", "completed"])
+  
+  const uniqueLocations = new Set(locations?.map(l => l.location)).size
+
+  // 4. Dana Terkumpul: Sum of amount from donations with status = 'completed'
+  const { data: donations } = await supabase
+    .from("donations")
+    .select("amount")
+    .eq("status", "completed")
+    .eq("type", "money")
+
+  const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
+
+  // 5. Jumlah Komunitas: Count of verified communities
+  const { count: totalCommunities } = await supabase
+    .from("communities")
+    .select("*", { count: "exact", head: true })
+    .eq("is_verified", true)
+
+  return {
+    totalVolunteers: totalVolunteers || 0,
+    ongoingActivities: ongoingActivities || 0,
+    protectedAreas: uniqueLocations || 0,
+    totalDonations: totalDonations || 0,
+    totalCommunities: totalCommunities || 0
+  }
+}
+
 // --- COMMUNITY DASHBOARD ---
 
 export async function getCommunityDashboardStats(userId: string) {
@@ -245,7 +285,9 @@ export async function getCommunityDashboardStats(userId: string) {
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (!community) {
     return { totalActivities: 0, totalVolunteers: 0, totalDonations: 0, verifiedReports: "0/0" }
@@ -293,12 +335,14 @@ export async function getCommunityDashboardStats(userId: string) {
 
 export async function getCommunityActivities(userId: string) {
   const adminSupabase = await createAdminClient()
-  
+
   const { data: community } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (!community) return []
 
@@ -376,7 +420,9 @@ export async function getCommunityProfile() {
     .from("communities")
     .select("*")
     .eq("owner_id", user.id)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (error || !data) {
     console.error("[getCommunityProfile] error:", error)
@@ -412,7 +458,7 @@ export async function updateCommunityProfile(communityId: string, payload: {
     .select("id")
     .eq("id", communityId)
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (checkErr || !existing) {
     return { success: false, error: "Akses ditolak. Komunitas ini bukan milik akun Anda." }

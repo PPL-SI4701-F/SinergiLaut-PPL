@@ -13,6 +13,7 @@ import {
   Anchor, Shield, Sparkles, Fish
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 interface JourneyMilestone {
   id: string
@@ -45,37 +46,57 @@ const values = [
   { icon: Globe, title: "Inklusif", description: "Platform kami terbuka untuk semua — dari nelayan tradisional hingga korporat besar.", color: "#06958a", bg: "rgba(6,149,138,0.08)" },
 ]
 
-const stats = [
-  { value: "2.4K+", label: "Relawan Aktif", icon: Users },
-  { value: "180+", label: "Komunitas", icon: Globe },
-  { value: "560+", label: "Kegiatan", icon: Award },
-  { value: "Rp 5M+", label: "Dana Terhimpun", icon: Banknote },
-]
-
 const fallbackMilestones: JourneyMilestone[] = [
-  { id: "1", year: 2020, title: "SinergiLaut Didirikan", description: "Platform lahir dari keresahan sulitnya koordinasi komunitas konservasi laut di Indonesia.", impact_stat: "Misi dimulai", icon: "Waves", order_index: 1, is_published: true, created_at: "", updated_at: "" },
-  { id: "2", year: 2021, title: "Komunitas Pertama Bergabung", description: "10 komunitas dari Jawa, Bali, Sulawesi bergabung. 500 relawan aktif terdaftar.", impact_stat: "10 komunitas, 500+ relawan", icon: "Users", order_index: 2, is_published: true, created_at: "", updated_at: "" },
-  { id: "3", year: 2022, title: "Sistem Donasi & Transparansi", description: "Meluncurkan sistem donasi terintegrasi dengan verifikasi penggunaan dana yang transparan.", impact_stat: "Rp 1M+ dana terhimpun", icon: "Banknote", order_index: 3, is_published: true, created_at: "", updated_at: "" },
-  { id: "4", year: 2023, title: "Ekspansi ke 50+ Komunitas", description: "Jaringan komunitas berkembang ke 50+ komunitas di 15 provinsi, dari Sabang hingga Papua.", impact_stat: "50+ komunitas, 15 provinsi", icon: "Globe", order_index: 4, is_published: true, created_at: "", updated_at: "" },
-  { id: "5", year: 2024, title: "Milestone 10.000 Relawan", description: "Mencapai 10.000+ relawan terdaftar dan Rp 5 miliar+ dana konservasi terhimpun.", impact_stat: "10.000+ relawan, Rp 5M+ dana", icon: "Award", order_index: 5, is_published: true, created_at: "", updated_at: "" },
-  { id: "6", year: 2026, title: "Platform Generasi Baru", description: "Peluncuran platform baru: realtime, Midtrans, dashboard lengkap, dan pencairan dana transparan.", impact_stat: "Fitur lengkap & real-time", icon: "Zap", order_index: 6, is_published: true, created_at: "", updated_at: "" },
+  { id: "6", year: 2026, title: "SinergiLaut Didirikan", description: "SinergiLaut lahir dari keresahan akan sulitnya koordinasi antar komunitas konservasi laut di Indonesia. Platform ini hadir sebagai jembatan digital pertama untuk gerakan konservasi kolaboratif.", impact_stat: "Misi dimulai", icon: "Waves", order_index: 6, is_published: true, created_at: "", updated_at: "" },
 ]
 
 async function getMilestones(): Promise<JourneyMilestone[]> {
   try {
     const supabase = await createClient()
     const { data, error } = await supabase
-      .from("journey_milestones").select("*")
-      .eq("is_published", true).order("order_index", { ascending: true })
-    if (error || !data || data.length === 0) return fallbackMilestones
+      .from("journey_milestones")
+      .select("*")
+      .eq("is_published", true)
+      .order("order_index", { ascending: true })
+    
+    if (error || !data || data.length === 0) {
+      return fallbackMilestones
+    }
     return data as JourneyMilestone[]
-  } catch {
+  } catch (err) {
+    console.error("Failed to fetch milestones:", err)
     return fallbackMilestones
   }
 }
 
 export default async function AboutPage() {
   const milestones = await getMilestones()
+  const homeStats = await getHomePageStats()
+
+  const stats = [
+    { 
+      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}+`, 
+      label: "Relawan Aktif", 
+      icon: Users 
+    },
+    { 
+      value: `${homeStats.ongoingActivities}+`, 
+      label: "Kegiatan", 
+      icon: Award 
+    },
+    { 
+      value: `${homeStats.protectedAreas}+`, 
+      label: "Area Terlindungi", 
+      icon: Globe 
+    },
+    { 
+      value: homeStats.totalDonations >= 1000000 
+        ? `Rp ${(homeStats.totalDonations / 1000000).toFixed(1)}Jt+`
+        : `Rp ${homeStats.totalDonations.toLocaleString("id-ID")}`, 
+      label: "Dana Terhimpun", 
+      icon: Banknote 
+    },
+  ]
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
@@ -88,7 +109,7 @@ export default async function AboutPage() {
           min-height: 92vh;
           display: flex;
           flex-direction: column;
-          justify-content: flex-end;
+          justify-content: center;
           overflow: hidden;
         }
         .about-hero-bg {
@@ -604,14 +625,6 @@ export default async function AboutPage() {
             <p className="about-hero-desc">
               Platform digital yang mempertemukan komunitas, relawan, dan donatur dalam satu ekosistem terintegrasi untuk melindungi lautan Indonesia.
             </p>
-            <div className="about-hero-btns">
-              <Link href="/activities" className="about-hero-btn-primary">
-                Lihat Kegiatan <ArrowRight style={{ width: 16, height: 16 }} />
-              </Link>
-              <Link href="/register" className="about-hero-btn-ghost">
-                Bergabung Gratis
-              </Link>
-            </div>
           </div>
 
           {/* Wave divider */}
@@ -619,21 +632,6 @@ export default async function AboutPage() {
             <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
               <path d="M0,40 C360,80 720,0 1080,40 C1260,60 1380,30 1440,40 L1440,80 L0,80 Z" fill="white"/>
             </svg>
-          </div>
-        </section>
-
-        {/* ── STATS BAR ── */}
-        <section className="about-stats-bar">
-          <div className="about-stats-grid">
-            {stats.map((s) => (
-              <div key={s.label} className="about-stat-item">
-                <div className="about-stat-icon">
-                  <s.icon style={{ width: 20, height: 20, color: 'rgba(255,255,255,0.9)' }} />
-                </div>
-                <div className="about-stat-value">{s.value}</div>
-                <div className="about-stat-label">{s.label}</div>
-              </div>
-            ))}
           </div>
         </section>
 
@@ -764,112 +762,6 @@ export default async function AboutPage() {
                   )
                 })}
               </div>
-            </div>
-
-            {/* Data Table */}
-            <div style={{ marginTop: '4rem' }}>
-              <div className="about-table-wrap">
-                <div className="about-table-header">
-                  <div className="about-table-header-icon">
-                    <Table2 style={{ width: 18, height: 18, color: 'white' }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '1rem', fontWeight: 700, color: '#0e2a3a' }}>Data Ringkasan Perjalanan</p>
-                    <p style={{ fontSize: '0.8125rem', color: '#64748b' }}>Seluruh tonggak sejarah dalam format tabel</p>
-                  </div>
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="about-table">
-                    <thead>
-                      <tr>
-                        <th>Tahun</th>
-                        <th>Milestone</th>
-                        <th style={{ display: 'none' }} className="md-show">Deskripsi</th>
-                        <th>Dampak</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {milestones.map((m) => {
-                        const IconComponent = iconMap[m.icon] ?? Award
-                        return (
-                          <tr key={m.id}>
-                            <td><span className="about-table-year">{m.year}</span></td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                                <div className="about-table-icon-wrap">
-                                  <IconComponent style={{ width: 13, height: 13, color: '#06958a' }} />
-                                </div>
-                                <span style={{ fontWeight: 600, color: '#0e2a3a', fontSize: '0.875rem' }}>{m.title}</span>
-                              </div>
-                            </td>
-                            <td style={{ color: '#64748b', maxWidth: 280, lineHeight: 1.55 }}>{m.description}</td>
-                            <td>
-                              {m.impact_stat
-                                ? <span className="about-table-badge">{m.impact_stat}</span>
-                                : <span style={{ color: '#94a3b8' }}>—</span>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ padding: '0.875rem 1.25rem', background: '#f8fafc', borderTop: '1px solid #f1f5f9', fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center' }}>
-                  Total {milestones.length} milestone tercatat · Data diperbarui secara berkala
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── TEAM ── */}
-        <section className="about-section-alt">
-          <div className="about-container">
-            <div className="text-center" style={{ marginBottom: '3rem' }}>
-              <div className="about-section-eyebrow" style={{ justifyContent: 'center' }}>
-                <span className="about-section-eyebrow-dot" />
-                Tim Kami
-              </div>
-              <h2 className="about-section-title">Orang-orang di Balik SinergiLaut</h2>
-              <p className="about-section-desc" style={{ margin: '0 auto' }}>
-                Dikerjakan dengan hati oleh tim yang berdedikasi untuk masa depan laut Indonesia.
-              </p>
-            </div>
-            <div className="about-team-grid" style={{ maxWidth: 900, margin: '0 auto' }}>
-              {teamMembers.map((member) => (
-                <div key={member.name} className="about-team-card">
-                  <div className="about-team-avatar">
-                    <Image src={member.image} alt={member.name} fill style={{ objectFit: 'cover' }} />
-                  </div>
-                  <h3 className="about-team-name">{member.name}</h3>
-                  <p className="about-team-role">{member.role}</p>
-                  <p className="about-team-bio">{member.bio}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── CTA ── */}
-        <section className="about-cta">
-          <div className="about-cta-bg" />
-          <div className="about-cta-glow" />
-          <div className="about-cta-content">
-            <div className="about-cta-badge">
-              <Sparkles style={{ width: 12, height: 12 }} />
-              Mulai Perjalanan Anda
-            </div>
-            <h2 className="about-cta-title">Bergabunglah dengan Gerakan Laut Bersih</h2>
-            <p className="about-cta-desc">
-              Bersama kita bisa menciptakan perubahan nyata untuk ekosistem laut Indonesia. Daftar gratis dan mulai berkontribusi hari ini.
-            </p>
-            <div className="about-cta-btns">
-              <Link href="/register" className="about-cta-btn-primary">
-                Daftar Sekarang <ArrowRight style={{ width: 16, height: 16 }} />
-              </Link>
-              <Link href="/contact" className="about-cta-btn-ghost">
-                Hubungi Kami
-              </Link>
             </div>
           </div>
         </section>
