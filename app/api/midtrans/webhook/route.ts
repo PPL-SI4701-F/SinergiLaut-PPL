@@ -19,6 +19,11 @@ import { createAdminClient } from "@/lib/supabase/server"
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
 
+interface ActivityWithCommunity {
+  title: string
+  communities: { owner_id: string } | null
+}
+
 interface MidtransNotification {
   order_id: string
   status_code: string
@@ -109,7 +114,7 @@ export async function POST(req: NextRequest) {
       .from("activities")
       .select("title, communities(owner_id)")
       .eq("id", donation.activity_id)
-      .single()
+      .single() as { data: ActivityWithCommunity | null }
 
     const activityTitle = activity?.title ?? "kegiatan"
     const formattedAmount = new Intl.NumberFormat("id-ID", {
@@ -130,9 +135,7 @@ export async function POST(req: NextRequest) {
 
       // Notifikasi ke komunitas
       if (activity?.communities) {
-        const ownerId = Array.isArray(activity.communities)
-          ? activity.communities[0]?.owner_id
-          : (activity.communities as any)?.owner_id
+        const ownerId = activity.communities.owner_id
 
         if (ownerId) {
           await supabase.from("notifications").insert({

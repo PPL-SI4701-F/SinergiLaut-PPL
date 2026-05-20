@@ -15,6 +15,9 @@ import {
 } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils/helpers"
 import { getCommunityDashboardStats, getCommunityActivities } from "@/lib/actions/dashboard.actions"
+import type { Activity } from "@/lib/types"
+
+type CommunityActivity = Activity & { reports: { status: string }[] | null }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   published: { label: "Aktif", className: "bg-green-100 text-green-700" },
@@ -30,7 +33,7 @@ export default function CommunityDashboardPage() {
   const { profile } = useAuth()
   const [search, setSearch] = useState("")
   const [stats, setStats] = useState({ totalActivities: 0, totalVolunteers: 0, totalDonations: 0, verifiedReports: "0/0" })
-  const [activities, setActivities] = useState<any[]>([])
+  const [activities, setActivities] = useState<CommunityActivity[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {

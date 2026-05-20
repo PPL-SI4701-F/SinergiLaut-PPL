@@ -2,11 +2,20 @@
 
 /**
  * SinergiLaut — Donation Actions
- * Alur pembayaran donasi uang: Donor → Midtrans Snap → SinergiLaut → Komunitas
- * Donasi barang: Langsung tercatat + tracking pengiriman
+ *
+ * Alur donasi uang:
+ *   1. createMoneyDonation()  → simpan record status "pending"
+ *   2. [frontend] tampilkan payment simulation dialog
+ *   3. completeMoneyDonation() → ubah status "completed"
+ *      DB trigger on_donation_status_change otomatis update activities.funding_raised
+ *
+ * Alur donasi barang (fulfillment):
+ *   1. createItemDonation()          → simpan record + items, status "pending"
+ *   2. [frontend] tampilkan payment simulation dialog
+ *   3. completeFulfillmentDonation() → ubah status "completed" + update items_needed
  */
 
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
 
 // ─── Type Definitions ───────────────────────────────────────────
@@ -16,7 +25,7 @@ export interface CreateMoneyDonationPayload {
   userId?: string | null
   donorName: string
   donorEmail: string
-  amount: number        // IDR, satuan rupiah
+  amount: number
   note?: string
   isAnonymous?: boolean
 }
@@ -38,65 +47,22 @@ export interface CreateItemDonationPayload {
   }[]
 }
 
-// ─── Midtrans Helper ─────────────────────────────────────────────
-
-/** Generate unique Midtrans order ID dengan prefix SL */
-function generateOrderId(): string {
-  const timestamp = Date.now().toString(36).toUpperCase()
-  const random = Math.random().toString(36).substring(2, 7).toUpperCase()
-  return `SL-${timestamp}-${random}`
-}
-
-/** Buat Midtrans Snap transaction melalui API route internal */
-async function createMidtransTransaction(payload: {
-  orderId: string
-  amount: number
-  donorName: string
-  donorEmail: string
-  activityTitle: string
-  itemDetails?: { id: string; price: number; quantity: number; name: string }[]
-}): Promise<{ snapToken: string; redirectUrl: string } | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000"
-    const response = await fetch(`${baseUrl}/api/midtrans/create-transaction`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-
-    if (!response.ok) return null
-
-    const result = await response.json()
-    return result.data ?? null
-  } catch (err) {
-    console.error("[createMidtransTransaction] fetch error:", err)
-    return null
-  }
+interface ActivityWithCommunity {
+  title: string
+  funding_raised?: number
+  communities: { owner_id: string } | null
 }
 
 // ─── Actions ────────────────────────────────────────────────────
 
 /**
- * Membuat record donasi UANG dan menginisiasi transaksi Midtrans.
- * Returns: { success, donationId, orderId, snapToken } — snapToken digunakan oleh frontend
- * untuk membuka Midtrans Snap payment UI.
+ * Simpan record donasi UANG dengan status "pending".
+ * Panggil completeMoneyDonation() setelah user konfirmasi pembayaran.
  */
 export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
-  const supabase = await createClient()
-
   const adminSupabase = await createAdminClient()
 
-  // 1. Ambil judul activity untuk Midtrans item details
-  const { data: activity } = await adminSupabase
-    .from("activities")
-    .select("title")
-    .eq("id", payload.activityId)
-    .single()
-
-  const orderId = generateOrderId()
-
-  // 2. Buat record donation di DB dengan status pending
-  const { data: donation, error: insertError } = await adminSupabase
+  const { data: donation, error } = await adminSupabase
     .from("donations")
     .insert({
       activity_id: payload.activityId,
@@ -105,7 +71,6 @@ export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
       donor_email: payload.donorEmail,
       type: "money",
       amount: payload.amount,
-      midtrans_order_id: orderId,
       status: "pending",
       note: payload.note ?? null,
       is_anonymous: payload.isAnonymous ?? false,
@@ -113,67 +78,96 @@ export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
     .select("id")
     .single()
 
-  if (insertError || !donation) {
-    console.error("[createMoneyDonation] insert error:", insertError)
-    return { success: false, error: "Gagal membuat record donasi." }
+  if (error || !donation) {
+    console.error("[createMoneyDonation] insert error:", error)
+    return { success: false as const, error: "Gagal membuat record donasi." }
   }
 
-  // 3. Buat transaksi Midtrans
-  let midtrans = await createMidtransTransaction({
-    orderId,
-    amount: payload.amount,
-    donorName: payload.isAnonymous ? "Donatur Anonim" : payload.donorName,
-    donorEmail: payload.donorEmail,
-    activityTitle: activity?.title ?? "Donasi Konservasi Laut",
-    itemDetails: [{
-      id: payload.activityId,
-      price: payload.amount,
-      quantity: 1,
-      name: `Donasi: ${activity?.title ?? "Kegiatan Konservasi"}`.substring(0, 50),
-    }],
-  })
+  return { success: true as const, donationId: donation.id }
+}
 
-  if (!midtrans) {
-    console.warn("[createMoneyDonation] Midtrans transaction fetch failed. Proceeding with mock token for simulation.")
-    midtrans = {
-      snapToken: "mock_snap_token_" + orderId,
-      redirectUrl: "http://localhost:3000/mock-payment"
-    }
-  }
+/**
+ * Selesaikan donasi UANG setelah pembayaran dikonfirmasi.
+ * Status berubah → "completed"; DB trigger otomatis menambah activities.funding_raised.
+ * Kirim notifikasi ke donor dan komunitas.
+ */
+export async function completeMoneyDonation(donationId: string) {
+  const adminSupabase = await createAdminClient()
 
-  // 4. Update record dengan snap token
-  await adminSupabase
+  const { data: donation, error: fetchError } = await adminSupabase
     .from("donations")
-    .update({
-      midtrans_snap_token: midtrans.snapToken,
-      midtrans_expiry_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 jam
-    })
-    .eq("id", donation.id)
+    .select("id, amount, activity_id, user_id, donor_name, is_anonymous")
+    .eq("id", donationId)
+    .eq("status", "pending")
+    .single()
+
+  if (fetchError || !donation) {
+    console.error("[completeMoneyDonation] fetch error:", fetchError)
+    return { success: false as const, error: "Donasi tidak ditemukan atau sudah diproses." }
+  }
+
+  // Update status → completed (DB trigger on_donation_status_change akan update funding_raised)
+  const { error: updateError } = await adminSupabase
+    .from("donations")
+    .update({ status: "completed" })
+    .eq("id", donationId)
+
+  if (updateError) {
+    console.error("[completeMoneyDonation] update error:", updateError)
+    return { success: false as const, error: "Gagal menyelesaikan donasi." }
+  }
+
+  // Ambil funding_raised terbaru (sudah diupdate oleh trigger) + data notifikasi
+  const { data: activity } = await adminSupabase
+    .from("activities")
+    .select("title, funding_raised, communities(owner_id)")
+    .eq("id", donation.activity_id)
+    .single() as { data: ActivityWithCommunity | null }
+
+  const activityTitle = activity?.title ?? "kegiatan"
+  const formattedAmount = new Intl.NumberFormat("id-ID", {
+    style: "currency", currency: "IDR", minimumFractionDigits: 0,
+  }).format(donation.amount ?? 0)
+
+  if (donation.user_id) {
+    await createNotification(
+      donation.user_id,
+      "Donasi Berhasil! 🎉",
+      `Donasi ${formattedAmount} untuk kegiatan "${activityTitle}" berhasil dicatat. Terima kasih atas kontribusimu!`,
+      "success",
+      "/user/dashboard"
+    )
+  }
+
+  const ownerId = activity?.communities?.owner_id
+  if (ownerId) {
+    const donorLabel = donation.is_anonymous ? "Donatur Anonim" : donation.donor_name
+    await createNotification(
+      ownerId,
+      "Donasi Baru Masuk! 💰",
+      `${donorLabel} berhasil mendonasikan ${formattedAmount} untuk kegiatan "${activityTitle}".`,
+      "success",
+      "/community/dashboard"
+    )
+  }
 
   return {
-    success: true,
-    donationId: donation.id,
-    orderId,
-    snapToken: midtrans.snapToken,
-    redirectUrl: midtrans.redirectUrl,
+    success: true as const,
+    funding_raised: activity?.funding_raised ?? 0,
   }
 }
 
 /**
- * Membuat record donasi BARANG.
- * Satu donasi bisa berisi banyak item (multi-item dalam satu transaksi).
- * Tidak memerlukan Midtrans — barang dikirim langsung ke komunitas.
+ * Simpan record donasi BARANG (fulfillment) dengan status "pending".
+ * Panggil completeFulfillmentDonation() setelah pembayaran dikonfirmasi.
  */
 export async function createItemDonation(payload: CreateItemDonationPayload) {
-  const supabase = await createClient()
-
   if (!payload.items || payload.items.length === 0) {
-    return { success: false, error: "Harus ada minimal 1 item untuk donasi barang." }
+    return { success: false as const, error: "Harus ada minimal 1 item untuk donasi barang." }
   }
 
   const adminSupabase = await createAdminClient()
 
-  // 1. Insert donation header
   const { data: donation, error: insertError } = await adminSupabase
     .from("donations")
     .insert({
@@ -183,7 +177,7 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
       donor_email: payload.donorEmail,
       type: "item",
       amount: null,
-      status: "pending", // Berubah ke completed setelah komunitas konfirmasi terima barang
+      status: "pending",
       note: payload.note ?? null,
       is_anonymous: payload.isAnonymous ?? false,
     })
@@ -192,10 +186,9 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
 
   if (insertError || !donation) {
     console.error("[createItemDonation] insert error:", insertError)
-    return { success: false, error: "Gagal membuat record donasi barang." }
+    return { success: false as const, error: "Gagal membuat record donasi barang." }
   }
 
-  // 2. Insert semua donation items
   const itemsToInsert = payload.items.map((item) => ({
     donation_id: donation.id,
     item_name: item.itemName,
@@ -212,56 +205,79 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
 
   if (itemsError) {
     console.error("[createItemDonation] items insert error:", itemsError)
-    // Rollback: hapus donation header
     await adminSupabase.from("donations").delete().eq("id", donation.id)
-    return { success: false, error: "Gagal menyimpan data barang donasi." }
+    return { success: false as const, error: "Gagal menyimpan data barang donasi." }
   }
 
-  // Ambil judul activity + owner komunitas untuk notifikasi
   const { data: activity } = await adminSupabase
     .from("activities")
     .select("title, communities(owner_id)")
     .eq("id", payload.activityId)
-    .single()
+    .single() as { data: ActivityWithCommunity | null }
 
   const activityTitle = activity?.title ?? "kegiatan"
-  const itemCount = payload.items.length
-  const communityOwnerId = Array.isArray(activity?.communities)
-    ? activity.communities[0]?.owner_id
-    : (activity?.communities as any)?.owner_id
+  const communityOwnerId = activity?.communities?.owner_id
 
-  // Notifikasi konfirmasi ke user donor
   if (payload.userId) {
     await createNotification(
       payload.userId,
-      "Donasi Barang Terkirim 📦",
-      `${itemCount} jenis barang untuk kegiatan "${activityTitle}" berhasil dicatat. Komunitas akan mengkonfirmasi penerimaan barang.`,
+      "Donasi Barang Didaftarkan 📦",
+      `${payload.items.length} jenis barang untuk kegiatan "${activityTitle}" berhasil dicatat. Lanjutkan pembayaran untuk menyelesaikan.`,
       "info",
       "/user/dashboard"
     )
   }
 
-  // Notifikasi ke komunitas bahwa ada donasi barang masuk
   if (communityOwnerId) {
     const donorLabel = payload.isAnonymous ? "Donatur Anonim" : payload.donorName
     await createNotification(
       communityOwnerId,
       "Donasi Barang Masuk 📦",
-      `${donorLabel} mengirimkan ${itemCount} jenis barang untuk kegiatan "${activityTitle}". Segera konfirmasi penerimaan.`,
+      `${donorLabel} mendaftarkan ${payload.items.length} jenis barang untuk kegiatan "${activityTitle}". Menunggu konfirmasi pembayaran.`,
       "info",
       "/community/dashboard"
     )
   }
 
-  return {
-    success: true,
-    donationId: donation.id,
-    itemCount,
-  }
+  return { success: true as const, donationId: donation.id, itemCount: payload.items.length }
 }
 
 /**
- * Ambil semua donasi untuk suatu activity (untuk komunitas/admin)
+ * Selesaikan donasi BARANG setelah pembayaran dikonfirmasi.
+ * Update status → "completed" + perbarui items_needed di activities.
+ */
+export async function completeFulfillmentDonation(
+  donationId: string,
+  activityId: string,
+  updatedItems: { item_name: string; target: number; donated: number; unit_price?: number }[]
+) {
+  const adminSupabase = await createAdminClient()
+
+  const { error: donationError } = await adminSupabase
+    .from("donations")
+    .update({ status: "completed" })
+    .eq("id", donationId)
+    .eq("status", "pending")
+
+  if (donationError) {
+    console.error("[completeFulfillmentDonation] update donation error:", donationError)
+    return { success: false as const, error: "Gagal menyelesaikan donasi barang." }
+  }
+
+  const { error: activityError } = await adminSupabase
+    .from("activities")
+    .update({ items_needed: updatedItems })
+    .eq("id", activityId)
+
+  if (activityError) {
+    console.error("[completeFulfillmentDonation] update activity error:", activityError)
+  }
+
+  return { success: true as const }
+}
+
+/**
+ * Ambil semua donasi untuk suatu activity (untuk komunitas/admin).
  */
 export async function getActivityDonations(activityId: string) {
   const adminSupabase = await createAdminClient()
@@ -285,7 +301,7 @@ export async function getActivityDonations(activityId: string) {
 }
 
 /**
- * Ambil riwayat donasi milik user yang sedang login
+ * Ambil riwayat donasi milik user tertentu.
  */
 export async function getMyDonations(userId: string) {
   const adminSupabase = await createAdminClient()
@@ -315,7 +331,7 @@ export async function getMyDonations(userId: string) {
 }
 
 /**
- * Konfirmasi penerimaan donasi barang oleh komunitas → ubah status menjadi completed
+ * Konfirmasi penerimaan donasi barang oleh komunitas → status menjadi "completed".
  */
 export async function confirmItemDonationReceived(donationId: string) {
   const adminSupabase = await createAdminClient()
