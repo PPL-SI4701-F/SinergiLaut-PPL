@@ -20,12 +20,29 @@ import {
 
 type UserTab = "overview" | "volunteer" | "donations"
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  approved:  { label: "Disetujui",  className: "bg-green-100 text-green-700" },
-  pending:   { label: "Menunggu",   className: "bg-yellow-100 text-yellow-700" },
-  rejected:  { label: "Ditolak",    className: "bg-red-100 text-red-700" },
-  completed: { label: "Selesai",    className: "bg-blue-100 text-blue-700" },
-  attended:  { label: "Hadir",      className: "bg-green-100 text-green-700" },
+const statusConfig: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  approved:  { label: "Disetujui", color: "#34d399", bg: "rgba(52,211,153,0.15)",  border: "rgba(52,211,153,0.35)"  },
+  pending:   { label: "Menunggu",  color: "#fbbf24", bg: "rgba(251,191,36,0.15)",  border: "rgba(251,191,36,0.35)"  },
+  rejected:  { label: "Ditolak",  color: "#f87171", bg: "rgba(248,113,113,0.15)", border: "rgba(248,113,113,0.35)" },
+  completed: { label: "Selesai",  color: "#60a5fa", bg: "rgba(96,165,250,0.15)",  border: "rgba(96,165,250,0.35)"  },
+  attended:  { label: "Hadir",    color: "#34d399", bg: "rgba(52,211,153,0.15)",  border: "rgba(52,211,153,0.35)"  },
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cfg = statusConfig[status]
+  if (!cfg) return (
+    <span className="text-[10px] font-bold text-muted-foreground px-2 py-0.5 rounded-full bg-secondary border border-border">
+      {status}
+    </span>
+  )
+  return (
+    <span
+      className="text-[10px] font-bold uppercase tracking-tight px-2.5 py-0.5 rounded-full"
+      style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}
+    >
+      {cfg.label}
+    </span>
+  )
 }
 
 interface VolunteerItem {
@@ -135,9 +152,7 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
                           )}
                         </div>
                       </div>
-                      <Badge className={statusConfig[v.status]?.className}>
-                        {statusConfig[v.status]?.label ?? v.status}
-                      </Badge>
+                      <StatusBadge status={v.status} />
                     </div>
                   ))}
                 </div>
@@ -179,9 +194,7 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
                         <Badge className={d.type === "money" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}>
                           {d.type === "money" ? <Banknote className="h-3 w-3" /> : <Package className="h-3 w-3" />}
                         </Badge>
-                        <Badge className={statusConfig[d.status]?.className}>
-                          {statusConfig[d.status]?.label ?? d.status}
-                        </Badge>
+                        <StatusBadge status={d.status} />
                       </div>
                     </div>
                   ))}
@@ -269,9 +282,7 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
                         )}
                       </div>
                     </div>
-                    <Badge className={statusConfig[v.status]?.className}>
-                      {statusConfig[v.status]?.label ?? v.status}
-                    </Badge>
+                    <StatusBadge status={v.status} />
                   </div>
                 ))}
               </div>
@@ -325,9 +336,7 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
                           {formatDateShort(d.created_at)}
                         </td>
                         <td className="py-4 px-4">
-                          <Badge className={statusConfig[d.status]?.className}>
-                            {statusConfig[d.status]?.label ?? d.status}
-                          </Badge>
+                          <StatusBadge status={d.status} />
                         </td>
                       </tr>
                     ))}
