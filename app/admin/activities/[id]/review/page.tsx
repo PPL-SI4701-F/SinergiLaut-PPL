@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -98,8 +97,7 @@ export default function AdminActivityReviewPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-secondary flex flex-col">
-        <Navigation />
+      <div className="flex-1 bg-slate-50 flex flex-col">
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
@@ -126,9 +124,8 @@ export default function AdminActivityReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navigation />
-      <main className="pt-16">
+    <div className="flex-1 bg-slate-50">
+      <main>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
 
           {/* Header */}
