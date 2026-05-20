@@ -152,7 +152,7 @@ export async function updateVolunteerStatus(
     .from("volunteer_registrations")
     .update({ status })
     .eq("id", registrationId)
-    .select("user_id, full_name, activity_id, activity:activities(title, volunteer_count)")
+    .select("user_id, full_name, activity_id, activity:activities(title)")
     .single()
 
   if (error) {
@@ -160,14 +160,7 @@ export async function updateVolunteerStatus(
     return { success: false, error: "Gagal mengubah status relawan." }
   }
 
-  // Jika disetujui, tambahkan volunteer_count di tabel activities
-  if (status === "approved" && data?.activity_id) {
-    const currentCount = (data?.activity as any)?.volunteer_count || 0
-    await adminSupabase
-      .from("activities")
-      .update({ volunteer_count: currentCount + 1 })
-      .eq("id", data.activity_id)
-  }
+  // volunteer_count diperbarui otomatis oleh DB trigger update_volunteer_count
 
   // Kirim notifikasi ke user berdasarkan status baru
   const userId = data?.user_id
