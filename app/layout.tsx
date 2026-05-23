@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/auth-context'
 import './globals.css'
+import './sinergilaut.css'
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" })
 

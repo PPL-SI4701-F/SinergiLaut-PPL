@@ -45,10 +45,10 @@ import { useRouter } from "next/navigation"
 import { registerCommunity } from "@/lib/actions/auth.actions"
 
 const steps = [
-  { id: 1, title: "Basic Info", icon: Building2 },
-  { id: 2, title: "Contact Info", icon: Mail },
-  { id: 3, title: "Location & Coverage", icon: MapPin },
-  { id: 4, title: "Documents", icon: FileText },
+  { id: 1, title: "Info Dasar", icon: Building2 },
+  { id: 2, title: "Kontak", icon: Mail },
+  { id: 3, title: "Lokasi & Cakupan", icon: MapPin },
+  { id: 4, title: "Dokumen", icon: FileText },
   { id: 5, title: "Submit", icon: CheckCircle2 },
 ]
 
@@ -229,9 +229,9 @@ export default function CommunityRegisterPage() {
                 </div>
 
                 <h2 className="text-2xl font-bold text-foreground mb-4">
-                  {verificationStatus === "pending" && "Registration Submitted!"}
-                  {verificationStatus === "verified" && "Registration Approved!"}
-                  {verificationStatus === "rejected" && "Registration Needs Review"}
+                  {verificationStatus === "pending" && "Pendaftaran Terkirim!"}
+                  {verificationStatus === "verified" && "Pendaftaran Disetujui!"}
+                  {verificationStatus === "rejected" && "Pendaftaran Perlu Ditinjau"}
                 </h2>
 
                 <Badge
@@ -244,78 +244,47 @@ export default function CommunityRegisterPage() {
                   }
                   className="mb-6"
                 >
-                  {verificationStatus === "pending" && "Pending Verification"}
-                  {verificationStatus === "verified" && "Verified"}
-                  {verificationStatus === "rejected" && "Rejected"}
+                  {verificationStatus === "pending" && "Menunggu Verifikasi"}
+                  {verificationStatus === "verified" && "Terverifikasi"}
+                  {verificationStatus === "rejected" && "Ditolak"}
                 </Badge>
 
                 <p className="text-muted-foreground mb-8">
                   {verificationStatus === "pending" &&
-                    "Your registration will be reviewed by the platform admin. You will receive a confirmation email at " +
+                    "Pendaftaran Anda akan ditinjau oleh admin platform. Anda akan menerima email konfirmasi ke " +
                       formData.email +
-                      " when approved."}
+                      " jika disetujui."}
                   {verificationStatus === "verified" &&
-                    "Congratulations! Your community has been verified. You can now start publishing activities."}
+                    "Selamat! Komunitas Anda telah diverifikasi. Anda kini dapat mulai mempublikasikan kegiatan."}
                   {verificationStatus === "rejected" &&
-                    "Please review the feedback sent to your email and resubmit your registration."}
+                    "Harap tinjau masukan yang dikirim ke email Anda dan ajukan ulang pendaftaran."}
                 </p>
 
                 <div className="bg-secondary/50 rounded-lg p-6 mb-8">
-                  <h3 className="font-semibold text-foreground mb-4">What happens next?</h3>
+                  <h3 className="font-semibold text-foreground mb-4">Selanjutnya?</h3>
                   <ul className="text-left space-y-3 text-sm text-muted-foreground">
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span>Our team will review your registration within 2-3 business days</span>
+                      <span>Tim kami akan meninjau pendaftaran Anda dalam 2-3 hari kerja</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span>You will receive an email notification about your registration status</span>
+                      <span>Anda akan menerima notifikasi email tentang status pendaftaran Anda</span>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span>Once approved, you can start creating activities and accepting volunteers</span>
+                      <span>Setelah disetujui, Anda dapat mulai membuat kegiatan dan menerima relawan</span>
                     </li>
                   </ul>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button asChild>
-                    <Link href="/">Return to Home</Link>
+                    <Link href="/community/dashboard">Ke Dashboard Komunitas</Link>
                   </Button>
                   <Button variant="outline" asChild>
-                    <Link href="/activities">Browse Activities</Link>
+                    <Link href="/activities">Lihat Kegiatan</Link>
                   </Button>
-                </div>
-
-                {/* Demo buttons to show different states */}
-                <div className="mt-8 pt-8 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-3">Demo: View different status states</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setVerificationStatus("pending")}
-                      className={verificationStatus === "pending" ? "ring-2 ring-primary" : ""}
-                    >
-                      Pending
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setVerificationStatus("verified")}
-                      className={verificationStatus === "verified" ? "ring-2 ring-primary" : ""}
-                    >
-                      Verified
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setVerificationStatus("rejected")}
-                      className={verificationStatus === "rejected" ? "ring-2 ring-primary" : ""}
-                    >
-                      Rejected
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -350,10 +319,10 @@ export default function CommunityRegisterPage() {
             <Heart className="w-8 h-8 text-accent" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-primary-foreground mb-4 text-balance">
-            Join SinergiLaut as a Conservation Community
+            Bergabung dengan SinergiLaut sebagai Komunitas Konservasi
           </h1>
           <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto text-pretty">
-            Register your organization to start publishing activities, managing volunteers, and accepting donations
+            Daftarkan organisasi Anda untuk mulai mempublikasikan kegiatan, mengelola relawan, dan menerima donasi
           </p>
         </div>
       </section>
@@ -411,7 +380,7 @@ export default function CommunityRegisterPage() {
             {/* Mobile Step Indicator */}
             <div className="sm:hidden text-center mt-4">
               <span className="text-sm font-medium text-primary">
-                Step {currentStep} of {steps.length}: {steps[currentStep - 1].title}
+                Langkah {currentStep} dari {steps.length}: {steps[currentStep - 1].title}
               </span>
             </div>
           </div>
@@ -423,19 +392,19 @@ export default function CommunityRegisterPage() {
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Basic Information</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Informasi Dasar</h2>
                     <p className="text-muted-foreground">
-                      Tell us about your conservation community or organization
+                      Ceritakan tentang komunitas atau organisasi konservasi Anda
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Community Name <span className="text-destructive">*</span>
+                        Nama Komunitas <span className="text-destructive">*</span>
                       </label>
                       <Input
-                        placeholder="e.g., Ocean Guardians Indonesia"
+                        placeholder="contoh: Ocean Guardians Indonesia"
                         value={formData.communityName}
                         onChange={(e) => handleInputChange("communityName", e.target.value)}
                         className="h-12"
@@ -444,23 +413,23 @@ export default function CommunityRegisterPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Short Description <span className="text-destructive">*</span>
+                        Deskripsi Singkat <span className="text-destructive">*</span>
                       </label>
                       <Textarea
-                        placeholder="Describe your community's mission and activities (max 500 characters)"
+                        placeholder="Deskripsikan misi dan kegiatan komunitas Anda (maks 500 karakter)"
                         value={formData.shortDescription}
                         onChange={(e) => handleInputChange("shortDescription", e.target.value)}
                         rows={4}
                         maxLength={500}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formData.shortDescription.length}/500 characters
+                        {formData.shortDescription.length}/500 karakter
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Community Logo
+                        Logo Komunitas
                       </label>
                       <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
                         <input
@@ -480,10 +449,10 @@ export default function CommunityRegisterPage() {
                             <>
                               <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                               <p className="text-sm text-muted-foreground">
-                                Click to upload or drag and drop
+                                Klik untuk unggah atau seret dan jatuhkan
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                PNG, JPG up to 2MB
+                                PNG, JPG maks 2MB
                               </p>
                             </>
                           )}
@@ -498,21 +467,21 @@ export default function CommunityRegisterPage() {
               {currentStep === 2 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Contact Information</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Informasi Kontak</h2>
                     <p className="text-muted-foreground">
-                      Provide contact details for your community administrator
+                      Berikan detail kontak administrator komunitas Anda
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Admin Name <span className="text-destructive">*</span>
+                        Nama Admin <span className="text-destructive">*</span>
                       </label>
                       <div className="relative">
                         <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <Input
-                          placeholder="Full name of the administrator"
+                          placeholder="Nama lengkap administrator"
                           value={formData.adminName}
                           onChange={(e) => handleInputChange("adminName", e.target.value)}
                           className="h-12 pl-10"
@@ -522,7 +491,7 @@ export default function CommunityRegisterPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Email Address <span className="text-destructive">*</span>
+                        Alamat Email <span className="text-destructive">*</span>
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -538,7 +507,7 @@ export default function CommunityRegisterPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Phone Number <span className="text-destructive">*</span>
+                        Nomor Telepon <span className="text-destructive">*</span>
                       </label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -572,7 +541,7 @@ export default function CommunityRegisterPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
-                          Confirm Password <span className="text-destructive">*</span>
+                          Konfirmasi Password <span className="text-destructive">*</span>
                         </label>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -590,7 +559,7 @@ export default function CommunityRegisterPage() {
 
                     <div className="pt-4 border-t border-border">
                       <p className="text-sm font-medium text-foreground mb-4">
-                        Social Media (Optional)
+                        Media Sosial (Opsional)
                       </p>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="relative">
@@ -639,23 +608,23 @@ export default function CommunityRegisterPage() {
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Location & Coverage</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Lokasi & Cakupan</h2>
                     <p className="text-muted-foreground">
-                      Specify your operational area and types of activities
+                      Tentukan area operasional dan jenis kegiatan Anda
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Region <span className="text-destructive">*</span>
+                        Wilayah <span className="text-destructive">*</span>
                       </label>
                       <Select
                         value={formData.region}
                         onValueChange={(value) => handleInputChange("region", value)}
                       >
                         <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select your operational region" />
+                          <SelectValue placeholder="Pilih wilayah operasional Anda" />
                         </SelectTrigger>
                         <SelectContent>
                           {regions.map((region) => (
@@ -669,12 +638,12 @@ export default function CommunityRegisterPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">
-                        Operational Area Details
+                        Detail Area Operasional
                       </label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
                         <Textarea
-                          placeholder="Describe specific locations where your community operates (cities, coastal areas, marine parks, etc.)"
+                          placeholder="Deskripsikan lokasi spesifik tempat komunitas Anda beroperasi (kota, kawasan pesisir, taman laut, dll.)"
                           value={formData.operationalArea}
                           onChange={(e) => handleInputChange("operationalArea", e.target.value)}
                           rows={3}
@@ -685,10 +654,10 @@ export default function CommunityRegisterPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-3">
-                        Types of Activities <span className="text-destructive">*</span>
+                        Jenis Kegiatan <span className="text-destructive">*</span>
                       </label>
                       <p className="text-xs text-muted-foreground mb-4">
-                        Select all activities your community participates in
+                        Pilih semua kegiatan yang dilakukan komunitas Anda
                       </p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {activityTypes.map((activity) => (
@@ -718,9 +687,9 @@ export default function CommunityRegisterPage() {
               {currentStep === 4 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Legal Documents</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Dokumen Legal</h2>
                     <p className="text-muted-foreground">
-                      Upload supporting documents (optional but recommended)
+                      Unggah dokumen pendukung (opsional namun direkomendasikan)
                     </p>
                   </div>
 
@@ -737,10 +706,10 @@ export default function CommunityRegisterPage() {
                       <label htmlFor="documents-upload" className="cursor-pointer">
                         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                         <p className="text-foreground font-medium mb-2">
-                          Upload Legal Documents
+                          Unggah Dokumen Legal
                         </p>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Organization registration, certificates, permits, or other official documents
+                          Akta pendirian organisasi, sertifikat, izin, atau dokumen resmi lainnya
                         </p>
                         <Button variant="outline" type="button" className="pointer-events-none">
                           <Upload className="w-4 h-4 mr-2" />
@@ -777,13 +746,13 @@ export default function CommunityRegisterPage() {
 
                     <div className="bg-secondary/30 rounded-lg p-4">
                       <p className="text-sm font-medium text-foreground mb-2">
-                        Recommended Documents:
+                        Dokumen yang Direkomendasikan:
                       </p>
                       <ul className="text-sm text-muted-foreground space-y-1">
-                        <li>- Organization registration certificate</li>
-                        <li>- NPO/NGO status proof (if applicable)</li>
-                        <li>- Activity permits or licenses</li>
-                        <li>- Previous activity reports or portfolios</li>
+                        <li>- Akta pendirian organisasi</li>
+                        <li>- Bukti status LSM/NPO (jika ada)</li>
+                        <li>- Izin kegiatan atau lisensi</li>
+                        <li>- Laporan kegiatan sebelumnya atau portofolio</li>
                       </ul>
                     </div>
                   </div>
@@ -794,19 +763,19 @@ export default function CommunityRegisterPage() {
               {currentStep === 5 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Review & Submit</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Tinjau & Kirim</h2>
                     <p className="text-muted-foreground">
-                      Review your information and submit your registration
+                      Tinjau informasi Anda dan kirimkan pendaftaran
                     </p>
                   </div>
 
                   {/* Summary */}
                   <div className="space-y-4">
                     <div className="bg-secondary/30 rounded-lg p-4">
-                      <h3 className="font-semibold text-foreground mb-3">Registration Summary</h3>
+                      <h3 className="font-semibold text-foreground mb-3">Ringkasan Pendaftaran</h3>
                       <div className="grid gap-3 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Community Name:</span>
+                          <span className="text-muted-foreground">Nama Komunitas:</span>
                           <span className="font-medium text-foreground">{formData.communityName || "-"}</span>
                         </div>
                         <div className="flex justify-between">
@@ -818,19 +787,19 @@ export default function CommunityRegisterPage() {
                           <span className="font-medium text-foreground">{formData.email || "-"}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Region:</span>
+                          <span className="text-muted-foreground">Wilayah:</span>
                           <span className="font-medium text-foreground">{formData.region || "-"}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Activities:</span>
+                          <span className="text-muted-foreground">Kegiatan:</span>
                           <span className="font-medium text-foreground">
-                            {formData.selectedActivities.length} selected
+                            {formData.selectedActivities.length} dipilih
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Documents:</span>
+                          <span className="text-muted-foreground">Dokumen:</span>
                           <span className="font-medium text-foreground">
-                            {formData.legalDocuments.length} uploaded
+                            {formData.legalDocuments.length} diunggah
                           </span>
                         </div>
                       </div>
@@ -841,10 +810,9 @@ export default function CommunityRegisterPage() {
                       <div className="flex items-start gap-3">
                         <Clock className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-medium text-foreground mb-1">Verification Process</p>
+                          <p className="font-medium text-foreground mb-1">Proses Verifikasi</p>
                           <p className="text-sm text-muted-foreground">
-                            Your registration will be reviewed by the platform admin. You will receive a
-                            confirmation email when approved. This process typically takes 2-3 business days.
+                            Pendaftaran Anda akan ditinjau oleh admin platform. Anda akan menerima email konfirmasi jika disetujui. Proses ini biasanya membutuhkan 2-3 hari kerja.
                           </p>
                         </div>
                       </div>
@@ -861,16 +829,15 @@ export default function CommunityRegisterPage() {
                         className="mt-0.5"
                       />
                       <label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer">
-                        I agree to the{" "}
+                        Saya menyetujui{" "}
                         <Link href="#" className="text-primary hover:underline">
-                          Terms & Conditions
+                          Syarat & Ketentuan
                         </Link>{" "}
-                        and{" "}
+                        dan{" "}
                         <Link href="#" className="text-primary hover:underline">
-                          Privacy Policy
+                          Kebijakan Privasi
                         </Link>
-                        . I confirm that all information provided is accurate and that I am authorized to
-                        register this community on SinergiLaut.
+                        . Saya menyatakan bahwa semua informasi yang diberikan akurat dan saya berwenang untuk mendaftarkan komunitas ini di SinergiLaut.
                       </label>
                     </div>
                   </div>
@@ -897,13 +864,13 @@ export default function CommunityRegisterPage() {
                     className="gap-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    Previous
+                    Kembali
                   </Button>
                 )}
 
                 {currentStep < 5 ? (
                   <Button onClick={nextStep} disabled={!canProceed()} className="gap-2">
-                    Next
+                    Lanjut
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 ) : (
@@ -917,7 +884,7 @@ export default function CommunityRegisterPage() {
                     ) : (
                       <CheckCircle2 className="w-4 h-4" />
                     )}
-                    {isSubmitting ? "Submitting..." : "Submit Registration"}
+                    {isSubmitting ? "Mengirim..." : "Kirim Pendaftaran"}
                   </Button>
                 )}
               </div>
