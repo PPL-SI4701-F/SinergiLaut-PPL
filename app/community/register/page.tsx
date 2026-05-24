@@ -45,11 +45,10 @@ import { useRouter } from "next/navigation"
 import { registerCommunity } from "@/lib/actions/auth.actions"
 
 const steps = [
-  { id: 1, title: "Info Dasar", icon: Building2 },
-  { id: 2, title: "Kontak", icon: Mail },
-  { id: 3, title: "Lokasi & Cakupan", icon: MapPin },
-  { id: 4, title: "Dokumen", icon: FileText },
-  { id: 5, title: "Submit", icon: CheckCircle2 },
+  { id: 1, title: "Info Komunitas", icon: Building2 },
+  { id: 2, title: "Lokasi & Kegiatan", icon: MapPin },
+  { id: 3, title: "Dokumen", icon: FileText },
+  { id: 4, title: "Submit", icon: CheckCircle2 },
 ]
 
 const activityTypes = [
@@ -131,7 +130,40 @@ export default function CommunityRegisterPage() {
   }
 
   const nextStep = () => {
-    if (currentStep < 5) setCurrentStep(currentStep + 1)
+    // Validasi step 1 (Info Komunitas — gabungan Basic + Contact)
+    if (currentStep === 1) {
+      if (formData.communityName.trim().length < 3) {
+        toast.error("Nama komunitas minimal 3 karakter.")
+        return
+      }
+      if (formData.shortDescription.trim().length < 20) {
+        toast.error("Deskripsi singkat minimal 20 karakter.")
+        return
+      }
+      if (formData.shortDescription.trim().length > 500) {
+        toast.error("Deskripsi singkat maksimal 500 karakter.")
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email)) {
+        toast.error("Format email tidak valid. Pastikan menggunakan @.")
+        return
+      }
+      const phoneRegex = /^[+\d\s()-]{6,20}$/
+      if (!phoneRegex.test(formData.phone)) {
+        toast.error("Nomor telepon tidak valid. Gunakan angka saja.")
+        return
+      }
+      if (formData.password.length < 8) {
+        toast.error("Password minimal 8 karakter.")
+        return
+      }
+      if (formData.password !== formData.confirmPassword) {
+        toast.error("Password dan konfirmasi password tidak cocok.")
+        return
+      }
+    }
+    if (currentStep < 4) setCurrentStep(currentStep + 1)
   }
 
   const prevStep = () => {
@@ -188,20 +220,15 @@ export default function CommunityRegisterPage() {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 1:
-        return formData.communityName && formData.shortDescription
-      case 2: {
-        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
-        const isValidPhone = /^[\d\+\-\s]+$/.test(formData.phone) && formData.phone.replace(/\D/g, '').length >= 9
-        const isValidPassword = formData.password.length >= 8
-        const isPasswordMatch = formData.password === formData.confirmPassword
-        return !!(formData.adminName && isValidEmail && isValidPhone && isValidPassword && isPasswordMatch)
-      }
-      case 3:
+      case 1: // Info Komunitas (Basic + Contact gabung)
+        return formData.communityName && formData.shortDescription &&
+               formData.adminName && formData.email && formData.phone &&
+               formData.password && formData.confirmPassword
+      case 2: // Lokasi & Kegiatan
         return formData.region && formData.selectedActivities.length > 0
-      case 4:
+      case 3: // Dokumen
         return true
-      case 5:
+      case 4: // Submit
         return formData.agreedToTerms
       default:
         return false
@@ -380,7 +407,7 @@ export default function CommunityRegisterPage() {
             {/* Mobile Step Indicator */}
             <div className="sm:hidden text-center mt-4">
               <span className="text-sm font-medium text-primary">
-                Langkah {currentStep} dari {steps.length}: {steps[currentStep - 1].title}
+                Step {currentStep} of {steps.length}: {steps[currentStep - 1].title}
               </span>
             </div>
           </div>
@@ -388,13 +415,13 @@ export default function CommunityRegisterPage() {
           {/* Form Card */}
           <Card className="border-0 shadow-xl">
             <CardContent className="p-6 md:p-8">
-              {/* Step 1: Basic Info */}
+              {/* Step 1: Info Komunitas (Basic + Contact gabung) */}
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Informasi Dasar</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Informasi Komunitas</h2>
                     <p className="text-muted-foreground">
-                      Ceritakan tentang komunitas atau organisasi konservasi Anda
+                      Isi informasi dasar dan kontak administrator komunitas Anda
                     </p>
                   </div>
 
@@ -408,7 +435,11 @@ export default function CommunityRegisterPage() {
                         value={formData.communityName}
                         onChange={(e) => handleInputChange("communityName", e.target.value)}
                         className="h-12"
+                        maxLength={100}
                       />
+                      <p className={`text-xs mt-1 ${formData.communityName.length < 3 && formData.communityName.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                        {formData.communityName.length}/100 karakter (min. 3)
+                      </p>
                     </div>
 
                     <div>
@@ -416,14 +447,14 @@ export default function CommunityRegisterPage() {
                         Deskripsi Singkat <span className="text-destructive">*</span>
                       </label>
                       <Textarea
-                        placeholder="Deskripsikan misi dan kegiatan komunitas Anda (maks 500 karakter)"
+                        placeholder="Deskripsikan misi dan kegiatan komunitas Anda (20–500 karakter)"
                         value={formData.shortDescription}
                         onChange={(e) => handleInputChange("shortDescription", e.target.value)}
                         rows={4}
                         maxLength={500}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formData.shortDescription.length}/500 karakter
+                      <p className={`text-xs mt-1 ${formData.shortDescription.length < 20 && formData.shortDescription.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                        {formData.shortDescription.length}/500 karakter (min. 20)
                       </p>
                     </div>
 
@@ -463,13 +494,13 @@ export default function CommunityRegisterPage() {
                 </div>
               )}
 
-              {/* Step 2: Contact Info */}
-              {currentStep === 2 && (
-                <div className="space-y-6">
+              {/* Step 1 bagian 2: Contact Info (masih di step 1) */}
+              {currentStep === 1 && (
+                <div className="space-y-6 border-t border-border pt-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Informasi Kontak</h2>
-                    <p className="text-muted-foreground">
-                      Berikan detail kontak administrator komunitas Anda
+                    <h3 className="text-lg font-bold text-foreground mb-1">Informasi Kontak Admin</h3>
+                    <p className="text-muted-foreground text-sm">
+                      Data akun administrator komunitas Anda
                     </p>
                   </div>
 
@@ -604,11 +635,11 @@ export default function CommunityRegisterPage() {
                 </div>
               )}
 
-              {/* Step 3: Location & Coverage */}
-              {currentStep === 3 && (
+              {/* Step 2: Lokasi & Kegiatan */}
+              {currentStep === 2 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-2">Lokasi & Cakupan</h2>
+                    <h2 className="text-2xl font-bold text-foreground mb-2">Lokasi & Kegiatan</h2>
                     <p className="text-muted-foreground">
                       Tentukan area operasional dan jenis kegiatan Anda
                     </p>
@@ -683,8 +714,8 @@ export default function CommunityRegisterPage() {
                 </div>
               )}
 
-              {/* Step 4: Documents */}
-              {currentStep === 4 && (
+              {/* Step 3: Dokumen */}
+              {currentStep === 3 && (
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-2xl font-bold text-foreground mb-2">Dokumen Legal</h2>
@@ -759,8 +790,8 @@ export default function CommunityRegisterPage() {
                 </div>
               )}
 
-              {/* Step 5: Submit */}
-              {currentStep === 5 && (
+              {/* Step 4: Submit */}
+              {currentStep === 4 && (
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-2xl font-bold text-foreground mb-2">Tinjau & Kirim</h2>
@@ -846,29 +877,16 @@ export default function CommunityRegisterPage() {
 
               {/* Navigation Buttons */}
               <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-                {currentStep === 1 ? (
-                  <Button
-                    variant="outline"
-                    asChild
-                    className="gap-2"
-                  >
-                    <Link href="/community">
-                      <ArrowLeft className="w-4 h-4" />
-                      Kembali
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={prevStep}
-                    className="gap-2"
-                  >
+                {currentStep > 1 ? (
+                  <Button variant="outline" onClick={prevStep} className="gap-2">
                     <ArrowLeft className="w-4 h-4" />
                     Kembali
                   </Button>
+                ) : (
+                  <div />
                 )}
 
-                {currentStep < 5 ? (
+                {currentStep < 4 ? (
                   <Button onClick={nextStep} disabled={!canProceed()} className="gap-2">
                     Lanjut
                     <ArrowRight className="w-4 h-4" />
