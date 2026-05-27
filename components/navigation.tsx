@@ -107,8 +107,6 @@ export function Navigation() {
   const isDashboard = pathname.includes("dashboard");
   const isDarkHeroPage = !isDashboard && (
     ["/", "/activities", "/community", "/about"].includes(pathname) ||
-    pathname.startsWith("/activities/") ||
-    pathname.startsWith("/community/") ||
     pathname === "/login" ||
     pathname === "/register"
   );

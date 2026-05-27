@@ -263,21 +263,51 @@ Aplikasi berjalan di **http://localhost:3000**
 
 ## Akun Seed (Testing)
 
-Semua akun testing menggunakan password: `Password@2026`
+Semua akun testing menggunakan password: `Test1234!`
 
-| Role | Email | Deskripsi |
-|------|-------|-----------|
-| **Admin** | `admin1@sinergilaut.id` | Admin Utama |
-| **Admin** | `admin2@sinergilaut.id` | Admin Reviewer |
-| **Community** | `owner1@example.com` | Owner Komunitas 1 |
-| **Community** | `owner2@example.com` | Owner Komunitas 2 |
-| **User** | `approved1@user.com` | Relawan Aktif |
-| **User** | `pending1@user.com` | Relawan (Status Pending) |
-| **User** | `rejected1@user.com` | Relawan (Status Terblokir/Rejected) |
+| Role | Email | Password | Deskripsi |
+|------|-------|----------|-----------|
+| **Admin** | `admin@sinergilaut.id` | `Test1234!` | Admin SinergiLaut |
+| **Community** | `komunitas@sinergilaut.id` | `Test1234!` | Komunitas Laut Bersih |
+| **User** | `relawan@sinergilaut.id` | `Test1234!` | Relawan Aktif |
 
-Jalankan seed script untuk mereset dan mengisi database:
-```bash
-pnpm db:seed
+Untuk mereset database dan membuat ulang akun testing, jalankan SQL berikut di **Supabase Dashboard → SQL Editor**:
+
+```sql
+-- Reset semua data
+TRUNCATE TABLE audit_logs, notifications, feedbacks, sanctions, journey_milestones,
+  report_files, reports, disbursements, donation_items, donations,
+  volunteer_registrations, activities, community_verifications, communities, profiles
+RESTART IDENTITY CASCADE;
+DELETE FROM auth.users;
+
+-- Buat akun testing (password: Test1234!)
+INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud)
+VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000',
+   'admin@sinergilaut.id', crypt('Test1234!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}','{"full_name":"Admin SinergiLaut","role":"admin"}',
+   NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('bbbbbbbb-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000',
+   'komunitas@sinergilaut.id', crypt('Test1234!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}','{"full_name":"Komunitas Laut Bersih","role":"community"}',
+   NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('cccccccc-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000000',
+   'relawan@sinergilaut.id', crypt('Test1234!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}','{"full_name":"Relawan Aktif","role":"user"}',
+   NOW(), NOW(), 'authenticated', 'authenticated');
+
+INSERT INTO profiles (id, email, full_name, role, volunteer_status, is_active) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001','admin@sinergilaut.id','Admin SinergiLaut','admin','approved',true),
+  ('bbbbbbbb-0000-0000-0000-000000000002','komunitas@sinergilaut.id','Komunitas Laut Bersih','community','pending',true),
+  ('cccccccc-0000-0000-0000-000000000003','relawan@sinergilaut.id','Relawan Aktif','user','approved',true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO communities (id, owner_id, name, slug, description, location, is_verified, verification_status, member_count)
+VALUES ('dddddddd-0000-0000-0000-000000000004','bbbbbbbb-0000-0000-0000-000000000002',
+  'Komunitas Laut Bersih','komunitas-laut-bersih','Komunitas peduli lingkungan laut Indonesia.',
+  'Jakarta', true, 'approved', 1);
 ```
 
 ---

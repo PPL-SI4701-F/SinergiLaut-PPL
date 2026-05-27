@@ -72,6 +72,14 @@ function RegisterContent() {
       setIsLoading(false)
       return
     }
+
+    if (result?.success) {
+      toast.success("Pendaftaran berhasil! Silakan masuk ke akun Anda.")
+      router.push("/login")
+      return
+    }
+
+    setIsLoading(false)
   }
 
 
@@ -664,20 +672,6 @@ function RegisterContent() {
             ))}
           </ul>
 
-          <div className="reg-stats-grid">
-            <div className="reg-stat-item">
-              <div className="reg-stat-value">2.4K+</div>
-              <div className="reg-stat-label">Relawan</div>
-            </div>
-            <div className="reg-stat-item">
-              <div className="reg-stat-value">180+</div>
-              <div className="reg-stat-label">Komunitas</div>
-            </div>
-            <div className="reg-stat-item">
-              <div className="reg-stat-value">560+</div>
-              <div className="reg-stat-label">Kegiatan</div>
-            </div>
-          </div>
         </div>
       </div>
 

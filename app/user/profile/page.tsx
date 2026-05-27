@@ -9,11 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
 import {
-  User, Camera, Save, Loader2, Phone, Mail, FileText, ArrowLeft, X,
+  User, Camera, Save, Loader2, Phone, Mail, FileText, X,
   ShieldCheck, ShieldAlert, ShieldX, Upload, Calendar, CreditCard,
   MapPin, UserCheck, AlertCircle, ImageIcon
 } from "lucide-react"
-import Link from "next/link"
 import { getInitials } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
@@ -286,16 +285,25 @@ export default function UserProfilePage() {
               <CardContent className="p-6">
                 <div className="flex items-center gap-6">
                   <div className="relative group">
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-background" />
+                    {optimisticAvatar || profile?.avatar_url ? (
+                      <div
+                        onClick={() => setIsPreviewOpen(true)}
+                        className="relative w-20 h-20 rounded-full overflow-hidden cursor-zoom-in border-2 border-background"
+                      >
+                        {isUploadingAvatar && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                            <Loader2 className="h-6 w-6 text-white animate-spin" />
+                          </div>
+                        )}
+                        <img src={optimisticAvatar || profile?.avatar_url || ""} alt="Avatar" className="w-full h-full object-cover" />
+                      </div>
                     ) : (
                       <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold border-2 border-background">
-                        {getInitials(profile?.full_name ?? profile?.email ?? "?")}
-                      </div>
-                    )}
-                    {isUploadingAvatar && (
-                      <div className="absolute inset-0 bg-background/50 rounded-full flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        {isUploadingAvatar ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : (
+                          getInitials(profile?.full_name ?? profile?.email ?? "?")
+                        )}
                       </div>
                     )}
                     <input 
