@@ -92,6 +92,7 @@ export default function ActivitiesPage() {
   const [typeOpen, setTypeOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [supabaseActivities, setSupabaseActivities] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   // Lokasi unik yang diambil dinamis dari data kegiatan
   const [dynamicLocations, setDynamicLocations] = useState<string[]>([]);
 
@@ -128,6 +129,7 @@ export default function ActivitiesPage() {
         ).sort() as string[];
         setDynamicLocations(uniqueLocations);
       }
+      setIsLoading(false);
     }
     fetchActivities();
   }, []);
@@ -693,7 +695,25 @@ export default function ActivitiesPage() {
         {/* ── ACTIVITY CARDS ── */}
         <section className="act-section">
           <div className="act-container">
-            {filteredActivities.length > 0 ? (
+            {isLoading ? (
+              <div className="act-grid">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="act-card animate-pulse">
+                    <div style={{ height: 192, background: "#e2e8f0" }} />
+                    <div className="act-card-body" style={{ gap: "0.75rem" }}>
+                      <div style={{ height: 16, background: "#e2e8f0", borderRadius: 8, width: "70%" }} />
+                      <div style={{ height: 12, background: "#f1f5f9", borderRadius: 8, width: "90%" }} />
+                      <div style={{ height: 12, background: "#f1f5f9", borderRadius: 8, width: "60%" }} />
+                      <div style={{ height: 72, background: "#f1f5f9", borderRadius: 12, marginTop: "0.5rem" }} />
+                      <div style={{ display: "flex", gap: "0.75rem", marginTop: "auto" }}>
+                        <div style={{ flex: 1, height: 36, background: "#e2e8f0", borderRadius: 10 }} />
+                        <div style={{ flex: 1, height: 36, background: "#f1f5f9", borderRadius: 10 }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredActivities.length > 0 ? (
               <div className="act-grid">
                 {filteredActivities.map((activity) => {
                   const pct =

@@ -72,6 +72,14 @@ function RegisterContent() {
       setIsLoading(false)
       return
     }
+
+    if (result?.success) {
+      toast.success("Pendaftaran berhasil! Silakan masuk ke akun Anda.")
+      router.push("/login")
+      return
+    }
+
+    setIsLoading(false)
   }
 
 
