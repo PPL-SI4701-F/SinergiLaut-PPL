@@ -175,13 +175,25 @@ export default function CommunityDashboardPage() {
                           )}
                         </div>
 
-                        <div className="pt-3 border-t border-border flex gap-2">
+                        <div className="pt-3 border-t border-border flex gap-2 flex-wrap">
                           <Button size="sm" className="flex-1 text-xs h-9" asChild>
                             <Link href={`/community/dashboard/activities/${a.id}/volunteers`}><Eye className="h-3.5 w-3.5 mr-1.5" /> Kelola</Link>
                           </Button>
                           <Button size="sm" variant="outline" className="flex-1 text-xs h-9 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40" asChild>
                             <Link href={`/community/dashboard/activities/${a.id}/edit`}><Edit className="h-3.5 w-3.5 mr-1.5" /> Edit</Link>
                           </Button>
+                          {a.status === "completed" && (
+                            <Button size="sm" variant="outline" className={`flex-1 text-xs h-9 ${
+                              !a.reports || a.reports.length === 0
+                                ? "border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+                                : "border-primary/20 text-primary hover:bg-primary/5"
+                            }`} asChild>
+                              <Link href={`/community/dashboard/activities/${a.id}/report`}>
+                                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                                {!a.reports || a.reports.length === 0 ? "Upload Laporan" : "Lihat Laporan"}
+                              </Link>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

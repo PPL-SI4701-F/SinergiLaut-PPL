@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { format } from "date-fns"
 import { id as localeID } from "date-fns/locale"
+import Link from "next/link"
 import {
   FileText, Search, CheckCircle2, XCircle, Clock, AlertCircle,
-  FileBarChart, ThumbsUp, ThumbsDown, Loader2, RefreshCw
+  FileBarChart, ThumbsUp, ThumbsDown, Loader2, RefreshCw, Eye
 } from "lucide-react"
 import { toast } from "sonner"
 import { approveReportAction, rejectReportAction } from "@/lib/actions/dashboard.actions"
@@ -201,7 +202,13 @@ export default function AdminReportsPage() {
                   <td className="px-5 py-4">{getStatusBadge(report.status)}</td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      {report.status === "submitted" ? (
+                      <Link
+                        href={`/admin/reports/${report.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+                      >
+                        <Eye className="w-3 h-3" /> Lihat Detail
+                      </Link>
+                      {report.status === "submitted" && (
                         <>
                           <button
                             onClick={() => handleApprove(report.id)}
@@ -224,10 +231,6 @@ export default function AdminReportsPage() {
                             Tolak
                           </button>
                         </>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">
-                          {report.status === "validated" ? "Sudah divalidasi" : report.status === "rejected" ? "Sudah ditolak" : "—"}
-                        </span>
                       )}
                     </div>
                   </td>
