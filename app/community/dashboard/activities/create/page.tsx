@@ -69,7 +69,7 @@ export default function CreateActivityPage() {
 
   useEffect(() => {
     const d = new Date()
-    d.setMonth(d.getMonth() + 6)
+    d.setMonth(d.getMonth() + 1)
     const offset = d.getTimezoneOffset() * 60000
     setMinStartDateTime((new Date(d.getTime() - offset)).toISOString().slice(0, 16))
   }, [])
@@ -159,7 +159,7 @@ export default function CreateActivityPage() {
     try {
       // ── Validasi Waktu Kegiatan ────────────────────────────────
       const minExecution = new Date()
-      minExecution.setMonth(minExecution.getMonth() + 6)
+      minExecution.setMonth(minExecution.getMonth() + 1)
       minExecution.setSeconds(0, 0) // clear sec/mins for accurate comparison
 
       const startD = new Date(form.startDate)
@@ -177,7 +177,7 @@ export default function CreateActivityPage() {
 
       const execD = new Date(form.executionDate)
       if (execD < minExecution) {
-        throw new Error("Tanggal Pelaksanaan Kegiatan harus minimal 6 bulan dari sekarang.")
+        throw new Error("Tanggal Pelaksanaan Kegiatan harus minimal 1 bulan dari sekarang.")
       }
       if (form.endDate && execD < new Date(form.endDate)) {
         throw new Error("Tanggal Pelaksanaan tidak boleh sebelum masa pengumpulan dana berakhir.")
@@ -300,7 +300,7 @@ export default function CreateActivityPage() {
                 <div className="space-y-2">
                    <Label htmlFor="executionDate">Tanggal Pelaksanaan Kegiatan *</Label>
                    <Input id="executionDate" name="executionDate" type="datetime-local" value={form.executionDate} onChange={handleChange} min={minStartDateTime} required />
-                   <p className="text-xs text-muted-foreground mt-1">Kegiatan fisik harus direncanakan minimal 6 bulan dari sekarang.</p>
+                   <p className="text-xs text-muted-foreground mt-1">Kegiatan fisik harus direncanakan minimal 1 bulan dari sekarang.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location">Lokasi Kegiatan *</Label>

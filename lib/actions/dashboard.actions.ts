@@ -366,11 +366,13 @@ export async function rejectReportAction(id: string, adminNote?: string) {
 export async function getHomePageStats() {
   const supabase = await createClient()
 
-  // 1. Relawan Aktif: Count of profiles with volunteer_status = 'approved'
-  const { count: totalVolunteers } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("volunteer_status", "approved")
+  // 1. Anggota Aktif: Count distinct users yang terdaftar sebagai relawan di kegiatan (approved/attended)
+  const { data: volunteerRows } = await supabase
+    .from("volunteer_registrations")
+    .select("user_id")
+    .in("status", ["approved", "attended"])
+
+  const totalVolunteers = new Set(volunteerRows?.map(r => r.user_id)).size
 
   // 2. Kegiatan Berlangsung: Count of activities with status = 'published'
   const { count: ongoingActivities } = await supabase

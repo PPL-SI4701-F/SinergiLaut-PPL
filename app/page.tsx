@@ -48,7 +48,7 @@ export default async function HomePage() {
     { count: completedCount },
     { data: fundingData },
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "user"),
     supabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "published"),
     supabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "completed"),
     supabase.from("activities").select("funding_raised"),
