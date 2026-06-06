@@ -102,6 +102,18 @@ Semua komponen visual kecil seperti tombol, form, dan kartu.
 
 ---
 
+## 🧪 8. Akun Uji Coba (Test Credentials)
+
+Gunakan akun berikut untuk menguji berbagai fitur platform sesuai dengan role masing-masing.
+
+| Role | Email | Password | Kegunaan |
+|------|-------|----------|----------|
+| **Admin** | `admin@sinergilaut.com` | `admin123` | Mengelola verifikasi komunitas, moderasi kegiatan, dan validasi laporan. |
+| **Komunitas** | `community@owner.com` | `community123` | Membuat kegiatan, mengelola relawan, dan mengirim laporan kegiatan. |
+| **Relawan (User)** | `volunteer@user.com` | `user123` | Mendaftar kegiatan, melakukan donasi, dan memberikan ulasan. |
+
+---
+
 ## 💡 Tips & Trik Kolaborasi
 
 1. **Memanggil Data:** Sebisa mungkin gunakan Server Actions (`lib/actions/*.ts`) daripada membuat file `/api/...` baru. Ini lebih cepat dan aman di Next.js 14+.

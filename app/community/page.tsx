@@ -44,10 +44,6 @@ export default function CommunityPage() {
     getRegisteredCommunities().then((data: any) => setRegisteredCommunities(data))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getAdminDashboardStats().then((data: any) => setGlobalStats(data))
-    const supabase = createClient()
-    supabase.from("activities").select("*", { count: "exact", head: true })
-      .eq("status", "completed")
-      .then(({ count }) => setCompletedCount(count ?? 0))
   }, [])
 
   const focusAreas = Array.from(
@@ -62,9 +58,9 @@ export default function CommunityPage() {
   })
 
   const statsDisplay = [
-    { icon: Users,  value: globalStats ? `${globalStats.totalUsers}+`       : "...", label: "Anggota Aktif"     },
-    { icon: MapPin, value: globalStats ? `${globalStats.totalCommunities}+` : "...", label: "Komunitas Pesisir" },
-    { icon: Globe,  value: completedCount !== null ? `${completedCount}+`   : "...", label: "Kegiatan Selesai"  },
+    { icon: Users,  value: globalStats ? `${globalStats.activeVolunteers}+`   : "...", label: "Anggota Aktif"     },
+    { icon: MapPin, value: globalStats ? `${globalStats.verifiedCommunities}+` : "...", label: "Komunitas Pesisir" },
+    { icon: Globe,  value: globalStats ? `${globalStats.completedActivities}+` : "...", label: "Kegiatan Selesai"  },
   ]
 
   return (

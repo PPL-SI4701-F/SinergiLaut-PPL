@@ -10,22 +10,33 @@ export async function getAdminDashboardStats() {
 
   const [
     { count: totalCommunities },
+    { count: verifiedCommunities },
     { count: totalUsers },
-    { count: totalActivities },
+    { count: activeActivities },
+    { count: completedActivities },
     { data: donationRows },
+    { data: volunteerRows },
   ] = await Promise.all([
     adminSupabase.from("communities").select("*", { count: "exact", head: true }),
+    adminSupabase.from("communities").select("*", { count: "exact", head: true }).eq("is_verified", true),
     adminSupabase.from("profiles").select("*", { count: "exact", head: true }),
-    adminSupabase.from("activities").select("*", { count: "exact", head: true }).in("status", ["published", "completed"]),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "published"),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "completed"),
     adminSupabase.from("donations").select("amount").eq("type", "money").eq("status", "completed"),
+    adminSupabase.from("volunteer_registrations").select("user_id").in("status", ["approved", "attended"]),
   ])
 
   const totalDonations = donationRows?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
+  const activeVolunteers = new Set(volunteerRows?.map(r => r.user_id)).size
 
   return {
     totalCommunities: totalCommunities || 0,
+    verifiedCommunities: verifiedCommunities || 0,
     totalUsers: totalUsers || 0,
-    totalActivities: totalActivities || 0,
+    activeVolunteers: activeVolunteers || 0,
+    activeActivities: activeActivities || 0,
+    completedActivities: completedActivities || 0,
+    totalActivities: (activeActivities || 0) + (completedActivities || 0),
     totalDonations,
   }
 }
@@ -364,10 +375,10 @@ export async function rejectReportAction(id: string, adminNote?: string) {
 }
 
 export async function getHomePageStats() {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
   // 1. Anggota Aktif: Count distinct users yang terdaftar sebagai relawan di kegiatan (approved/attended)
-  const { data: volunteerRows } = await supabase
+  const { data: volunteerRows } = await adminSupabase
     .from("volunteer_registrations")
     .select("user_id")
     .in("status", ["approved", "attended"])
@@ -375,13 +386,13 @@ export async function getHomePageStats() {
   const totalVolunteers = new Set(volunteerRows?.map(r => r.user_id)).size
 
   // 2. Kegiatan Berlangsung: Count of activities with status = 'published'
-  const { count: ongoingActivities } = await supabase
+  const { count: ongoingActivities } = await adminSupabase
     .from("activities")
     .select("*", { count: "exact", head: true })
     .eq("status", "published")
 
   // 3. Area Pesisir Terlindungi: Count of unique locations from published/completed activities
-  const { data: locations } = await supabase
+  const { data: locations } = await adminSupabase
     .from("activities")
     .select("location")
     .in("status", ["published", "completed"])
@@ -389,7 +400,7 @@ export async function getHomePageStats() {
   const uniqueLocations = new Set(locations?.map(l => l.location)).size
 
   // 4. Dana Terkumpul: Sum of amount from donations with status = 'completed'
-  const { data: donations } = await supabase
+  const { data: donations } = await adminSupabase
     .from("donations")
     .select("amount")
     .eq("status", "completed")
@@ -398,7 +409,7 @@ export async function getHomePageStats() {
   const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
 
   // 5. Jumlah Komunitas: Count of verified communities
-  const { count: totalCommunities } = await supabase
+  const { count: totalCommunities } = await adminSupabase
     .from("communities")
     .select("*", { count: "exact", head: true })
     .eq("is_verified", true)
