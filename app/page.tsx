@@ -272,7 +272,7 @@ export default async function HomePage() {
                           <MapPin style={{ width: 13, height: 13, color: "var(--sl-success)" }} /> {activity.location.split(",")[0]}
                         </span>
                       </div>
-                      <Link href={`/activities/${activity.id}`} className="sl-btn sl-btn-primary sl-btn-sm" style={{ background: "var(--sl-grad-success)", boxShadow: "0 2px 8px rgba(22,163,74,0.3)" }}>
+                      <Link href={`/activities/${activity.id}#reports`} className="sl-btn sl-btn-primary sl-btn-sm" style={{ background: "var(--sl-grad-success)", boxShadow: "0 2px 8px rgba(22,163,74,0.3)" }}>
                         Lihat Laporan <ArrowRight style={{ width: 13, height: 13 }} />
                       </Link>
                     </div>
