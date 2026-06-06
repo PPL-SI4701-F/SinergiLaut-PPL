@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ const contactInfo = [
     icon: Phone,
     label: "WhatsApp",
     value: "+62 811 1234 5678",
-    href: "https://wa.me/628111234578",
+    href: "https://wa.me/6281112345678",
   },
   { icon: MapPin, label: "Alamat", value: "Jakarta, Indonesia", href: "#" },
   {
@@ -120,13 +119,20 @@ export default function ContactPage() {
                     Ikuti kami di sosial media
                   </p>
                   <div className="flex gap-3">
-                    {["Instagram", "Twitter", "LinkedIn"].map((s) => (
-                      <span
-                        key={s}
-                        className="text-xs text-primary hover:underline cursor-pointer"
+                    {[
+                      { label: "Instagram", href: "https://instagram.com/sinergilaut" },
+                      { label: "Twitter", href: "https://twitter.com/sinergilaut" },
+                      { label: "LinkedIn", href: "https://linkedin.com/company/sinergilaut" },
+                    ].map((s) => (
+                      <a
+                        key={s.label}
+                        href={s.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline"
                       >
-                        {s}
-                      </span>
+                        {s.label}
+                      </a>
                     ))}
                   </div>
                 </div>

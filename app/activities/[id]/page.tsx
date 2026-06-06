@@ -144,14 +144,9 @@ export default function ActivityDetailPage() {
           setActivity(prev => prev ? { ...prev, funding_raised: result.funding_raised } : prev);
         }
       } else {
-        const updatedItems = activity.items_needed?.map((item, index) => ({
-          ...item,
-          donated: (item.donated || 0) + (fulfillmentCart[index] || 0),
-        })) || [];
-
-        const result = await completeFulfillmentDonation(paymentSim.donationId, activity.id, updatedItems);
-        if (result.success) {
-          setActivity(prev => prev ? { ...prev, items_needed: updatedItems } : prev);
+        const result = await completeFulfillmentDonation(paymentSim.donationId, activity.id);
+        if (result.success && result.updatedItems) {
+          setActivity(prev => prev ? { ...prev, items_needed: result.updatedItems } : prev);
         }
       }
     } catch (err) {
@@ -488,7 +483,7 @@ export default function ActivityDetailPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      <main className="flex-1 pt-16">
+      <main className="flex-1 pt-24">
         {/* Breadcrumb / Back Button */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
           <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>

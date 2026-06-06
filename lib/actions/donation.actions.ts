@@ -245,24 +245,75 @@ export async function createItemDonation(payload: CreateItemDonationPayload) {
 /**
  * Selesaikan donasi BARANG setelah pembayaran dikonfirmasi.
  * Update status → "completed" + perbarui items_needed di activities.
+ * Increment donated count diambil dari DB (donation_items), bukan dari client.
  */
 export async function completeFulfillmentDonation(
   donationId: string,
   activityId: string,
-  updatedItems: { item_name: string; target: number; donated: number; unit_price?: number }[]
 ) {
   const adminSupabase = await createAdminClient()
 
+  // Verifikasi donasi masih pending
+  const { data: donation, error: donationFetchError } = await adminSupabase
+    .from("donations")
+    .select("id")
+    .eq("id", donationId)
+    .eq("status", "pending")
+    .single()
+
+  if (donationFetchError || !donation) {
+    return { success: false as const, error: "Donasi tidak ditemukan atau sudah diproses." }
+  }
+
+  // Update status donation → completed
   const { error: donationError } = await adminSupabase
     .from("donations")
     .update({ status: "completed" })
     .eq("id", donationId)
-    .eq("status", "pending")
 
   if (donationError) {
     console.error("[completeFulfillmentDonation] update donation error:", donationError)
     return { success: false as const, error: "Gagal menyelesaikan donasi barang." }
   }
+
+  // Ambil item yang didonasikan dari DB (server-side, bukan dari client)
+  const { data: donationItems, error: itemsError } = await adminSupabase
+    .from("donation_items")
+    .select("item_name, quantity")
+    .eq("donation_id", donationId)
+
+  if (itemsError || !donationItems) {
+    console.error("[completeFulfillmentDonation] fetch items error:", itemsError)
+    return { success: false as const, error: "Gagal mengambil data barang donasi." }
+  }
+
+  // Ambil items_needed saat ini dari DB
+  const { data: activity, error: activityFetchError } = await adminSupabase
+    .from("activities")
+    .select("items_needed")
+    .eq("id", activityId)
+    .single()
+
+  if (activityFetchError || !activity) {
+    console.error("[completeFulfillmentDonation] fetch activity error:", activityFetchError)
+    return { success: false as const, error: "Gagal mengambil data kegiatan." }
+  }
+
+  const currentItems = activity.items_needed
+  if (!Array.isArray(currentItems)) {
+    return { success: false as const, error: "Data barang kegiatan tidak valid." }
+  }
+
+  // Hitung increment berdasarkan data donation_items dari DB
+  const updatedItems = currentItems.map((item: { item_name: string; target: number; donated: number; unit_price?: number }) => {
+    if (!item.item_name || typeof item.target !== "number" || typeof item.donated !== "number") return item
+    const fulfilled = donationItems.find((di) => di.item_name === item.item_name)
+    if (!fulfilled) return item
+    return {
+      ...item,
+      donated: Math.min(item.target, (item.donated || 0) + (fulfilled.quantity || 0)),
+    }
+  })
 
   const { error: activityError } = await adminSupabase
     .from("activities")
@@ -271,9 +322,10 @@ export async function completeFulfillmentDonation(
 
   if (activityError) {
     console.error("[completeFulfillmentDonation] update activity error:", activityError)
+    return { success: false as const, error: "Gagal memperbarui data barang kegiatan." }
   }
 
-  return { success: true as const }
+  return { success: true as const, updatedItems }
 }
 
 /**

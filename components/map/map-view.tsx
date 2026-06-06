@@ -17,12 +17,19 @@ export default function MapView({ lat, lng, label }: MapViewProps) {
   useEffect(() => {
     if (!mapContainerRef.current) return
 
+    // Use MapTiler only if key is valid, fallback to free OSM demotiles
+    const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY
+    const isValidKey = maptilerKey && maptilerKey !== "get_your_own_free_key_at_maptiler" && maptilerKey.length > 10
+    const styleUrl = isValidKey
+      ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${maptilerKey}`
+      : "https://demotiles.maplibre.org/style.json"
+
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY || 'get_your_own_free_key_at_maptiler'}`,
+      style: styleUrl,
       center: [lng, lat],
       zoom: 15,
-      scrollZoom: false, // Optional: disable scroll zoom on detail view
+      scrollZoom: false,
     })
 
     // Add navigation controls

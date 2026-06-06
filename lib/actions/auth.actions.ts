@@ -9,8 +9,6 @@ export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  console.log("Mencoba login untuk:", email);
-
   if (!email || !password) {
     return { error: "Email dan password harus diisi." };
   }
@@ -45,8 +43,6 @@ export async function register(formData: FormData) {
   const role = formData.get("role") as string;
   const phone = formData.get("phone") as string;
 
-  console.log("Mencoba mendaftar untuk:", email);
-
   if (!email || !password) {
     return { error: "Email dan password harus diisi." };
   }
@@ -69,7 +65,7 @@ export async function register(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/login"); // Redirect ke login setelah sukses register
+  return { success: true };
 }
 
 export async function logout() {

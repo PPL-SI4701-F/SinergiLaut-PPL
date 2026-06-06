@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
                   <CardDescription>Menunggu validasi admin</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/admin/activities">Lihat Semua <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+                  <Link href="/admin/reports">Lihat Semua <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
                 </Button>
               </CardHeader>
               <CardContent>
