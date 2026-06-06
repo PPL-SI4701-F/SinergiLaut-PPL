@@ -282,35 +282,46 @@ export default function UserProfilePage() {
 
           <div className="space-y-6">
             {/* ── Avatar Card ── */}
-            <Card>
+            <Card className="bg-white/70 backdrop-blur-xl border-white/80 shadow-sm rounded-2xl overflow-hidden group">
               <CardContent className="p-6">
-                <div className="flex items-center gap-6">
-                  <div className="relative group">
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-background" />
-                    ) : (
-                      <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-2xl font-bold border-2 border-background">
-                        {getInitials(profile?.full_name ?? profile?.email ?? "?")}
-                      </div>
-                    )}
-                    {isUploadingAvatar && (
-                      <div className="absolute inset-0 bg-background/50 rounded-full flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      </div>
-                    )}
-                    <input 
-                      type="file" 
-                      ref={avatarInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleAvatarUpload} 
-                      disabled={isUploadingAvatar}
+                <div className="flex flex-col sm:flex-row items-center gap-8 text-center sm:text-left">
+                  <div className="relative group/avatar">
+                    <div className="absolute inset-0 bg-teal-400/20 blur-2xl rounded-full opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-700" />
+                    <input
+                      type="file"
+                      className="hidden"
+                      ref={avatarInputRef}
+                      onChange={handleAvatarUpload}
+                      accept="image/*"
                     />
-                    <button 
-                      type="button" 
+                    {optimisticAvatar || profile?.avatar_url ? (
+                      <div
+                        onClick={() => setIsPreviewOpen(true)}
+                        className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-xl group-hover/avatar:scale-105 transition-transform duration-500 cursor-zoom-in"
+                      >
+                        {isUploadingAvatar && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                            <Loader2 className="h-8 w-8 text-white animate-spin" />
+                          </div>
+                        )}
+                        <img src={optimisticAvatar || profile?.avatar_url || ""} alt="Avatar" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="relative w-24 h-24 bg-gradient-to-br from-[#06958a] to-[#04756c] rounded-full border-4 border-white shadow-xl flex items-center justify-center text-white text-3xl font-black group-hover/avatar:scale-105 transition-transform duration-500">
+                        {isUploadingAvatar ? (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 rounded-full">
+                            <Loader2 className="h-8 w-8 text-white animate-spin" />
+                          </div>
+                        ) : (
+                          getInitials(profile?.full_name ?? profile?.email ?? "?")
+                        )}
+                      </div>
+                    )}
+                    <button
+                      type="button"
                       onClick={() => avatarInputRef.current?.click()}
                       disabled={isUploadingAvatar}
-                      className="absolute -bottom-1 -right-1 w-8 h-8 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center text-primary-foreground shadow-sm transition-transform active:scale-95 disabled:opacity-50"
+                      className="absolute -bottom-1 -right-1 w-9 h-9 bg-white border border-[#06958a]/20 rounded-full flex items-center justify-center text-[#06958a] shadow-lg hover:bg-[#06958a] hover:text-white transition-all duration-300 z-20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Camera className="h-4 w-4" />
                     </button>
