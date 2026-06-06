@@ -54,8 +54,8 @@ export default async function AboutPage() {
     { count: userCount }, { count: communityCount },
     { count: activityCount }, { data: fundingData },
   ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "user"),
-    supabase.from("communities").select("*", { count: "exact", head: true }).eq("verification_status", "approved"),
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("communities").select("*", { count: "exact", head: true }).eq("status", "approved"),
     supabase.from("activities").select("*", { count: "exact", head: true }),
     supabase.from("activities").select("funding_raised"),
   ])
@@ -78,7 +78,6 @@ export default async function AboutPage() {
 
   return (
     <div className="sl-marketing">
-      {/* Page-specific styles — timeline, values, team (tidak ada di sinergilaut.css) */}
       <style>{`
         .about-mission-grid { display:grid; gap:4rem; align-items:center; }
         @media(min-width:1024px){ .about-mission-grid{ grid-template-columns:1fr 1fr; } }
@@ -274,7 +273,7 @@ export default async function AboutPage() {
           <div className="sl-container">
             <div className="sl-text-center" style={{ marginBottom: "3rem" }}>
               <div className="sl-eyebrow is-center sl-mx-auto">Struktur Organisasi</div>
-              <h2 className="sl-section-title">Struktur Organisasi Kami</h2>
+              <h2 className="sl-section-title">Tim yang Berdedikasi</h2>
               <p className="sl-section-desc is-center sl-mx-auto">
                 Tim yang berdedikasi membangun SinergiLaut untuk masa depan laut Indonesia.
               </p>

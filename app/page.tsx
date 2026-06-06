@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Navigation } from "@/components/navigation"
@@ -6,10 +5,11 @@ import { Footer } from "@/components/footer"
 import {
   ArrowRight, Users, Heart, Leaf, Calendar, MapPin,
   CheckCircle, Search, Gift, LineChart, FileText,
-  Sparkles, Anchor, Zap, ShieldCheck, TrendingUp, Globe,
+  Sparkles, Anchor, Zap, ShieldCheck, TrendingUp, Globe, Building,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { formatDate } from "@/lib/utils/helpers"
+import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 const pillars = [
   { icon: ShieldCheck, title: "100% Transparan",  description: "Setiap donasi dan kegiatan dipantau secara publik. Laporan real-time tersedia untuk semua kontributor.", color: "#3b82f6", bg: "rgba(59,130,246,0.08)" },
@@ -18,10 +18,10 @@ const pillars = [
 ]
 
 const donationSteps = [
-  { step: "01", icon: Search,    title: "Pilih Kegiatan",   desc: "Telusuri dan pilih aksi pelestarian lingkungan atau pesisir yang ingin Anda dukung." },
+  { step: "01", icon: Search,    title: "Pilih Kegiatan",    desc: "Telusuri dan pilih aksi pelestarian lingkungan atau pesisir yang ingin Anda dukung." },
   { step: "02", icon: Gift,      title: "Pilih Jenis Donasi", desc: "Sumbangkan sejumlah dana atau belikan barang yang sedang dibutuhkan oleh relawan." },
-  { step: "03", icon: LineChart, title: "Pantau Eksekusi",  desc: "Lacak setiap progres pendanaan dan persiapan aksi secara transparan dan real-time." },
-  { step: "04", icon: FileText,  title: "Terima Laporan",   desc: "Buka tab laporan untuk melihat bukti dokumen RAB dan galeri foto hasil kegiatan." },
+  { step: "03", icon: LineChart, title: "Pantau Eksekusi",   desc: "Lacak setiap progres pendanaan dan persiapan aksi secara transparan dan real-time." },
+  { step: "04", icon: FileText,  title: "Terima Laporan",    desc: "Buka tab laporan untuk melihat bukti dokumen RAB dan galeri foto hasil kegiatan." },
 ]
 
 const missionFeatures = [
@@ -31,44 +31,27 @@ const missionFeatures = [
 ]
 
 export default async function HomePage() {
-  const supabase = await createClient()
-
-  // Redirect user yang sudah login ke dashboard masing-masing
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session?.user) {
-    const role = session.user.user_metadata?.role
-    if (role === "admin")     redirect("/admin/dashboard")
-    if (role === "community") redirect("/community/dashboard")
-    redirect("/user/dashboard")
-  }
-
-  const [
-    { count: userCount },
-    { count: publishedCount },
-    { count: completedCount },
-    { data: fundingData },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "user"),
-    supabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "completed"),
-    supabase.from("activities").select("funding_raised"),
-  ])
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const totalFunding = (fundingData as any[])?.reduce((sum: number, a: any) => sum + (a.funding_raised || 0), 0) ?? 0
-  const formatFunding = (amount: number) => {
-    if (amount >= 1_000_000_000) return `Rp ${(amount / 1_000_000_000).toFixed(1)}M+`
-    if (amount >= 1_000_000)     return `Rp ${(amount / 1_000_000).toFixed(0)}Jt+`
-    if (amount >= 1_000)         return `Rp ${(amount / 1_000).toFixed(0)}Rb+`
-    return `Rp ${amount}`
-  }
+  const homeStats = await getHomePageStats()
 
   const stats = [
-    { icon: Users,  value: `${userCount ?? 0}+`,       label: "Relawan Aktif" },
-    { icon: Globe,  value: `${publishedCount ?? 0}+`,   label: "Kegiatan Berlangsung" },
-    { icon: Anchor, value: `${completedCount ?? 0}+`,   label: "Kegiatan Selesai" },
-    { icon: Heart,  value: formatFunding(totalFunding), label: "Dana Terkumpul" },
+    {
+      icon: Users,
+      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}${homeStats.totalVolunteers > 10 ? "+" : ""}`,
+      label: "Relawan Aktif",
+    },
+    {
+      icon: Globe,
+      value: `${homeStats.ongoingActivities}${homeStats.ongoingActivities > 5 ? "+" : ""}`,
+      label: "Kegiatan Berlangsung",
+    },
+    {
+      icon: Building,
+      value: `${homeStats.totalCommunities.toLocaleString("id-ID")}${homeStats.totalCommunities > 5 ? "+" : ""}`,
+      label: "Jumlah Komunitas",
+    },
   ]
+
+  const supabase = await createClient()
 
   const { data: realActivities } = await supabase
     .from("activities").select("*").eq("status", "published")
@@ -162,7 +145,7 @@ export default async function HomePage() {
         <section className="sl-section">
           <div className="sl-container">
             <div className="sl-intro-card">
-              <div className="sl-eyebrow sl-eyebrow is-center">Tentang SinergiLaut</div>
+              <div className="sl-eyebrow is-center sl-mx-auto">Tentang SinergiLaut</div>
               <h2 style={{ fontSize: "clamp(1.5rem,3vw,2.25rem)", fontWeight: 800, color: "var(--sl-ink)", letterSpacing: "-0.02em", marginBottom: "1rem" }}>
                 Mengenal SinergiLaut Lebih Dekat
               </h2>

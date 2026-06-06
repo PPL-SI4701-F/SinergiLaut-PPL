@@ -54,6 +54,7 @@ const adminNavLinks = [
   { href: "/admin/dashboard", label: "Dashboard Admin" },
 ];
 
+// Tipe data notifikasi
 interface Notification {
   id: string;
   title: string;
@@ -80,6 +81,7 @@ export function Navigation() {
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // Handle scroll for navbar appearance
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -103,10 +105,12 @@ export function Navigation() {
     return "/user/dashboard";
   };
 
-  // Dark hero detection: halaman yang punya background gelap di hero
+  // Check if current page has a dark hero section
   const isDashboard = pathname.includes("dashboard");
   const isDarkHeroPage = !isDashboard && (
     ["/", "/activities", "/community", "/about"].includes(pathname) ||
+    pathname.startsWith("/activities/") ||
+    pathname.startsWith("/community/") ||
     pathname === "/login" ||
     pathname === "/register"
   );
@@ -116,9 +120,10 @@ export function Navigation() {
   const handleSignOut = async () => {
     await signOut();
     toast.success("Berhasil keluar.");
-    router.push("/");
-    router.refresh();
+    window.location.href = "/";
   };
+
+  // ─── Notifications ────────────────────────────────────────────────────────
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -128,6 +133,7 @@ export function Navigation() {
     }
   }, [user]);
 
+  // Fetch on mount + setiap 30 detik
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
@@ -135,6 +141,7 @@ export function Navigation() {
     return () => clearInterval(interval);
   }, [fetchNotifications, user]);
 
+  // Fetch ulang saat dropdown dibuka
   useEffect(() => {
     if (notifOpen) fetchNotifications();
   }, [notifOpen, fetchNotifications]);
@@ -158,6 +165,7 @@ export function Navigation() {
     toast.success("Semua notifikasi telah ditandai dibaca");
   };
 
+  // Render ikon dot berdasarkan tipe
   const NotifDot = ({ type }: { type: string }) => (
     <span
       className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${notifTypeColor[type] ?? "bg-gray-400"}`}
@@ -251,7 +259,7 @@ export function Navigation() {
               <div className="w-8 h-8 rounded-full bg-secondary animate-pulse" />
             ) : user ? (
               <>
-                {/* Notification Bell */}
+                {/* ── Notification Bell Dropdown ── */}
                 <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -276,6 +284,7 @@ export function Navigation() {
                     align="end"
                     className="w-80 max-h-[480px] overflow-hidden flex flex-col p-0"
                   >
+                    {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/50">
                       <div>
                         <p className="text-sm font-semibold text-foreground">
@@ -299,6 +308,8 @@ export function Navigation() {
                         </Button>
                       )}
                     </div>
+
+                    {/* List */}
                     <div className="overflow-y-auto flex-1">
                       {notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 text-center px-4">
@@ -497,7 +508,7 @@ export function Navigation() {
                       }`}
                     >
                       <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-black border ${
+                        className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-black border overflow-hidden ${
                           isScrolled
                             ? "bg-primary/10 text-primary border-primary/20"
                             : "bg-white/20 text-white border-white/30"
@@ -507,7 +518,7 @@ export function Navigation() {
                           <img
                             src={profile.avatar_url}
                             alt="Profile"
-                            className="w-full h-full object-cover rounded-full"
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           getInitials(profile?.full_name || user.email || "U")
@@ -542,7 +553,7 @@ export function Navigation() {
                         asChild
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        <Link href="/user/profile">
+                        <Link href={role === "community" ? "/community/dashboard/profile" : "/user/profile"}>
                           <User className="w-4 h-4 mr-2" /> Profil
                         </Link>
                       </Button>

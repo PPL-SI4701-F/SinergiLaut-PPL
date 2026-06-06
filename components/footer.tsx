@@ -29,8 +29,6 @@ export function Footer() {
             </p>
           </div>
 
-
-
           <div>
             <h3 className="font-semibold mb-4">Jelajahi</h3>
             <ul className="space-y-3">
