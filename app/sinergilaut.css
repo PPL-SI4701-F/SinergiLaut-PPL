@@ -142,19 +142,28 @@
 .sl-hero-wave svg { display: block; width: 100%; }
 
 /* ---------- 8. Stats bar ---------- */
-.sl-stats-wrapper { position: relative; z-index: 20; margin-top: 3.5rem; padding: 0 1rem; }
-.sl-stats-bar { background: var(--sl-grad-primary); border-radius: var(--sl-r-2xl); box-shadow: var(--sl-shadow-stat); padding: 2.5rem 2rem; max-width: 900px; margin: 0 auto; position: relative; overflow: hidden; }
-.sl-stats-inner { display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; position: relative; z-index: 2; }
-@media (min-width: 480px) { .sl-stats-inner { gap: 1.5rem; } }
-.sl-stat-item { text-align: center; padding: 0 1.5rem; width: auto; min-width: 160px; flex: 1 1 0px; }
+.sl-stats-wrapper { position: relative; z-index: 20; margin-top: 4.5rem; padding: 0 1.5rem; }
+.sl-stats-bar { background: var(--sl-grad-primary); border-radius: var(--sl-r-2xl); box-shadow: var(--sl-shadow-stat); padding: 2.75rem 2.5rem; max-width: 880px; margin: 0 auto; position: relative; overflow: hidden; }
+.sl-stats-bar::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 18% 25%, rgba(255,255,255,0.16), transparent 45%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.1), transparent 50%); pointer-events: none; }
+.sl-stats-inner { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 1.25rem; position: relative; z-index: 2; }
+.sl-stat-item { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0.5rem 2rem; width: auto; min-width: 170px; flex: 1 1 0px; }
 @media (min-width: 768px) {
-  .sl-stat-item { border-right: 1px solid rgba(255,255,255,0.15); }
+  .sl-stat-item { border-right: 1px solid rgba(255,255,255,0.2); }
   .sl-stat-item:last-child { border-right: none; }
 }
-.sl-stat-icon { width: 46px; height: 46px; background: rgba(255,255,255,0.12); border-radius: 0.875rem; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.875rem; backdrop-filter: blur(4px); }
-.sl-stat-val { font-size: 1.875rem; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -0.03em; }
-.sl-stat-lbl { font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.375rem; }
-@media (max-width: 640px) { .sl-stats-bar { padding: 1.5rem 1rem; } .sl-stat-val { font-size: 1.375rem; } .sl-stat-lbl { font-size: 0.65rem; } .sl-stat-icon { width: 38px; height: 38px; margin-bottom: 0.5rem; } }
+.sl-stat-icon { width: 48px; height: 48px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18); border-radius: 0.875rem; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; backdrop-filter: blur(4px); }
+.sl-stat-val { font-size: 2rem; font-weight: 900; color: #fff; line-height: 1; letter-spacing: -0.03em; }
+.sl-stat-lbl { font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.72); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem; }
+@media (max-width: 640px) {
+  .sl-stats-wrapper { margin-top: 3rem; }
+  .sl-stats-bar { padding: 1.75rem 1.25rem; }
+  .sl-stats-inner { gap: 1.5rem 0; }
+  .sl-stat-item { padding: 0.75rem 1rem; min-width: 130px; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .sl-stat-item:nth-last-child(-n+1) { border-bottom: none; }
+  .sl-stat-val { font-size: 1.5rem; }
+  .sl-stat-lbl { font-size: 0.65rem; }
+  .sl-stat-icon { width: 40px; height: 40px; margin-bottom: 0.625rem; }
+}
 
 /* ---------- 9. Cards ---------- */
 .sl-pillar-card { background: rgba(255,255,255,0.72); backdrop-filter: blur(16px); border-radius: var(--sl-r-3xl); padding: 2.75rem 2.25rem; border: 1.5px solid rgba(255,255,255,0.65); box-shadow: 0 4px 10px rgba(0,0,0,0.02), 0 14px 28px rgba(0,0,0,0.04); transition: all 0.6s cubic-bezier(0.16,1,0.3,1); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; text-align: left; }

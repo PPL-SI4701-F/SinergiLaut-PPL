@@ -118,9 +118,13 @@ export function DashboardClient({ volunteers, donations }: DashboardClientProps)
           .order("created_at", { ascending: false })
           .limit(6)
         if (cancelled) return
-        if (!error && data) setAvailableActivities(data as ActivityItem[])
-      } catch {
-        // ignore network errors
+        if (error) {
+          console.error("[DashboardClient] Gagal memuat kegiatan tersedia:", error)
+        } else if (data) {
+          setAvailableActivities(data as ActivityItem[])
+        }
+      } catch (err) {
+        if (!cancelled) console.error("[DashboardClient] Error saat memuat kegiatan tersedia:", err)
       } finally {
         if (!cancelled) setLoadingActivities(false)
       }
