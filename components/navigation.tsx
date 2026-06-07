@@ -176,21 +176,21 @@ export function Navigation() {
     <header
       className={`fixed left-0 right-0 z-50 transition-all duration-500 ease-in-out ${
         showPillNav
-          ? "top-4 px-4 sm:px-6 lg:px-8"
-          : "top-0 px-6 sm:px-10 lg:px-12"
+          ? "top-8 px-4 sm:px-6 lg:px-8"
+          : "top-4 px-6 sm:px-10 lg:px-12"
       }`}
     >
       <div
         className={`max-w-7xl mx-auto transition-all duration-500 ease-in-out ${
           showPillNav
-            ? "bg-background/80 backdrop-blur-xl shadow-2xl rounded-2xl md:rounded-full py-1 border border-border/40"
-            : "bg-transparent py-6 border-transparent"
+            ? "bg-white backdrop-blur-xl shadow-2xl rounded-2xl md:rounded-full py-2 border border-border/40"
+            : "bg-transparent py-8 border-transparent"
         }`}
       >
         <div
           className={`flex items-center justify-between transition-all duration-500 ${
             showPillNav ? "px-6 sm:px-8" : "px-0"
-          } h-16 md:h-18`}
+          } h-16 md:h-20`}
         >
           {/* Logo */}
           <div className="flex-1 flex justify-start">
@@ -211,7 +211,7 @@ export function Navigation() {
               <span
                 className={`text-xl font-black tracking-tight transition-colors duration-300 ${
                   showPillNav
-                    ? "text-foreground group-hover:text-primary"
+                    ? "text-primary"
                     : "text-white group-hover:text-white"
                 }`}
               >

@@ -37,8 +37,6 @@ export default function CommunityPage() {
   const [registeredCommunities, setRegisteredCommunities] = useState<any[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [globalStats, setGlobalStats]             = useState<any>(null)
-  const [completedCount, setCompletedCount]       = useState<number | null>(null)
-
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getRegisteredCommunities().then((data: any) => setRegisteredCommunities(data))
@@ -357,7 +355,7 @@ export default function CommunityPage() {
                     <div className="comm-card-body">
                       <div className="comm-card-header">
                         <div className="comm-card-avatar">
-                          <Image src={community.logo_url || "https://placehold.co/100"} alt={community.name} fill className="object-cover" />
+                          <Image src={community.logo_url || "/placeholder-logo.png"} alt={community.name} fill className="object-cover" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {community.is_verified && (
