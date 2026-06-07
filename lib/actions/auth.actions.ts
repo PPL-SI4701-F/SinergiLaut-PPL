@@ -40,21 +40,24 @@ export async function register(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const fullName = formData.get("fullName") as string;
-  const role = formData.get("role") as string;
   const phone = formData.get("phone") as string;
 
   if (!email || !password) {
     return { error: "Email dan password harus diisi." };
   }
 
+  // Registrasi publik hanya boleh membuat akun dengan role "user".
+  // Role lain (admin, community) dibuat melalui jalur terpisah yang membutuhkan otorisasi.
+  const role = "user";
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({ 
-    email, 
+  const { error } = await supabase.auth.signUp({
+    email,
     password,
     options: {
       data: {
         full_name: fullName,
-        role: role,
+        role,
         phone: phone,
       }
     }

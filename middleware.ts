@@ -52,7 +52,14 @@ export async function middleware(request: NextRequest) {
 
   // Jika user login, jalankan logic RBAC (Role-Based Access Control)
   if (user) {
-    const role = user.user_metadata?.role || 'user'
+    // Baca role dari database (source of truth) agar konsisten dengan auth-context.
+    // user_metadata hanya dipakai sebagai fallback jika query database gagal.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+    const role = profile?.role || user.user_metadata?.role || 'user'
     const pathname = request.nextUrl.pathname
 
     // 1. Redirect /dashboard ke dashboard masing-masing role
@@ -86,8 +93,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect ke dashboard jika sudah login dan mengakses halaman auth
-  const authRoutes = ['/login', '/register', '/forgot-password']
+  // Redirect ke dashboard jika sudah login dan mengakses halaman auth atau registrasi komunitas
+  const authRoutes = ['/login', '/register', '/forgot-password', '/community/register']
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   )
