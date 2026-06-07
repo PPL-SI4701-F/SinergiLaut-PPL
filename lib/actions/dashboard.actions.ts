@@ -3,9 +3,22 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
 
+// Memverifikasi bahwa request berasal dari user dengan role admin.
+// Dipanggil di awal setiap server action yang bersifat admin-only.
+async function requireAdmin(): Promise<{ authorized: true; userId: string } | { authorized: false }> {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false }
+  if (user.user_metadata?.role !== "admin") return { authorized: false }
+  return { authorized: true, userId: user.id }
+}
+
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return null
+
   const adminSupabase = await createAdminClient()
 
   const [
@@ -42,6 +55,9 @@ export async function getAdminDashboardStats() {
 }
 
 export async function getPendingCommunities() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return []
+
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from("communities")
@@ -54,6 +70,9 @@ export async function getPendingCommunities() {
 }
 
 export async function getPendingActivities() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return []
+
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from("activities")
@@ -66,6 +85,9 @@ export async function getPendingActivities() {
 }
 
 export async function getOngoingActivities() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return []
+
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from("activities")
@@ -78,6 +100,9 @@ export async function getOngoingActivities() {
 }
 
 export async function getPendingReports() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return []
+
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from("reports")
@@ -90,6 +115,9 @@ export async function getPendingReports() {
 }
 
 export async function getAllCommunities() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return []
+
   const adminSupabase = await createAdminClient()
   const { data, error } = await adminSupabase
     .from("communities")
@@ -106,6 +134,9 @@ export async function getAllCommunities() {
 // --- ADMIN MODERATION ACTIONS ---
 
 export async function approveCommunityAction(id: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
     .from("communities")
@@ -128,6 +159,9 @@ export async function approveCommunityAction(id: string) {
 }
 
 export async function rejectCommunityAction(id: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
     .from("communities")
@@ -150,6 +184,9 @@ export async function rejectCommunityAction(id: string) {
 }
 
 export async function approveActivityAction(id: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
   const { data: activity, error } = await adminSupabase
     .from("activities")
@@ -173,6 +210,9 @@ export async function approveActivityAction(id: string) {
 }
 
 export async function rejectActivityAction(id: string, adminNote?: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
   const { data: activity, error } = await adminSupabase
     .from("activities")
@@ -196,14 +236,15 @@ export async function rejectActivityAction(id: string, adminNote?: string) {
 }
 
 export async function approveReportAction(id: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
   const { data: report, error } = await adminSupabase
     .from("reports")
     .update({
       status: "validated",
-      reviewed_by: user?.id ?? null,
+      reviewed_by: auth.userId,
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -224,6 +265,9 @@ export async function approveReportAction(id: string) {
 }
 
 export async function suspendCommunityAction(id: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
     .from("communities")
@@ -245,6 +289,9 @@ export async function suspendCommunityAction(id: string) {
 }
 
 export async function unsuspendCommunityAction(id: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
     .from("communities")
@@ -266,6 +313,9 @@ export async function unsuspendCommunityAction(id: string) {
 }
 
 export async function getPlatformMonitoringStats() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return null
+
   const adminSupabase = await createAdminClient()
 
   const [
@@ -307,6 +357,9 @@ export async function getPlatformMonitoringStats() {
 }
 
 export async function getAdminAuditLog() {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { reports: [], communities: [], activities: [], volunteers: [] }
+
   const adminSupabase = await createAdminClient()
 
   const [reportsRes, communitiesRes, activitiesRes, volunteersRes] = await Promise.all([
@@ -346,15 +399,16 @@ export async function getAdminAuditLog() {
 }
 
 export async function rejectReportAction(id: string, adminNote?: string) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
   const { data: report, error } = await adminSupabase
     .from("reports")
     .update({
       status: "rejected",
       admin_note: adminNote?.trim() || null,
-      reviewed_by: user?.id ?? null,
+      reviewed_by: auth.userId,
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", id)
