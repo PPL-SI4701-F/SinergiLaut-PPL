@@ -7,6 +7,7 @@
  */
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createNotification } from "@/lib/actions/notification.actions"
 
 export interface CreateDisbursementPayload {
   activityId: string
@@ -88,6 +89,27 @@ export async function createDisbursement(payload: Omit<CreateDisbursementPayload
     return { success: false, error: "Gagal membuat record pencairan." }
   }
 
+  // Notifikasi ke komunitas bahwa pencairan diajukan
+  const { data: community } = await adminSupabase
+    .from("communities")
+    .select("owner_id, name")
+    .eq("id", payload.communityId)
+    .maybeSingle()
+
+  if (community?.owner_id) {
+    const formatted = new Intl.NumberFormat("id-ID", {
+      style: "currency", currency: "IDR", minimumFractionDigits: 0,
+    }).format(payload.amount)
+
+    await createNotification(
+      community.owner_id,
+      "Pencairan Dana Diajukan 💸",
+      `Pengajuan pencairan dana sebesar ${formatted} untuk komunitas "${community.name}" sedang diproses oleh admin.`,
+      "info",
+      "/community/dashboard"
+    )
+  }
+
   return { success: true, data }
 }
 
@@ -122,6 +144,31 @@ export async function updateDisbursementStatus(
   if (error) {
     console.error("[updateDisbursementStatus] error:", error)
     return { success: false, error: "Gagal mengupdate status pencairan." }
+  }
+
+  // Notifikasi ke komunitas saat status berubah ke completed atau failed
+  if (status === "completed" || status === "failed") {
+    const { data: community } = await adminSupabase
+      .from("communities")
+      .select("owner_id, name")
+      .eq("id", data.community_id)
+      .maybeSingle()
+
+    if (community?.owner_id) {
+      const formatted = new Intl.NumberFormat("id-ID", {
+        style: "currency", currency: "IDR", minimumFractionDigits: 0,
+      }).format(data.amount)
+
+      await createNotification(
+        community.owner_id,
+        status === "completed" ? "Pencairan Dana Berhasil ✅" : "Pencairan Dana Gagal ❌",
+        status === "completed"
+          ? `Dana sebesar ${formatted} untuk komunitas "${community.name}" telah berhasil dicairkan ke rekening Anda.`
+          : `Pencairan dana sebesar ${formatted} untuk komunitas "${community.name}" gagal diproses. Hubungi admin untuk informasi lebih lanjut.`,
+        status === "completed" ? "success" : "error",
+        "/community/dashboard"
+      )
+    }
   }
 
   return { success: true, data }

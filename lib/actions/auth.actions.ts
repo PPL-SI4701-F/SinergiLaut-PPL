@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createNotification } from "@/lib/actions/notification.actions";
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-
-  console.log("Mencoba login untuk:", email);
 
   if (!email || !password) {
     return { error: "Email dan password harus diisi." };
@@ -25,15 +24,15 @@ export async function login(formData: FormData) {
   
   if (data?.user) {
     const role = data.user.user_metadata?.role || "user";
+    let redirectTo = "/user/dashboard";
     if (role === "admin") {
-      redirect("/admin/dashboard");
+      redirectTo = "/admin/dashboard";
     } else if (role === "community") {
-      redirect("/community/dashboard");
-    } else {
-      redirect("/user/dashboard");
+      redirectTo = "/community/dashboard";
     }
+    return { success: true, redirectTo };
   } else {
-    redirect("/");
+    return { error: "Login failed" };
   }
 }
 
@@ -43,8 +42,6 @@ export async function register(formData: FormData) {
   const fullName = formData.get("fullName") as string;
   const role = formData.get("role") as string;
   const phone = formData.get("phone") as string;
-
-  console.log("Mencoba mendaftar untuk:", email);
 
   if (!email || !password) {
     return { error: "Email dan password harus diisi." };
@@ -68,7 +65,7 @@ export async function register(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/login"); // Redirect ke login setelah sukses register
+  return { success: true };
 }
 
 export async function logout() {
@@ -161,6 +158,35 @@ export async function registerCommunity(formData: FormData) {
     if (commError) {
       console.error("[registerCommunity] Gagal insert community:", commError)
       return { error: "Akun berhasil dibuat, tapi gagal menyimpan data komunitas: " + commError.message }
+    }
+
+    // Notifikasi konfirmasi ke komunitas yang baru mendaftar
+    if (authData?.user?.id) {
+      await createNotification(
+        authData.user.id,
+        "Registrasi Komunitas Diterima 🎉",
+        `Registrasi komunitas "${communityName}" berhasil dikirim dan sedang menunggu verifikasi dari admin. Kami akan memberitahumu setelah diproses.`,
+        "info",
+        "/community/dashboard"
+      )
+    }
+
+    // Notifikasi ke semua admin bahwa ada komunitas baru yang perlu diverifikasi
+    const { data: admins } = await adminSupabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "admin")
+
+    if (admins && admins.length > 0) {
+      for (const admin of admins) {
+        await createNotification(
+          admin.id,
+          "Komunitas Baru Menunggu Verifikasi 🏢",
+          `Komunitas "${communityName}" baru saja mendaftar dan menunggu verifikasi dari admin.`,
+          "info",
+          "/admin/communities"
+        )
+      }
     }
 
     if (communityData && legalDocuments.length > 0) {

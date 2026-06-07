@@ -265,20 +265,24 @@ Aplikasi berjalan di **http://localhost:3000**
 
 Semua akun testing menggunakan password: `Password@2026`
 
-| Role | Email | Deskripsi |
-|------|-------|-----------|
-| **Admin** | `admin1@sinergilaut.id` | Admin Utama |
-| **Admin** | `admin2@sinergilaut.id` | Admin Reviewer |
-| **Community** | `owner1@example.com` | Owner Komunitas 1 |
-| **Community** | `owner2@example.com` | Owner Komunitas 2 |
-| **User** | `approved1@user.com` | Relawan Aktif |
-| **User** | `pending1@user.com` | Relawan (Status Pending) |
-| **User** | `rejected1@user.com` | Relawan (Status Terblokir/Rejected) |
+| Role | Email | Password | Deskripsi |
+|------|-------|----------|-----------|
+| **Admin** | `admin1@sinergilaut.id` | `Password@2026` | Admin Utama |
+| **Admin** | `admin2@sinergilaut.id` | `Password@2026` | Admin Reviewer |
+| **Community** | `owner1@example.com` | `Password@2026` | Budi Bahari |
+| **Community** | `owner2@example.com` | `Password@2026` | Siti Pesisir |
+| **User** | `approved1@user.com` | `Password@2026` | Relawan Aktif 1 |
+| **User** | `approved2@user.com` | `Password@2026` | Relawan Aktif 2 |
+| **User** | `pending1@user.com` | `Password@2026` | Relawan Baru 1 (Pending) |
+| **User** | `pending2@user.com` | `Password@2026` | Relawan Baru 2 (Pending) |
+| **User** | `rejected1@user.com` | `Password@2026` | Relawan Gagal 1 (Rejected) |
+| **User** | `rejected2@user.com` | `Password@2026` | Relawan Gagal 2 (Rejected) |
 
-Jalankan seed script untuk mereset dan mengisi database:
-```bash
-pnpm db:seed
-```
+> **Catatan:** Untuk mereset database dan seed ulang, disarankan menggunakan command bawaan project:
+> ```bash
+> pnpm db:reset
+> ```
+> Perintah tersebut akan mengosongkan database dan menjalankan file `prisma/seed.ts` yang berisi seluruh akun di atas beserta contoh kegiatan, donasi, dan laporan secara otomatis.
 
 ---
 

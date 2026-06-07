@@ -3,42 +3,119 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import { 
-  Search, 
-  Calendar, 
-  MapPin, 
-  Users, 
-  Filter,
-  ChevronDown,
-  Leaf,
-  Heart,
-  GraduationCap,
-  Anchor,
-  Banknote,
-  Package
-} from "lucide-react"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Search, Calendar, MapPin, Users, Filter, ChevronDown, Leaf,
+  Banknote, Sparkles, CheckCircle, Target, Heart, Globe,
+} from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { formatDate, formatCurrency } from "@/lib/utils/helpers"
 
+const pillars = [
+  { icon: Target, title: "Dampak Terukur",    description: "Setiap kegiatan memiliki target sukarelawan dan pendanaan yang jelas, sehingga kontribusi Anda bisa diukur hasilnya secara nyata.", color: "#3b82f6", bg: "rgba(59,130,246,0.08)" },
+  { icon: Heart,  title: "Komunitas Berdaya", description: "Kegiatan diinisiasi dan dikelola oleh komunitas lokal yang memahami kebutuhan nyata ekosistem laut di wilayah mereka.",            color: "#06958a", bg: "rgba(6,149,138,0.08)"  },
+  { icon: Globe,  title: "Laut Lebih Sehat",  description: "Dari pembersihan pantai hingga restorasi terumbu karang, setiap aksi berkontribusi pada kelestarian laut Indonesia jangka panjang.", color: "#f59e0b", bg: "rgba(245,158,11,0.08)" },
+]
+
+const howItWorks = [
+  { step: "01", title: "Temukan Kegiatan",    desc: "Cari kegiatan konservasi laut yang sesuai minat dan lokasimu, mulai dari bersih pantai hingga restorasi terumbu karang." },
+  { step: "02", title: "Bergabung atau Donasi", desc: "Daftar sebagai relawan langsung atau dukung kegiatan dengan donasi uang maupun barang yang dibutuhkan." },
+  { step: "03", title: "Buat Perubahan Nyata", desc: "Kontribusimu langsung berdampak pada ekosistem laut dan menginspirasi lebih banyak orang untuk peduli." },
+]
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ActivityCard({ activity, variant }: { activity: any; variant: 'active' | 'completed' }) {
+  const pct = activity.fundingGoal > 0
+    ? Math.min(Math.round((activity.fundingRaised / activity.fundingGoal) * 100), 100)
+    : 0
+  const isCompleted = variant === 'completed'
+  const accent = isCompleted ? '#64748b' : '#06958a'
+
+  return (
+    <Link href={`/activities/${activity.id}`} className={`act-card${isCompleted ? ' grayscale-[0.3]' : ''}`}>
+      <div className="act-card-img-wrap">
+        <Image src={activity.image} alt={activity.title} fill className="object-cover" />
+        <span className={`act-card-badge${isCompleted ? ' bg-slate-700/80' : ''}`}>{activity.type}</span>
+        {isCompleted && <span className="act-card-status-badge">Selesai</span>}
+      </div>
+      <div className="act-card-body">
+        <div className="act-card-header">
+          <div className={`act-card-icon${isCompleted ? ' opacity-60' : ''}`}>
+            <activity.icon style={{ width: 20, height: 20, color: accent }} />
+          </div>
+          <h3 className={`act-card-title${isCompleted ? ' text-slate-700' : ''}`}>{activity.title}</h3>
+        </div>
+        <p className="act-card-desc">{activity.description}</p>
+        <div className="act-card-meta">
+          <div className="act-card-meta-item">
+            <Calendar style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+            {activity.date}
+          </div>
+          <div className="act-card-meta-item">
+            <MapPin style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+            {activity.location}
+          </div>
+          {!isCompleted && (
+            <div className="act-card-meta-item">
+              <Users style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+              {activity.volunteers} / {activity.slots} relawan
+            </div>
+          )}
+        </div>
+        <div className={`act-progress-wrap${isCompleted ? ' bg-slate-50 border-slate-100' : ''}`}>
+          <div className="act-progress-header">
+            {isCompleted
+              ? <Target style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+              : <Banknote style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+            }
+            <span className={`act-progress-label${isCompleted ? ' text-slate-500' : ''}`}>
+              {isCompleted ? 'Hasil Akhir' : 'Progres Pendanaan'}
+            </span>
+            <span className={`act-progress-pct${isCompleted ? ' text-slate-700' : ''}`}>{pct}%</span>
+          </div>
+          <div className="act-progress-track">
+            <div
+              className={`act-progress-fill${isCompleted ? ' bg-slate-400' : ''}`}
+              style={{ width: `${pct}%`, ...(isCompleted ? { background: 'linear-gradient(90deg, #94a3b8, #64748b)' } : {}) }}
+            />
+          </div>
+          <div className="act-progress-amounts">
+            {isCompleted ? (
+              <span className="act-progress-raised text-slate-500">Terkumpul {formatCurrency(activity.fundingRaised)}</span>
+            ) : (
+              <>
+                <span className="act-progress-raised">{formatCurrency(activity.fundingRaised)}</span>
+                <span className="act-progress-goal">target {formatCurrency(activity.fundingGoal)}</span>
+              </>
+            )}
+          </div>
+        </div>
+        {isCompleted ? (
+          <div className="act-card-btns mt-4">
+            <span className="act-card-btn-ghost border-slate-300 text-slate-600 w-full">Lihat Laporan</span>
+          </div>
+        ) : (
+          <div className="act-card-btns">
+            <span className="act-card-btn-primary">Relawan</span>
+            <span className="act-card-btn-ghost">Donasi</span>
+          </div>
+        )}
+      </div>
+    </Link>
+  )
+}
+
 export default function ActivitiesPage() {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery]           = useState("")
   const [selectedLocation, setSelectedLocation] = useState("All Locations")
-  const [selectedType, setSelectedType] = useState("All Types")
+  const [selectedType, setSelectedType]         = useState("All Types")
+  const [locationOpen, setLocationOpen]         = useState(false)
+  const [typeOpen, setTypeOpen]                 = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [supabaseActivities, setSupabaseActivities] = useState<any[]>([])
-  const [availableLocations, setAvailableLocations] = useState<string[]>(["All Locations"])
-  const [availableTypes, setAvailableTypes] = useState<string[]>(["All Types"])
+  const [availableLocations, setAvailableLocations] = useState<string[]>([])
+  const [availableTypes, setAvailableTypes]         = useState<string[]>([])
 
   useEffect(() => {
     async function fetchActivities() {
@@ -46,10 +123,11 @@ export default function ActivitiesPage() {
       const { data } = await supabase
         .from("activities")
         .select(`*, community:communities(name)`)
-        .eq("status", "published")
+        .in("status", ["published", "completed"])
         .order("created_at", { ascending: false })
 
       if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped = data.map((d: any) => ({
           id: d.id,
           title: d.title,
@@ -63,254 +141,346 @@ export default function ActivitiesPage() {
           icon: Leaf,
           fundingGoal: d.funding_goal || 0,
           fundingRaised: d.funding_raised || 0,
-          itemsNeeded: [] 
+          status: d.status,
         }))
         setSupabaseActivities(mapped)
 
-        // Derive unique locations
-        const locs = Array.from(new Set(data.map((d: any) => d.location || "Online"))) as string[]
-        setAvailableLocations(["All Locations", ...locs.sort()])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const locs = Array.from(new Set(data.map((d: any) => d.location).filter(Boolean))).sort() as string[]
+        setAvailableLocations(locs)
 
-        // Derive unique categories
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const types = Array.from(new Set(data.map((d: any) => d.category || "other"))) as string[]
-        const capitalizedTypes = types.map(t => t.charAt(0).toUpperCase() + t.slice(1))
-        setAvailableTypes(["All Types", ...capitalizedTypes.sort()])
+        setAvailableTypes(types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).sort())
       }
     }
     fetchActivities()
   }, [])
 
-  const allActivities = supabaseActivities
+  const locations       = ["All Locations", ...availableLocations]
+  const typeOptions     = ["All Types", ...availableTypes]
 
-  const filteredActivities = allActivities.filter((activity) => {
-    const matchesSearch = activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         activity.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesLocation = selectedLocation === "All Locations" || 
-                          activity.location.toLowerCase().includes(selectedLocation.toLowerCase())
-    const matchesType = selectedType === "All Types" || 
-                       activity.type === selectedType.toLowerCase()
+  const filteredActivities = supabaseActivities.filter((activity) => {
+    const matchesSearch   = (activity.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (activity.description || "").toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesLocation = selectedLocation === "All Locations" ||
+                            (activity.location || "").toLowerCase() === selectedLocation.toLowerCase()
+    const matchesType     = selectedType === "All Types" ||
+                            (activity.type || "").toLowerCase() === selectedType.toLowerCase()
     return matchesSearch && matchesLocation && matchesType
   })
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navigation />
-      
-      <main className="flex-1 pt-16">
-        {/* Header */}
-        <section className="bg-secondary py-16 lg:py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground text-balance">
-                Conservation Activities
-              </h1>
-              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Find volunteer opportunities or support activities with donations and items they need to succeed.
-              </p>
-            </div>
+  const activeActivities = filteredActivities.filter(a => a.status === "published")
+  const completedActivities = filteredActivities.filter(a => a.status === "completed")
 
-            {/* Search and Filters */}
-            <div className="mt-10 flex flex-col lg:flex-row gap-4 max-w-4xl mx-auto">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "'Inter', sans-serif" }}>
+      <style>{`
+        /* ── Hero ── */
+        .act-hero { position:relative; min-height:80vh; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; padding:6rem 1.5rem 5rem; text-align:center; }
+        .act-hero-bg { position:absolute; inset:0; background-image:url('/images/donate-hero.jpg'); background-size:cover; background-position:center 40%; }
+        .act-hero-overlay { position:absolute; inset:0; background:linear-gradient(160deg,rgba(3,22,48,0.88) 0%,rgba(4,55,82,0.72) 50%,rgba(3,40,60,0.90) 100%); }
+        .act-hero-particles { position:absolute; inset:0; background-image:radial-gradient(circle,rgba(103,232,249,0.12) 1px,transparent 1px),radial-gradient(circle,rgba(165,243,252,0.07) 1px,transparent 1px); background-size:55px 55px,28px 28px; background-position:0 0,14px 14px; animation:actParticleDrift 25s linear infinite; pointer-events:none; }
+        @keyframes actParticleDrift { from{transform:translateY(0)} to{transform:translateY(-60px)} }
+        .act-hero-content { position:relative; z-index:10; max-width:820px; }
+        .act-hero-badge { display:inline-flex; align-items:center; gap:0.5rem; background:rgba(103,232,249,0.12); backdrop-filter:blur(10px); border:1px solid rgba(103,232,249,0.28); color:#a5f3fc; font-size:0.8125rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:0.45rem 1.25rem; border-radius:9999px; margin-bottom:2rem; }
+        .act-hero-title { font-size:clamp(2.25rem,5.5vw,4rem); font-weight:900; color:white; line-height:1.1; letter-spacing:-0.03em; margin-bottom:1.5rem; }
+        .act-shimmer { background:linear-gradient(90deg,#67e8f9,#a5f3fc,#67e8f9); background-size:200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; animation:actShimmer 4s linear infinite; }
+        @keyframes actShimmer { from{background-position:0% center} to{background-position:200% center} }
+        .act-hero-desc { font-size:1.0625rem; color:rgba(255,255,255,0.72); line-height:1.75; max-width:580px; margin:0 auto 2.5rem; }
+        .act-wave { position:absolute; bottom:-2px; left:0; right:0; z-index:5; line-height:0; }
+
+        /* ── Search Bar ── */
+        .act-search-wrapper { position:relative; z-index:20; margin-top:2rem; padding:0 1.5rem; margin-bottom:2rem; }
+        .act-search-bar { background:linear-gradient(135deg,#06958a,#0e7268); border-radius:1.5rem; box-shadow:0 16px 40px rgba(6,149,138,0.25); padding:2rem 1.5rem; position:relative; max-width:1000px; margin:0 auto; }
+        @media(max-width:640px){ .act-search-bar{padding:1.25rem 1rem;border-radius:1.25rem;} }
+        .act-search-inner { position:relative; z-index:2; max-width:900px; margin:0 auto; display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
+        .act-search-input-wrap { position:relative; flex:1; min-width:240px; }
+        @media(max-width:640px){ .act-search-inner{flex-direction:column;align-items:stretch;gap:0.75rem;} .act-search-input-wrap{min-width:0;} }
+        .act-search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,0.55); pointer-events:none; }
+        .act-search-input { width:100%; padding:0.75rem 1rem 0.75rem 2.75rem; background:rgba(255,255,255,0.12); border:1.5px solid rgba(255,255,255,0.22); border-radius:0.875rem; color:white; font-size:0.9375rem; outline:none; font-family:inherit; transition:all 0.2s ease; }
+        .act-search-input::placeholder { color:rgba(255,255,255,0.5); }
+        .act-search-input:focus { background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.4); }
+        .act-dropdown-wrap { position:relative; }
+        .act-dropdown-btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.75rem 1.125rem; background:rgba(255,255,255,0.1); border:1.5px solid rgba(255,255,255,0.22); border-radius:0.875rem; color:white; font-size:0.875rem; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s ease; white-space:nowrap; }
+        .act-dropdown-btn:hover { background:rgba(255,255,255,0.18); }
+        .act-dropdown-menu { position:absolute; top:calc(100% + 0.5rem); right:0; background:white; border-radius:0.875rem; box-shadow:0 8px 30px rgba(0,0,0,0.15); overflow:hidden; z-index:50; min-width:160px; border:1px solid rgba(0,0,0,0.06); }
+        .act-dropdown-item { display:block; width:100%; text-align:left; padding:0.625rem 1rem; font-size:0.875rem; color:#374151; background:transparent; border:none; cursor:pointer; font-family:inherit; transition:background 0.15s ease; }
+        .act-dropdown-item:hover { background:#f0f9ff; color:#06958a; }
+        .act-results-count { color:rgba(255,255,255,0.75); font-size:0.875rem; font-weight:500; margin-left:auto; white-space:nowrap; }
+
+        /* ── Layout ── */
+        .act-section { padding:3rem 1.5rem 5.5rem; }
+        .act-section-alt { padding:5.5rem 1.5rem; background:#f0f9ff; }
+        .act-container { max-width:1200px; margin:0 auto; }
+        .act-eyebrow { display:inline-flex; align-items:center; gap:0.5rem; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#06958a; margin-bottom:0.875rem; }
+        .act-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#06958a; }
+        .act-section-title { font-size:clamp(1.75rem,3.5vw,2.625rem); font-weight:800; color:#0e2a3a; line-height:1.2; letter-spacing:-0.02em; margin-bottom:1rem; }
+        .act-section-desc { font-size:1.0625rem; color:#475569; line-height:1.7; max-width:580px; }
+        .act-group-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .act-group-title { font-size: 1.5rem; font-weight: 800; color: #0e2a3a; display: flex; align-items: center; gap: 0.75rem; }
+        .act-group-count { background: #f1f5f9; color: #64748b; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px; }
+
+        /* ── Activity Cards Grid ── */
+        .act-grid { display:grid; gap:1.5rem; grid-template-columns:1fr; }
+        @media(min-width:640px){ .act-grid{grid-template-columns:repeat(2,1fr);} }
+        @media(min-width:1024px){ .act-grid{grid-template-columns:repeat(3,1fr);} }
+        .act-card { background:white; border-radius:1.25rem; overflow:hidden; border:1.5px solid rgba(0,0,0,0.06); box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:all 0.3s ease; display:flex; flex-direction:column; text-decoration:none; }
+        .act-card:hover { transform:translateY(-5px); box-shadow:0 20px 50px rgba(0,0,0,0.1); }
+        .act-card-img-wrap { position:relative; height:192px; overflow:hidden; }
+        .act-card-img-wrap img { transition:transform 0.4s ease; }
+        .act-card:hover .act-card-img-wrap img { transform:scale(1.05); }
+        .act-card-badge { position:absolute; top:12px; left:12px; background:rgba(14,77,109,0.85); backdrop-filter:blur(8px); color:white; font-size:0.75rem; font-weight:700; padding:0.3rem 0.875rem; border-radius:9999px; text-transform:capitalize; letter-spacing:0.03em; border:1px solid rgba(255,255,255,0.2); }
+        .act-card-status-badge { position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.9); backdrop-filter:blur(8px); color:#0e4d6d; font-size:0.65rem; font-weight:800; padding:0.25rem 0.625rem; border-radius:0.5rem; text-transform:uppercase; letter-spacing:0.05em; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .act-card-body { padding:1.5rem; flex:1; display:flex; flex-direction:column; }
+        .act-card-header { display:flex; align-items:flex-start; gap:0.875rem; margin-bottom:0.875rem; }
+        .act-card-icon { width:42px; height:42px; flex-shrink:0; background:linear-gradient(135deg,rgba(14,77,109,0.1),rgba(6,149,138,0.12)); border-radius:0.75rem; display:flex; align-items:center; justify-content:center; }
+        .act-card-title { font-size:1rem; font-weight:700; color:#0e2a3a; line-height:1.3; }
+        .act-card-desc { font-size:0.875rem; color:#64748b; line-height:1.65; margin-bottom:1rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+        .act-card-meta { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:1rem; }
+        .act-card-meta-item { display:flex; align-items:center; gap:0.5rem; font-size:0.8125rem; color:#64748b; }
+        .act-progress-wrap { padding:0.875rem; background:#f8fafc; border-radius:0.875rem; border:1px solid #f1f5f9; margin-bottom:1rem; }
+        .act-progress-header { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.625rem; }
+        .act-progress-label { font-size:0.75rem; font-weight:600; color:#374151; flex:1; }
+        .act-progress-pct { font-size:0.75rem; font-weight:700; color:#06958a; }
+        .act-progress-track { height:8px; background:#e2e8f0; border-radius:9999px; overflow:hidden; margin-bottom:0.4rem; }
+        .act-progress-fill { height:100%; border-radius:9999px; background:linear-gradient(90deg,#0e4d6d,#06958a); position:relative; overflow:hidden; transition:width 0.6s ease; }
+        .act-progress-fill::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent); animation:actProgressShimmer 2s linear infinite; }
+        @keyframes actProgressShimmer { from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+        .act-progress-amounts { display:flex; justify-content:space-between; font-size:0.75rem; }
+        .act-progress-raised { color:#64748b; }
+        .act-progress-goal { color:#94a3b8; }
+        .act-card-btns { display:flex; gap:0.75rem; margin-top:auto; }
+        .act-card-btn-primary { flex:1; padding:0.625rem 1rem; background:linear-gradient(135deg,#06958a,#0e7268); color:white; border:none; border-radius:0.75rem; font-size:0.875rem; font-weight:700; text-decoration:none; text-align:center; display:flex; align-items:center; justify-content:center; transition:all 0.2s ease; box-shadow:0 2px 10px rgba(6,149,138,0.3); cursor:pointer; }
+        .act-card-btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(6,149,138,0.4); }
+        .act-card-btn-ghost { flex:1; padding:0.625rem 1rem; background:transparent; color:#0e4d6d; border:1.5px solid rgba(14,77,109,0.2); border-radius:0.75rem; font-size:0.875rem; font-weight:600; text-decoration:none; text-align:center; display:flex; align-items:center; justify-content:center; transition:all 0.2s ease; cursor:pointer; }
+        .act-card-btn-ghost:hover { background:rgba(14,77,109,0.05); border-color:rgba(14,77,109,0.4); }
+        .act-empty { padding:5rem 1.5rem; text-align:center; }
+        .act-empty-icon { width:72px; height:72px; background:linear-gradient(135deg,rgba(14,77,109,0.08),rgba(6,149,138,0.1)); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.25rem; }
+        .act-empty-title { font-size:1.125rem; font-weight:700; color:#0e2a3a; margin-bottom:0.5rem; }
+        .act-empty-desc { font-size:0.9375rem; color:#64748b; }
+
+        /* ── Pillars ── */
+        .act-pillars-grid { display:grid; gap:1.5rem; grid-template-columns:1fr; }
+        @media(min-width:768px){ .act-pillars-grid{grid-template-columns:repeat(3,1fr);} }
+        .act-pillar-card { background:white; border-radius:1.25rem; padding:2rem; border:1.5px solid rgba(0,0,0,0.06); box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:all 0.3s ease; position:relative; overflow:hidden; }
+        .act-pillar-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; opacity:0; transition:opacity 0.3s; }
+        .act-pillar-card:hover { transform:translateY(-4px); box-shadow:0 16px 40px rgba(0,0,0,0.1); }
+        .act-pillar-card:hover::after { opacity:1; }
+        .act-pillar-icon { width:52px; height:52px; border-radius:1rem; display:flex; align-items:center; justify-content:center; margin-bottom:1.25rem; }
+        .act-pillar-title { font-size:1.0625rem; font-weight:700; color:#0e2a3a; margin-bottom:0.5rem; }
+        .act-pillar-desc { font-size:0.875rem; color:#64748b; line-height:1.65; }
+
+        /* ── How it works ── */
+        .act-how-grid { display:grid; gap:2rem; grid-template-columns:1fr; }
+        @media(min-width:768px){ .act-how-grid{grid-template-columns:repeat(3,1fr);} }
+        .act-how-card { background:white; border-radius:1.25rem; padding:2rem; border:1.5px solid rgba(6,149,138,0.1); box-shadow:0 2px 8px rgba(0,0,0,0.03); transition:all 0.3s ease; }
+        .act-how-card:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(6,149,138,0.1); }
+        .act-how-step { font-size:3rem; font-weight:900; letter-spacing:-0.05em; background:linear-gradient(135deg,#0e4d6d,#06958a); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1; margin-bottom:1rem; opacity:0.5; }
+        .act-how-title { font-size:1.0625rem; font-weight:700; color:#0e2a3a; margin-bottom:0.5rem; }
+        .act-how-desc { font-size:0.875rem; color:#64748b; line-height:1.65; }
+      `}</style>
+
+      <Navigation />
+      <main style={{ flex: 1 }}>
+
+        {/* ── HERO ── */}
+        <section className="act-hero">
+          <div className="act-hero-bg" />
+          <div className="act-hero-overlay" />
+          <div className="act-hero-particles" />
+          <div className="act-hero-content">
+            <div className="act-hero-badge">
+              <Sparkles style={{ width: 12, height: 12 }} />
+              Konservasi Laut Indonesia
+            </div>
+            <h1 className="act-hero-title">
+              Kegiatan <span className="act-shimmer">Konservasi</span> Laut
+            </h1>
+            <p className="act-hero-desc">
+              Temukan peluang menjadi relawan atau dukung kegiatan konservasi laut dengan donasi dan barang yang mereka butuhkan untuk sukses.
+            </p>
+          </div>
+          <div className="act-wave">
+            <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block", width: "100%" }}>
+              <path d="M0,40 C360,80 720,0 1080,40 C1260,60 1380,30 1440,40 L1440,80 L0,80 Z" fill="white" />
+            </svg>
+          </div>
+        </section>
+
+        {/* ── SEARCH & FILTER BAR ── */}
+        <div className="act-search-wrapper" id="kegiatan-list">
+          <section className="act-search-bar">
+            <div className="act-search-inner">
+              <div className="act-search-input-wrap">
+                <Search className="act-search-icon" style={{ width: 18, height: 18 }} />
+                <input
                   type="text"
-                  placeholder="Search activities..."
+                  placeholder="Cari kegiatan konservasi..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12 bg-background"
+                  className="act-search-input"
                 />
               </div>
-              
-              <div className="flex gap-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-12 min-w-[160px] justify-between bg-background">
-                      <span className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        {selectedLocation}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[160px]">
-                    {availableLocations.map((location) => (
-                      <DropdownMenuItem 
-                        key={location}
-                        onClick={() => setSelectedLocation(location)}
-                      >
-                        {location}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-12 min-w-[140px] justify-between bg-background">
-                      <span className="flex items-center gap-2">
-                        <Filter className="h-4 w-4" />
-                        {selectedType}
-                      </span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[140px]">
-                    {availableTypes.map((type) => (
-                      <DropdownMenuItem 
-                        key={type}
-                        onClick={() => setSelectedType(type)}
-                      >
-                        {type}
-                      </DropdownMenuItem>
+              {/* Location dropdown */}
+              <div className="act-dropdown-wrap">
+                <button className="act-dropdown-btn" onClick={() => { setLocationOpen(!locationOpen); setTypeOpen(false) }}>
+                  <MapPin style={{ width: 15, height: 15 }} />
+                  {selectedLocation}
+                  <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
+                </button>
+                {locationOpen && (
+                  <div className="act-dropdown-menu">
+                    {locations.map((loc) => (
+                      <button key={loc} className="act-dropdown-item" onClick={() => { setSelectedLocation(loc); setLocationOpen(false) }}>
+                        {loc}
+                      </button>
                     ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
-        </section>
 
-        {/* Activities Grid */}
-        <section className="py-12 lg:py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              {selectedLocation !== "All Locations" && (
-                <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">{filteredActivities.length}</span> kegiatan ditemukan
-                </p>
+              {/* Type dropdown */}
+              <div className="act-dropdown-wrap">
+                <button className="act-dropdown-btn" onClick={() => { setTypeOpen(!typeOpen); setLocationOpen(false) }}>
+                  <Filter style={{ width: 15, height: 15 }} />
+                  {selectedType}
+                  <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
+                </button>
+                {typeOpen && (
+                  <div className="act-dropdown-menu">
+                    {typeOptions.map((t) => (
+                      <button key={t} className="act-dropdown-item" onClick={() => { setSelectedType(t); setTypeOpen(false) }}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {filteredActivities.length > 0 && (selectedLocation !== "All Locations" || selectedType !== "All Types" || searchQuery !== "") && (
+                <span className="act-results-count">{filteredActivities.length} kegiatan ditemukan</span>
               )}
             </div>
+          </section>
+        </div>
 
-            {filteredActivities.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                {filteredActivities.map((activity) => (
-                  <Card key={activity.id} className="overflow-hidden group hover:shadow-lg transition-shadow relative">
-                    <Link href={`/activities/${activity.id}`} className="absolute inset-0 z-10">
-                      <span className="sr-only">View activity details</span>
-                    </Link>
-                    <div className="relative h-48 overflow-hidden">
-                      <Image
-                        src={activity.image}
-                        alt={activity.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute top-4 left-4 flex gap-2">
-                        <span className="bg-accent text-accent-foreground px-3 py-1 rounded-full text-xs font-medium capitalize">
-                          {activity.type}
-                        </span>
-                      </div>
-                    </div>
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <activity.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <h3 className="font-semibold text-foreground leading-tight">{activity.title}</h3>
-                      </div>
-                      <p className="text-muted-foreground text-sm leading-relaxed mb-4 line-clamp-2">
-                        {activity.description}
-                      </p>
-                      <div className="flex flex-col gap-2 text-sm text-muted-foreground mb-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 flex-shrink-0" />
-                          <span>{activity.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 flex-shrink-0" />
-                          <span>{activity.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 flex-shrink-0" />
-                          <span>{activity.volunteers} / {activity.slots} volunteers</span>
-                        </div>
-                      </div>
-                      
-                      {/* Funding Progress */}
-                      <div className="mb-4 p-3 bg-secondary/50 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Banknote className="h-4 w-4 text-primary" />
-                          <span className="text-xs font-medium text-foreground">Funding Progress</span>
-                        </div>
-                        <div className="h-2 bg-background rounded-full overflow-hidden mb-1">
-                          <div 
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${activity.fundingGoal > 0 ? Math.min((activity.fundingRaised / activity.fundingGoal) * 100, 100) : 0}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">{formatCurrency(activity.fundingRaised)}</span>
-                          <span className="font-medium text-foreground">{activity.fundingGoal > 0 ? Math.round((activity.fundingRaised / activity.fundingGoal) * 100) : 0}%</span>
-                        </div>
-                      </div>
-
-                      {/* Items Needed Preview — only if there are items */}
-                      {activity.itemsNeeded.length > 0 && (
-                        <div className="mb-4 p-3 bg-secondary/50 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Package className="h-4 w-4 text-accent" />
-                            <span className="text-xs font-medium text-foreground">Items Needed</span>
-                          </div>
-                          <ul className="space-y-1">
-                            {activity.itemsNeeded.slice(0, 2).map((item: any) => (
-                              <li key={item.name} className="text-xs text-muted-foreground flex justify-between">
-                                <span className="truncate">{item.name}</span>
-                                <span className="font-medium">{item.donated}/{item.quantity}</span>
-                              </li>
-                            ))}
-                            {activity.itemsNeeded.length > 2 && (
-                              <li className="text-xs text-primary">+{activity.itemsNeeded.length - 2} more items</li>
-                            )}
-                          </ul>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button className="flex-1" asChild>
-                          <Link href={`/activities/${activity.id}`}>Volunteer</Link>
-                        </Button>
-                        <Button variant="outline" className="flex-1" asChild>
-                          <Link href={`/activities/${activity.id}`}>Donate</Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+        {/* ── ACTIVITY LIST SECTIONS ── */}
+        <section className="act-section">
+          <div className="act-container">
+            {activeActivities.length === 0 && completedActivities.length === 0 ? (
+              <div className="act-empty">
+                <div className="act-empty-icon">
+                  <Search style={{ width: 32, height: 32, color: "#06958a" }} />
+                </div>
+                <h3 className="act-empty-title">Tidak ada kegiatan ditemukan</h3>
+                <p className="act-empty-desc">Coba ubah kata kunci, lokasi, atau tipe kegiatan yang kamu cari.</p>
               </div>
             ) : (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No activities found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filters to find what you are looking for.</p>
-              </div>
-            )}
-          </div>
+              <>
+                {activeActivities.length > 0 && (
+                  <div className="mb-16">
+                    <div className="act-group-header">
+                      <div className="act-group-title">
+                        <Sparkles className="text-primary h-6 w-6" />
+                        Kegiatan Aktif
+                        <span className="act-group-count">{activeActivities.length}</span>
+                      </div>
+                    </div>
+                    <div className="act-grid">
+                      {activeActivities.map(a => <ActivityCard key={a.id} activity={a} variant="active" />)}
+                    </div>
+                  </div>
+                )}
+                {completedActivities.length > 0 && (
+                  <div>
+                    <div className="act-group-header">
+                      <div className="act-group-title">
+                        <CheckCircle className="text-muted-foreground h-6 w-6" />
+                        Kegiatan Selesai
+                        <span className="act-group-count">{completedActivities.length}</span>
+                      </div>
+                    </div>
+                    <div className="act-grid opacity-85">
+                      {completedActivities.map(a => <ActivityCard key={a.id} activity={a} variant="completed" />)}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          }</div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-16 bg-primary">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-primary-foreground">
-              Want to organize your own conservation activity?
-            </h2>
-            <p className="mt-4 text-primary-foreground/80">
-              Register your community and propose activities that need funding and volunteer support.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" variant="secondary" asChild>
-                <Link href="/community/register">Register Your Community</Link>
-              </Button>
-              <Button size="lg" variant="outline" className="bg-transparent text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/10 hover:text-primary-foreground" asChild>
-                <Link href="/community">View Communities</Link>
-              </Button>
+        {/* ── PILLARS ── */}
+        <section className="act-section-alt">
+          <div className="act-container">
+            <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+              <div className="act-eyebrow" style={{ justifyContent: "center", margin: "0 auto 0.875rem" }}>
+                <span className="act-eyebrow-dot" /> Mengapa Bergabung
+              </div>
+              <h2 className="act-section-title">Setiap Aksi Memberi Dampak Nyata</h2>
+              <p className="act-section-desc" style={{ margin: "0 auto" }}>
+                Kontribusimu — sekecil apapun — bermakna bagi keberlangsungan ekosistem laut Indonesia.
+              </p>
+            </div>
+            <div className="act-pillars-grid">
+              {pillars.map((p, i) => (
+                <div key={p.title} className="act-pillar-card">
+                  <style>{`.act-pillar-card:nth-child(${i + 1})::after { background: linear-gradient(90deg, ${p.color}, ${p.color}88); }`}</style>
+                  <div className="act-pillar-icon" style={{ background: p.bg }}>
+                    <p.icon style={{ width: 24, height: 24, color: p.color }} />
+                  </div>
+                  <h3 className="act-pillar-title">{p.title}</h3>
+                  <p className="act-pillar-desc">{p.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
-      </main>
 
+        {/* ── HOW IT WORKS ── */}
+        <section className="act-section">
+          <div className="act-container">
+            <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+              <div className="act-eyebrow" style={{ justifyContent: "center", margin: "0 auto 0.875rem" }}>
+                <span className="act-eyebrow-dot" /> Cara Berkontribusi
+              </div>
+              <h2 className="act-section-title">Mulai dalam 3 Langkah Mudah</h2>
+              <p className="act-section-desc" style={{ margin: "0 auto" }}>
+                Proses sederhana untuk mulai berkontribusi pada pelestarian laut Indonesia bersama komunitas kami.
+              </p>
+            </div>
+            <div className="act-how-grid">
+              {howItWorks.map((h) => (
+                <div key={h.step} className="act-how-card">
+                  <div className="act-how-step">{h.step}</div>
+                  <h3 className="act-how-title">{h.title}</h3>
+                  <p className="act-how-desc">{h.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: "3.5rem", padding: "1.75rem 2rem", background: "#f0f9ff", borderRadius: "1.25rem", border: "1.5px solid rgba(6,149,138,0.12)", display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
+              <div style={{ width: 48, height: 48, background: "linear-gradient(135deg,#0e4d6d,#06958a)", borderRadius: "0.875rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Leaf style={{ width: 22, height: 22, color: "white" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <p style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#0e2a3a", marginBottom: "0.25rem" }}>Terverifikasi &amp; Dimoderasi</p>
+                <p style={{ fontSize: "0.875rem", color: "#64748b", lineHeight: 1.55 }}>Seluruh kegiatan telah diverifikasi oleh tim SinergiLaut dan dikelola oleh komunitas yang terdaftar dan terpercaya.</p>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {["Komunitas terverifikasi", "Laporan transparan", "Monitoring dampak"].map(t => (
+                  <div key={t} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", color: "#374151" }}>
+                    <CheckCircle style={{ width: 15, height: 15, color: "#06958a", flexShrink: 0 }} />
+                    {t}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
       <Footer />
     </div>
   )

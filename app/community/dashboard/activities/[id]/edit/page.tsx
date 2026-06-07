@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { useRouter, useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -139,8 +138,7 @@ export default function EditActivityPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navigation />
+      <div className="flex-1 flex flex-col">
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
@@ -149,9 +147,8 @@ export default function EditActivityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30">
-      <Navigation />
-      <main className="pt-20 pb-16">
+    <div className="flex-1 bg-slate-50">
+      <main className="pb-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">

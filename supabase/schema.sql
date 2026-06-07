@@ -535,3 +535,15 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Public Access to SinergiLaut Assets" 
 ON storage.objects FOR SELECT USING ( bucket_id = 'sinergilaut-assets' );
+
+CREATE POLICY "Users can upload assets" 
+ON storage.objects FOR INSERT 
+WITH CHECK ( bucket_id = 'sinergilaut-assets' AND auth.role() = 'authenticated' );
+
+CREATE POLICY "Users can update their own assets"
+ON storage.objects FOR UPDATE
+USING ( bucket_id = 'sinergilaut-assets' AND auth.uid() = owner );
+
+CREATE POLICY "Users can delete their own assets"
+ON storage.objects FOR DELETE
+USING ( bucket_id = 'sinergilaut-assets' AND auth.uid() = owner );

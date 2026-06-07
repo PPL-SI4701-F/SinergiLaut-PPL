@@ -32,7 +32,19 @@ async function main() {
   await prisma.communities.deleteMany({})
   await prisma.journey_milestones.deleteMany({})
   await prisma.profiles.deleteMany({})
-  console.log('   ✅ Database dibersihkan.')
+  console.log('   ✅ Tabel database dibersihkan.')
+
+  // Hapus semua auth users
+  console.log('🔐 Membersihkan auth users...')
+  const { data: authList } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  if (authList?.users?.length) {
+    for (const u of authList.users) {
+      await supabase.auth.admin.deleteUser(u.id)
+    }
+    console.log(`   ✅ ${authList.users.length} auth user dihapus.`)
+  } else {
+    console.log('   ℹ️  Tidak ada auth user.')
+  }
 
   async function createAuthUser(email: string, fullName: string, role: user_role) {
     const password = 'Password@2026'
@@ -82,6 +94,7 @@ async function main() {
 
   const userApproved1 = await createAuthUser('approved1@user.com', 'Relawan Aktif 1', 'user')
   const userApproved2 = await createAuthUser('approved2@user.com', 'Relawan Aktif 2', 'user')
+  await prisma.profiles.updateMany({ where: { id: { in: [userApproved1.id, userApproved2.id] } }, data: { volunteer_status: 'approved' } })
 
   const userRejected1 = await createAuthUser('rejected1@user.com', 'Relawan Gagal 1', 'user')
   const userRejected2 = await createAuthUser('rejected2@user.com', 'Relawan Gagal 2', 'user')
@@ -105,6 +118,7 @@ async function main() {
           location: i === 1 ? 'Bali' : 'Lombok',
           verification_status: status,
           is_verified: status === 'approved',
+          logo_url: status === 'approved' ? (i === 1 ? '/images/partner-1.jpg' : '/images/partner-2.jpg') : null,
           bank_name: 'BCA',
           bank_account_number: `123456789${i}`,
           bank_account_name: `Rekening Komunitas ${i}`,
@@ -131,8 +145,22 @@ async function main() {
   const approvedComm = comms.find(c => c.verification_status === 'approved')!
   const activityStatuses: activity_status[] = ['draft', 'pending_review', 'published', 'cancelled', 'completed']
   const activities = []
+  
+  const activityImages = [
+    '/images/activities/activity-template-1.png',
+    '/images/activities/activity-template-2.png',
+    '/images/beach-cleanup.jpg',
+    '/images/coral-restoration.jpg',
+    '/images/mangrove-planting.jpg',
+  ]
+
   for (const status of activityStatuses) {
     for (let i = 1; i <= 2; i++) {
+      const imgIdx = (activities.length) % activityImages.length
+      const isCompleted = status === 'completed'
+      const goal = 10000000
+      const quota = 20
+      
       const act = await prisma.activities.create({
         data: {
           community_id: approvedComm.id,
@@ -143,10 +171,18 @@ async function main() {
           status: status,
           start_date: new Date(Date.now() + (i * 86400000 * 30)),
           location: i === 1 ? 'Pantai Kuta' : 'Pantai Sanur',
-          volunteer_quota: 20,
-          funding_goal: 10000000,
+          volunteer_quota: quota,
+          volunteer_count: isCompleted ? quota : 0,
+          funding_goal: goal,
+          funding_raised: isCompleted ? goal : 0,
           allow_item_donation: true,
-          items_needed: [{ item_name: 'Gloves', target: 50, donated: 0 }],
+          items_needed: [{ item_name: 'Gloves', target: 50, donated: isCompleted ? 50 : 0 }],
+          cover_image_url: activityImages[imgIdx],
+          images: isCompleted ? [
+            '/images/reports/completed-1.png',
+            '/images/reports/completed-2.png',
+            '/images/reports/completed-3.png'
+          ] : [],
           published_at: (status === 'published' || status === 'completed') ? new Date() : null,
         }
       })
@@ -233,21 +269,72 @@ async function main() {
   // 8. REPORTS
   // ============================================
   console.log('📄 Membuat laporan...')
-  const rStatuses: report_status[] = ['draft', 'submitted', 'validated', 'rejected']
-  for (const status of rStatuses) {
-    for (let i = 1; i <= 2; i++) {
-      await prisma.reports.create({
-        data: {
-          activity_id: activeAct.id,
-          community_id: approvedComm.id,
-          submitted_by: owner1.id,
-          title: `Laporan Akhir ${status} ${i}`,
-          summary: `Summary status ${status}`,
-          status: status,
-          fund_usage: [],
-        }
-      })
+  const completedActivitiesSeed = activities.filter(a => a.status === 'completed')
+  
+  // Add one EXTRA completed activity as requested
+  const extraCompleted = await prisma.activities.create({
+    data: {
+      community_id: approvedComm.id,
+      title: "Ekspedisi Terumbu Karang Selesai",
+      slug: "ekspedisi-terumbu-karang-selesai",
+      description: "Kegiatan ekspedisi pemantauan terumbu karang yang telah berhasil dilaksanakan sepenuhnya.",
+      category: "restoration",
+      status: "completed",
+      start_date: new Date(Date.now() - (30 * 86400000)),
+      location: "Pulau Menjangan",
+      volunteer_quota: 15,
+      funding_goal: 15000000,
+      funding_raised: 15000000,
+      volunteer_count: 15,
+      cover_image_url: '/images/activities/activity-template-1.png',
+      published_at: new Date(Date.now() - (60 * 86400000)),
     }
+  })
+  completedActivitiesSeed.push(extraCompleted)
+
+  const rStatuses: report_status[] = ['draft', 'submitted', 'validated', 'rejected']
+  
+  for (const [idx, act] of completedActivitiesSeed.entries()) {
+    // Each completed activity gets at least one validated report
+    const report = await prisma.reports.create({
+      data: {
+        activity_id: act.id,
+        community_id: approvedComm.id,
+        submitted_by: owner1.id,
+        title: `Laporan Akhir ${act.title}`,
+        summary: `Ini adalah laporan pertanggungjawaban untuk kegiatan ${act.title}. Semua target telah tercapai dengan baik. Berikut adalah bukti dokumentasi dan penggunaan dana.`,
+        status: 'validated',
+        fund_usage: [
+          { item: 'Sewa Alat Selam', amount: 2500000 },
+          { item: 'Transportasi Kapal', amount: 3000000 },
+          { item: 'Konsumsi Relawan', amount: 1500000 }
+        ],
+      }
+    })
+
+    // Add report files (documentation)
+    await prisma.report_files.createMany({
+      data: [
+        { report_id: report.id, file_url: '/images/reports/completed-1.png', file_name: 'Dokumentasi Utama.png', file_type: 'image' },
+        { report_id: report.id, file_url: '/images/reports/completed-2.png', file_name: 'Foto Kegiatan Lapangan.png', file_type: 'image' },
+        { report_id: report.id, file_url: '/images/reports/completed-3.png', file_name: 'Bukti Pengeluaran.png', file_type: 'image' },
+      ]
+    })
+  }
+
+  // Also create some other status reports for the first active activity for testing
+  for (const status of rStatuses) {
+    await prisma.reports.create({
+      data: {
+        activity_id: activeAct.id,
+        community_id: approvedComm.id,
+        submitted_by: owner1.id,
+        title: `Laporan Testing ${status}`,
+        summary: `Summary testing status ${status}`,
+        status: status,
+        fund_usage: [],
+      }
+    })
   }
   console.log('   ✅ Laporan dibuat.')
 

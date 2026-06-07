@@ -29,7 +29,7 @@ import {
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
-import { formatDate } from "@/lib/utils/helpers"
+import { formatDate, calcPercentage } from "@/lib/utils/helpers"
 
 export default function CommunityProfilePage({
   params,
@@ -141,7 +141,7 @@ export default function CommunityProfilePage({
                   {community.is_verified && (
                     <Badge className="bg-primary/10 text-primary">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Verified
+                      Terverifikasi
                     </Badge>
                   )}
                 </div>
@@ -149,19 +149,19 @@ export default function CommunityProfilePage({
                   <MapPin className="h-4 w-4" />
                   <span>{community.location || "Indonesia"}</span>
                   <span className="text-muted-foreground/50">|</span>
-                  <span>Joined {formatDate(community.created_at)}</span>
+                  <span>Bergabung {formatDate(community.created_at)}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">Konservasi Laut</Badge>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" aria-label="Bagikan halaman komunitas">
                   <Share2 className="h-4 w-4" />
                 </Button>
                 <Button asChild>
                   <Link href={`/activities?community=${community.id}`}>
-                    View Activities
+                    Lihat Kegiatan
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
                 </Button>
@@ -179,14 +179,14 @@ export default function CommunityProfilePage({
                   <Users className="h-5 w-5 text-primary" />
                   <span className="text-2xl font-bold text-foreground">{memberCount}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Members</p>
+                <p className="text-sm text-muted-foreground">Anggota</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Activity className="h-5 w-5 text-primary" />
                   <span className="text-2xl font-bold text-foreground">{allActs.length}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Activities</p>
+                <p className="text-sm text-muted-foreground">Kegiatan</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
@@ -195,7 +195,7 @@ export default function CommunityProfilePage({
                     {formatCurrency(totalDonations)}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">Donations Received</p>
+                <p className="text-sm text-muted-foreground">Dana Terkumpul</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
@@ -204,7 +204,7 @@ export default function CommunityProfilePage({
                     {activeActs.length}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">Active Activities</p>
+                <p className="text-sm text-muted-foreground">Kegiatan Aktif</p>
               </div>
             </div>
           </div>
@@ -218,7 +218,7 @@ export default function CommunityProfilePage({
               <div className="space-y-6">
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-foreground mb-4">About</h2>
+                    <h2 className="text-lg font-semibold text-foreground mb-4">Tentang Komunitas</h2>
                     <p className="text-muted-foreground leading-relaxed">
                       {community.description}
                     </p>
@@ -227,7 +227,7 @@ export default function CommunityProfilePage({
 
                 <Card>
                   <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-foreground mb-4">Contact</h2>
+                    <h2 className="text-lg font-semibold text-foreground mb-4">Kontak</h2>
                     <div className="space-y-3">
                       {community.email && (
                         <a
@@ -307,7 +307,7 @@ export default function CommunityProfilePage({
                 {community.cover_url && (
                   <Card>
                     <CardContent className="p-6">
-                      <h2 className="text-lg font-semibold text-foreground mb-4">Gallery</h2>
+                      <h2 className="text-lg font-semibold text-foreground mb-4">Galeri</h2>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="relative aspect-square rounded-lg overflow-hidden">
                           <Image
@@ -326,9 +326,9 @@ export default function CommunityProfilePage({
               {/* Right Column - Activities */}
               <div className="lg:col-span-2">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-foreground">Active Activities</h2>
+                  <h2 className="text-xl font-semibold text-foreground">Kegiatan Aktif</h2>
                   <Button variant="outline" asChild>
-                    <Link href={`/activities?community=${community.id}`}>View All</Link>
+                    <Link href={`/activities?community=${community.id}`}>Lihat Semua</Link>
                   </Button>
                 </div>
 
@@ -378,7 +378,7 @@ export default function CommunityProfilePage({
                                   </span>
                                 </div>
                                 <Progress
-                                  value={activity.volunteer_quota > 0 ? ((activity.volunteer_count || 0) / activity.volunteer_quota) * 100 : 0}
+                                  value={calcPercentage(activity.volunteer_count || 0, activity.volunteer_quota || 0)}
                                   className="h-2"
                                 />
                               </div>
@@ -391,7 +391,7 @@ export default function CommunityProfilePage({
                                   </span>
                                 </div>
                                 <Progress
-                                  value={activity.funding_goal > 0 ? ((activity.funding_raised || 0) / activity.funding_goal) * 100 : 0}
+                                  value={calcPercentage(activity.funding_raised || 0, activity.funding_goal || 0)}
                                   className="h-2"
                                 />
                               </div>

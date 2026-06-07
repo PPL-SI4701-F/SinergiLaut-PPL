@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
@@ -22,7 +21,7 @@ import {
 import { getVolunteersPendingVerification } from "@/lib/actions/volunteer-verification.actions"
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({ totalCommunities: 0, totalUsers: 0, totalActivities: 0, totalEndowment: 0 })
+  const [stats, setStats] = useState({ totalCommunities: 0, totalUsers: 0, totalActivities: 0, totalDonations: 0 })
   const [pendingCommunities, setPendingCommunities] = useState<any[]>([])
   const [pendingActivities, setPendingActivities] = useState<any[]>([])
   const [pendingReports, setPendingReports] = useState<any[]>([])
@@ -71,20 +70,19 @@ export default function AdminDashboardPage() {
     { label: "Total Komunitas", value: stats.totalCommunities, icon: Building2, color: "text-primary" },
     { label: "Pengguna Aktif", value: stats.totalUsers, icon: Users, color: "text-blue-600" },
     { label: "Kegiatan Aktif", value: stats.totalActivities, icon: Activity, color: "text-green-600" },
-    { label: "Total Dana Abadi", value: formatCurrency(stats.totalEndowment), icon: Banknote, color: "text-amber-600" },
+    { label: "Total Donasi Terkumpul", value: formatCurrency(stats.totalDonations), icon: Banknote, color: "text-amber-600" },
   ]
 
   const alertCards = [
     { label: `${pendingCommunities.length} komunitas`, sub: "Menunggu verifikasi", color: "bg-yellow-50 border-yellow-200 text-yellow-800", icon: "🏢", href: "/admin/communities" },
     { label: `${pendingActivities.length} kegiatan`, sub: "Menunggu persetujuan", color: "bg-blue-50 border-blue-200 text-blue-800", icon: "📋", href: "/admin/activities" },
-    { label: `${pendingReports.length} laporan`, sub: "Menunggu validasi", color: "bg-green-50 border-green-200 text-green-800", icon: "📄", href: "/admin/activities" },
+    { label: `${pendingReports.length} laporan`, sub: "Menunggu validasi", color: "bg-green-50 border-green-200 text-green-800", icon: "📄", href: "/admin/reports" },
     { label: `${pendingVolunteers} pengguna`, sub: "Menunggu verifikasi data diri", color: "bg-purple-50 border-purple-200 text-purple-800", icon: "👤", href: "/admin/users" },
   ]
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navigation />
-      <main className="pt-16">
+    <div className="flex-1 bg-slate-50">
+      <main>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">
@@ -230,7 +228,7 @@ export default function AdminDashboardPage() {
                   <CardDescription>Menunggu validasi admin</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/admin/activities">Lihat Semua <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
+                  <Link href="/admin/reports">Lihat Semua <ArrowRight className="h-3.5 w-3.5 ml-1" /></Link>
                 </Button>
               </CardHeader>
               <CardContent>

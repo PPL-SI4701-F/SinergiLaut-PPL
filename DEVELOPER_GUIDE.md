@@ -28,18 +28,22 @@ Semua sistem login, register, dan proteksi halaman diatur di sini. Sistem membag
 ---
 
 ## 🏢 3. Dashboard Komunitas
-*(Fitur dari Adilio Adaha)*
+*(Fitur dari Adilio Adaha — FR-05 Manajemen Kegiatan Konservasi)*
 
-Tempat komunitas mengelola kegiatan, melihat pendaftar relawan, dan mencatat donasi.
+Tempat komunitas mengelola kegiatan, melihat pendaftar relawan, dan mencatat donasi. Dashboard komunitas menggunakan **sidebar layout** (bukan Navigation bar) yang konsisten dengan pola admin dan user dashboard.
+
+> **Pola Layout:** `app/community/dashboard/layout.tsx` membungkus semua halaman di bawah `/community/dashboard/*` dengan `CommunitySidebar`. Tambahkan halaman baru cukup buat file `page.tsx` di dalam folder tersebut — sidebar otomatis muncul.
 
 | Komponen / Fitur | Lokasi File Kode | Penjelasan |
 |------------------|------------------|------------|
+| **Sidebar Navigasi** | `components/community-sidebar.tsx` | Sidebar kiri dengan menu Dashboard, Buat Kegiatan, Profil Komunitas. Mengikuti pola yang sama dengan `admin-sidebar.tsx` dan `user-sidebar.tsx`. |
+| **Layout Wrapper** | `app/community/dashboard/layout.tsx` | Membungkus semua halaman dashboard komunitas dengan sidebar layout. |
 | **Halaman Utama Dashboard** | `app/community/dashboard/page.tsx` | Menampilkan 4 kartu statistik (Total Kegiatan, Relawan, dll) dan list kegiatan komunitas. |
 | **Buat Kegiatan Baru** | `app/community/dashboard/activities/create/page.tsx` | Form panjang untuk membuat kegiatan baru (judul, deskripsi, kuota relawan, target donasi). |
 | **Edit Kegiatan** | `app/community/dashboard/activities/[id]/edit/page.tsx` | Form untuk mengubah data kegiatan yang sudah ada. |
 | **Manajemen Relawan** | `app/community/dashboard/activities/[id]/volunteers/page.tsx` | Tabel yang menampilkan siapa saja yang daftar jadi relawan. Komunitas bisa klik "Terima" (Approve) atau "Tolak" (Reject). |
 | **Manajemen Donatur** | `app/community/dashboard/activities/[id]/donors/page.tsx` | Menampilkan riwayat donasi uang dan konfirmasi penerimaan donasi barang. |
-| **Logika Data Komunitas** | `lib/actions/dashboard.actions.ts` | Fungsi `getCommunityDashboardStats()` dan `getCommunityActivities()` ada di sini. |
+| **Logika Data Komunitas** | `lib/actions/dashboard.actions.ts` | Fungsi `getCommunityDashboardStats()` dan `getCommunityActivities()` ada di sini. Fungsi `rejectActivityAction(id, adminNote?)` kini menerima catatan penolakan opsional yang disimpan ke kolom `admin_note` di database. |
 | **Logika Relawan & Donasi**| `lib/actions/volunteer.actions.ts` & `lib/actions/donation.actions.ts` | Fungsi untuk mengambil data pendaftar dan fungsi untuk update status relawan. |
 
 ---
@@ -95,6 +99,18 @@ Semua komponen visual kecil seperti tombol, form, dan kartu.
 | **Peta (MapPicker & View)** | `components/map/*.tsx` | Komponen untuk menampilkan peta MapLibre (seperti di halaman detail kegiatan atau saat edit lokasi kegiatan). |
 | **Helpers / Utilities** | `lib/utils/helpers.ts` | Fungsi-fungsi pembantu yang sering dipakai, misal: `formatCurrency(10000)` jadi "Rp 10.000", `formatDate()`, dll. |
 | **CSS Global & Tailwind** | `app/globals.css` | File konfigurasi CSS dasar dan warna-warna tema platform (misal warna *primary* teal kita didefinisikan di sini). |
+
+---
+
+## 🧪 8. Akun Uji Coba (Test Credentials)
+
+Gunakan akun berikut untuk menguji berbagai fitur platform sesuai dengan role masing-masing.
+
+| Role | Email | Password | Kegunaan |
+|------|-------|----------|----------|
+| **Admin** | `admin@sinergilaut.com` | `admin123` | Mengelola verifikasi komunitas, moderasi kegiatan, dan validasi laporan. |
+| **Komunitas** | `community@owner.com` | `community123` | Membuat kegiatan, mengelola relawan, dan mengirim laporan kegiatan. |
+| **Relawan (User)** | `volunteer@user.com` | `user123` | Mendaftar kegiatan, melakukan donasi, dan memberikan ulasan. |
 
 ---
 

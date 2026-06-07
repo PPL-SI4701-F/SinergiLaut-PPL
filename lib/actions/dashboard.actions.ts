@@ -2,38 +2,42 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
-import { getEndowmentStats } from "@/lib/actions/endowment.actions"
 
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
   const adminSupabase = await createAdminClient()
 
-  // Total communities
-  const { count: totalCommunities } = await adminSupabase
-    .from("communities")
-    .select("*", { count: "exact", head: true })
+  const [
+    { count: totalCommunities },
+    { count: verifiedCommunities },
+    { count: totalUsers },
+    { count: activeActivities },
+    { count: completedActivities },
+    { data: donationRows },
+    { data: volunteerRows },
+  ] = await Promise.all([
+    adminSupabase.from("communities").select("*", { count: "exact", head: true }),
+    adminSupabase.from("communities").select("*", { count: "exact", head: true }).eq("is_verified", true),
+    adminSupabase.from("profiles").select("*", { count: "exact", head: true }),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "published"),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "completed"),
+    adminSupabase.from("donations").select("amount").eq("type", "money").eq("status", "completed"),
+    adminSupabase.from("volunteer_registrations").select("user_id").in("status", ["approved", "attended"]),
+  ])
 
-  // Active users
-  const { count: totalUsers } = await adminSupabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-
-  // Active activities
-  const { count: totalActivities } = await adminSupabase
-    .from("activities")
-    .select("*", { count: "exact", head: true })
-    .in("status", ["published", "completed"])
-
-  // Endowment stats
-  const { totalRaised } = await getEndowmentStats()
-  const totalEndowment = totalRaised
+  const totalDonations = donationRows?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
+  const activeVolunteers = new Set(volunteerRows?.map(r => r.user_id)).size
 
   return {
     totalCommunities: totalCommunities || 0,
+    verifiedCommunities: verifiedCommunities || 0,
     totalUsers: totalUsers || 0,
-    totalActivities: totalActivities || 0,
-    totalEndowment
+    activeVolunteers: activeVolunteers || 0,
+    activeActivities: activeActivities || 0,
+    completedActivities: completedActivities || 0,
+    totalActivities: (activeActivities || 0) + (completedActivities || 0),
+    totalDonations,
   }
 }
 
@@ -168,11 +172,11 @@ export async function approveActivityAction(id: string) {
   return { success: true }
 }
 
-export async function rejectActivityAction(id: string) {
+export async function rejectActivityAction(id: string, adminNote?: string) {
   const adminSupabase = await createAdminClient()
   const { data: activity, error } = await adminSupabase
     .from("activities")
-    .update({ status: "draft", admin_note: "Ditolak oleh admin" })
+    .update({ status: "draft", admin_note: adminNote?.trim() || "Ditolak oleh admin" })
     .eq("id", id)
     .select("title, community_id, community:communities(owner_id)")
     .single()
@@ -193,9 +197,15 @@ export async function rejectActivityAction(id: string) {
 
 export async function approveReportAction(id: string) {
   const adminSupabase = await createAdminClient()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: report, error } = await adminSupabase
     .from("reports")
-    .update({ status: "validated" })
+    .update({
+      status: "validated",
+      reviewed_by: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select("title, community_id, community:communities(owner_id)")
     .single()
@@ -213,11 +223,140 @@ export async function approveReportAction(id: string) {
   return { success: true }
 }
 
-export async function rejectReportAction(id: string) {
+export async function suspendCommunityAction(id: string) {
   const adminSupabase = await createAdminClient()
+  const { data: community, error } = await adminSupabase
+    .from("communities")
+    .update({ is_verified: false, is_suspended: true })
+    .eq("id", id)
+    .select("name, owner_id")
+    .single()
+  if (error) return { success: false, error: error.message }
+  if (community?.owner_id) {
+    await createNotification(
+      community.owner_id,
+      "Komunitas Disuspend ⚠️",
+      `Komunitas "${community.name}" Anda telah disuspend oleh admin. Hubungi admin untuk informasi lebih lanjut.`,
+      "error",
+      "/community"
+    )
+  }
+  return { success: true }
+}
+
+export async function unsuspendCommunityAction(id: string) {
+  const adminSupabase = await createAdminClient()
+  const { data: community, error } = await adminSupabase
+    .from("communities")
+    .update({ is_verified: true, is_suspended: false, verification_status: "approved" })
+    .eq("id", id)
+    .select("name, owner_id")
+    .single()
+  if (error) return { success: false, error: error.message }
+  if (community?.owner_id) {
+    await createNotification(
+      community.owner_id,
+      "Komunitas Diaktifkan Kembali ✅",
+      `Komunitas "${community.name}" Anda telah diaktifkan kembali oleh admin.`,
+      "success",
+      "/community/dashboard"
+    )
+  }
+  return { success: true }
+}
+
+export async function getPlatformMonitoringStats() {
+  const adminSupabase = await createAdminClient()
+
+  const [
+    { data: donations },
+    { data: commStatuses },
+    { data: actStatuses },
+    { count: totalUsers },
+    { count: totalVolunteers },
+  ] = await Promise.all([
+    adminSupabase.from("donations").select("amount, status, type").eq("type", "money"),
+    adminSupabase.from("communities").select("verification_status"),
+    adminSupabase.from("activities").select("status"),
+    adminSupabase.from("profiles").select("*", { count: "exact", head: true }),
+    adminSupabase.from("profiles").select("*", { count: "exact", head: true }).eq("volunteer_status", "approved"),
+  ])
+
+  const totalDonations = (donations ?? []).filter(d => d.status === "completed").reduce((sum, d) => sum + Number(d.amount || 0), 0)
+  const pendingDonations = (donations ?? []).filter(d => d.status === "pending").reduce((sum, d) => sum + Number(d.amount || 0), 0)
+
+  return {
+    totalDonations,
+    pendingDonations,
+    communityStats: {
+      total: commStatuses?.length ?? 0,
+      approved: commStatuses?.filter(c => c.verification_status === "approved").length ?? 0,
+      pending: commStatuses?.filter(c => c.verification_status === "pending").length ?? 0,
+      rejected: commStatuses?.filter(c => c.verification_status === "rejected").length ?? 0,
+      suspended: commStatuses?.filter(c => c.verification_status === "suspended").length ?? 0,
+    },
+    activityStats: {
+      total: actStatuses?.length ?? 0,
+      published: actStatuses?.filter(a => a.status === "published").length ?? 0,
+      completed: actStatuses?.filter(a => a.status === "completed").length ?? 0,
+      pendingReview: actStatuses?.filter(a => a.status === "pending_review").length ?? 0,
+    },
+    totalUsers: totalUsers ?? 0,
+    totalVolunteers: totalVolunteers ?? 0,
+  }
+}
+
+export async function getAdminAuditLog() {
+  const adminSupabase = await createAdminClient()
+
+  const [reportsRes, communitiesRes, activitiesRes, volunteersRes] = await Promise.all([
+    adminSupabase
+      .from("reports")
+      .select("id, title, status, reviewed_at, updated_at, community:communities(name)")
+      .in("status", ["validated", "rejected"])
+      .order("updated_at", { ascending: false })
+      .limit(30),
+    adminSupabase
+      .from("communities")
+      .select("id, name, verification_status, updated_at")
+      .in("verification_status", ["approved", "rejected", "suspended"])
+      .order("updated_at", { ascending: false })
+      .limit(30),
+    adminSupabase
+      .from("activities")
+      .select("id, title, status, updated_at, community:communities(name)")
+      .in("status", ["published", "draft"])
+      .not("published_at", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(30),
+    adminSupabase
+      .from("profiles")
+      .select("id, full_name, volunteer_status, updated_at")
+      .in("volunteer_status", ["approved", "rejected"])
+      .order("updated_at", { ascending: false })
+      .limit(30),
+  ])
+
+  return {
+    reports: reportsRes.data ?? [],
+    communities: communitiesRes.data ?? [],
+    activities: activitiesRes.data ?? [],
+    volunteers: volunteersRes.data ?? [],
+  }
+}
+
+export async function rejectReportAction(id: string, adminNote?: string) {
+  const adminSupabase = await createAdminClient()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: report, error } = await adminSupabase
     .from("reports")
-    .update({ status: "rejected" })
+    .update({
+      status: "rejected",
+      admin_note: adminNote?.trim() || null,
+      reviewed_by: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select("title, community_id, community:communities(owner_id)")
     .single()
@@ -236,22 +375,24 @@ export async function rejectReportAction(id: string) {
 }
 
 export async function getHomePageStats() {
-  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
 
-  // 1. Relawan Aktif: Count of profiles with volunteer_status = 'approved'
-  const { count: totalVolunteers } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("volunteer_status", "approved")
+  // 1. Anggota Aktif: Count distinct users yang terdaftar sebagai relawan di kegiatan (approved/attended)
+  const { data: volunteerRows } = await adminSupabase
+    .from("volunteer_registrations")
+    .select("user_id")
+    .in("status", ["approved", "attended"])
+
+  const totalVolunteers = new Set(volunteerRows?.map(r => r.user_id)).size
 
   // 2. Kegiatan Berlangsung: Count of activities with status = 'published'
-  const { count: ongoingActivities } = await supabase
+  const { count: ongoingActivities } = await adminSupabase
     .from("activities")
     .select("*", { count: "exact", head: true })
     .eq("status", "published")
 
   // 3. Area Pesisir Terlindungi: Count of unique locations from published/completed activities
-  const { data: locations } = await supabase
+  const { data: locations } = await adminSupabase
     .from("activities")
     .select("location")
     .in("status", ["published", "completed"])
@@ -259,7 +400,7 @@ export async function getHomePageStats() {
   const uniqueLocations = new Set(locations?.map(l => l.location)).size
 
   // 4. Dana Terkumpul: Sum of amount from donations with status = 'completed'
-  const { data: donations } = await supabase
+  const { data: donations } = await adminSupabase
     .from("donations")
     .select("amount")
     .eq("status", "completed")
@@ -267,11 +408,18 @@ export async function getHomePageStats() {
 
   const totalDonations = donations?.reduce((sum, d) => sum + Number(d.amount || 0), 0) || 0
 
+  // 5. Jumlah Komunitas: Count of verified communities
+  const { count: totalCommunities } = await adminSupabase
+    .from("communities")
+    .select("*", { count: "exact", head: true })
+    .eq("is_verified", true)
+
   return {
     totalVolunteers: totalVolunteers || 0,
     ongoingActivities: ongoingActivities || 0,
     protectedAreas: uniqueLocations || 0,
-    totalDonations: totalDonations || 0
+    totalDonations: totalDonations || 0,
+    totalCommunities: totalCommunities || 0
   }
 }
 
@@ -285,7 +433,9 @@ export async function getCommunityDashboardStats(userId: string) {
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (!community) {
     return { totalActivities: 0, totalVolunteers: 0, totalDonations: 0, verifiedReports: "0/0" }
@@ -333,12 +483,14 @@ export async function getCommunityDashboardStats(userId: string) {
 
 export async function getCommunityActivities(userId: string) {
   const adminSupabase = await createAdminClient()
-  
+
   const { data: community } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (!community) return []
 
@@ -416,7 +568,9 @@ export async function getCommunityProfile() {
     .from("communities")
     .select("*")
     .eq("owner_id", user.id)
-    .single()
+    .eq("is_verified", true)
+    .limit(1)
+    .maybeSingle()
 
   if (error || !data) {
     console.error("[getCommunityProfile] error:", error)
@@ -452,7 +606,7 @@ export async function updateCommunityProfile(communityId: string, payload: {
     .select("id")
     .eq("id", communityId)
     .eq("owner_id", user.id)
-    .single()
+    .maybeSingle()
 
   if (checkErr || !existing) {
     return { success: false, error: "Akses ditolak. Komunitas ini bukan milik akun Anda." }

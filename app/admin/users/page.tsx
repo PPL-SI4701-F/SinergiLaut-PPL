@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,12 +34,12 @@ export default function AdminUsersPage() {
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; userId: string; userName: string }>({ open: false, userId: "", userName: "" })
   const [rejectReason, setRejectReason] = useState("")
 
-  useEffect(() => { loadVolunteers() }, [filter])
+  // Fetch ALL volunteers once to get accurate total counts
+  useEffect(() => { loadVolunteers() }, [])
 
   async function loadVolunteers() {
     setIsLoading(true)
-    const statusArg = filter === "all" ? undefined : filter
-    const result = await getVolunteersPendingVerification(statusArg as any)
+    const result = await getVolunteersPendingVerification(undefined)
     if (result.success) setVolunteers(result.data as Profile[])
     setIsLoading(false)
   }
@@ -73,10 +72,14 @@ export default function AdminUsersPage() {
   }
 
   const filtered = volunteers.filter(v => {
-    return !search ||
+    const matchSearch = !search ||
       v.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       v.email.toLowerCase().includes(search.toLowerCase()) ||
       v.nik?.includes(search)
+      
+    const matchFilter = filter === "all" || v.volunteer_status === filter
+    
+    return matchSearch && matchFilter
   })
 
   const counts = {
@@ -87,9 +90,8 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navigation />
-      <main className="pt-16">
+    <div className="flex-1 bg-slate-50">
+      <main>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">

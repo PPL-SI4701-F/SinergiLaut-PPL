@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -163,8 +162,7 @@ export default function CommunityProfilePage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navigation />
+      <div className="flex-1 flex flex-col">
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
@@ -175,8 +173,7 @@ export default function CommunityProfilePage() {
   // No community found
   if (!community) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navigation />
+      <div className="flex-1 flex flex-col">
         <main className="flex-1 flex items-center justify-center p-4 text-center">
           <div>
             <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-30" />
@@ -191,9 +188,8 @@ export default function CommunityProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary">
-      <Navigation />
-      <main className="pt-16">
+    <div className="flex-1 bg-slate-50">
+      <main>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
           {/* Header */}
           <div className="mb-6">

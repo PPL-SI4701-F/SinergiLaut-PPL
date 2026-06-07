@@ -26,14 +26,19 @@ import {
   Calendar, MapPin, Users, Heart, Package, ArrowLeft,
   CheckCircle2, Banknote, Star, Shield, FileText, Loader2,
   AlertCircle, Phone, QrCode, CreditCard, ChevronRight, Clock,
-  ShieldAlert
+  ShieldAlert, ExternalLink
 } from "lucide-react"
 import { formatCurrency, calcPercentage, formatDate } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { createClient } from "@/lib/supabase/client"
 import { registerVolunteer } from "@/lib/actions/volunteer.actions"
-import { createMoneyDonation, createItemDonation } from "@/lib/actions/donation.actions"
+import {
+  createMoneyDonation,
+  createItemDonation,
+  completeMoneyDonation,
+  completeFulfillmentDonation,
+} from "@/lib/actions/donation.actions"
 import { submitFeedback, getMyFeedback } from "@/lib/actions/feedback.actions"
 import type { Activity, VolunteerRegistration, Donation } from "@/lib/types"
 
@@ -42,7 +47,7 @@ const MapView = dynamic(() => import("@/components/map/map-view"), {
   loading: () => <div className="h-[300px] w-full bg-secondary animate-pulse rounded-xl flex items-center justify-center text-muted-foreground">Memuat peta...</div>
 })
 
-type TabType = "detail" | "volunteer" | "donate" | "items" | "reports" | "feedback"
+type TabType = "detail" | "volunteer" | "donate" | "items" | "reports" | "feedback" | "info_community"
 
 const MARKUP_PERCENT = 10 // 10% markup on item prices
 /** Calculate marked-up price using integer math to avoid floating point errors */
@@ -64,7 +69,7 @@ export default function ActivityDetailPage() {
 
   const [activity, setActivity] = useState<Activity & {
     community: { id: string; name: string; logo_url: string | null; is_verified: boolean }
-    reports: { id: string; title: string; status: string; created_at: string }[]
+    reports: { id: string; title: string; summary: string | null; status: string; created_at: string; fund_usage: any; report_files: { file_url: string; file_name: string; file_type: string }[] }[]
     feedbacks: { id: string; rating: number; comment: string | null; created_at: string; user: { full_name: string | null } }[]
     items_needed: { item_name: string; target: number; donated: number; unit_price?: number }[]
   } | null>(null)
@@ -107,6 +112,8 @@ export default function ActivityDetailPage() {
     donationType: "money" | "fulfillment";
   }>({ isOpen: false, step: "method", amount: 0, method: "", timeLeft: 30, donationId: null, donationType: "money" })
 
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+
   useEffect(() => {
     if (!paymentSim.isOpen || paymentSim.step !== "qr") return;
     
@@ -134,48 +141,20 @@ export default function ActivityDetailPage() {
 
     try {
       if (paymentSim.donationType === "money") {
-        // Tandai donasi uang sebagai 'completed' → trigger DB otomatis tambah funding_raised
-        await supabase
-          .from('donations')
-          .update({ status: 'completed' })
-          .eq('id', paymentSim.donationId);
-
-        // Refresh funding_raised dari DB
-        const { data: updated } = await supabase
-          .from('activities')
-          .select('funding_raised')
-          .eq('id', activity.id)
-          .single();
-        if (updated) {
-          setActivity(prev => prev ? { ...prev, funding_raised: updated.funding_raised } : prev);
+        const result = await completeMoneyDonation(paymentSim.donationId);
+        if (result.success) {
+          setActivity(prev => prev ? { ...prev, funding_raised: result.funding_raised } : prev);
         }
       } else {
-        // Donasi barang: tandai sebagai completed + update items_needed di activities
-        await supabase
-          .from('donations')
-          .update({ status: 'completed' })
-          .eq('id', paymentSim.donationId);
-
-        // Update items_needed dengan qty yang dipenuhi dari fulfillmentCart
-        const updatedItems = activity.items_needed?.map((item, index) => ({
-          ...item,
-          donated: (item.donated || 0) + (fulfillmentCart[index] || 0)
-        })) || [];
-
-        const { error } = await supabase
-          .from('activities')
-          .update({ items_needed: updatedItems })
-          .eq('id', activity.id);
-
-        if (!error) {
-          setActivity(prev => prev ? { ...prev, items_needed: updatedItems } : prev);
+        const result = await completeFulfillmentDonation(paymentSim.donationId, activity.id);
+        if (result.success && result.updatedItems) {
+          setActivity(prev => prev ? { ...prev, items_needed: result.updatedItems } : prev);
         }
       }
     } catch (err) {
-      console.error('[handlePaymentSuccess] error:', err);
+      console.error("[handlePaymentSuccess] error:", err);
     }
 
-    // Reset fulfillment cart
     setFulfillmentCart(prev => prev.map(() => 0));
   };
 
@@ -191,7 +170,7 @@ export default function ActivityDetailPage() {
         .select(`
           *,
           community:communities(id, name, logo_url, is_verified),
-          reports(id, title, status, created_at),
+          reports(id, title, summary, status, created_at, fund_usage, report_files(*)),
           feedbacks(id, rating, comment, created_at, user:profiles(full_name)),
           volunteer_registrations(*)
         `)
@@ -199,7 +178,6 @@ export default function ActivityDetailPage() {
         .single()
 
       if (error || !data) {
-        console.error("DEBUG fetchActivity - params.id:", params.id, "error:", error, "data:", data);
         toast.error("Kegiatan tidak ditemukan.")
         router.push("/activities")
         return
@@ -261,7 +239,7 @@ export default function ActivityDetailPage() {
     if (alreadyRegistered?.status !== "attended") return
 
     async function loadFeedback() {
-      const feedback = await getMyFeedback(params.id as string, user!.id)
+      const feedback = await getMyFeedback(params.id as string)
       if (feedback) {
         setExistingFeedback(feedback)
         setFeedbackRating(feedback.rating)
@@ -271,6 +249,13 @@ export default function ActivityDetailPage() {
 
     loadFeedback()
   }, [user, params.id, alreadyRegistered?.status])
+
+  // ── Handle Hash Fragment for Tabs ───────────────────────────
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#reports") {
+      setActiveTab("reports")
+    }
+  }, [])
 
   if (isLoadingActivity) {
     return (
@@ -306,8 +291,6 @@ export default function ActivityDetailPage() {
   const timeDiff = deadlineDate.getTime() - now.getTime();
   const daysLeft = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
 
-
-
   // ── Handle feedback submit ───────────────────────────────────
   async function handleFeedbackSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -317,7 +300,6 @@ export default function ActivityDetailPage() {
     setIsSubmittingFeedback(true)
     const result = await submitFeedback({
       activityId: activity.id,
-      userId: user.id,
       rating: feedbackRating,
       comment: feedbackComment.trim() || undefined,
     })
@@ -508,7 +490,7 @@ export default function ActivityDetailPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      <main className="flex-1 pt-16">
+      <main className="flex-1 pt-24">
         {/* Breadcrumb / Back Button */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
           <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
@@ -564,9 +546,13 @@ export default function ActivityDetailPage() {
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {[
                   { id: "detail", label: "Detail" } as const,
-                  { id: "volunteer", label: profile?.role === "community" ? "Kelola Relawan" : "Daftar Relawan" } as const,
-                  ...(profile?.role === "community" && activity.items_needed && activity.items_needed.length > 0 ? [{ id: "items", label: "Kelola Barang" } as const] : []),
-                  ...(profile?.role !== "community" ? [{ id: "donate", label: "Donasi" } as const] : []),
+                  ...(activity.status !== "completed" ? [
+                    { id: "volunteer", label: profile?.role === "community" ? "Kelola Relawan" : "Daftar Relawan" } as const,
+                    ...(profile?.role === "community" && activity.items_needed && activity.items_needed.length > 0 ? [{ id: "items", label: "Kelola Barang" } as const] : []),
+                    ...(profile?.role !== "community"
+                      ? [{ id: "donate", label: "Donasi" } as const]
+                      : [{ id: "info_community", label: "ℹ️ Donasi" } as const]),
+                  ] : []),
                   { id: "reports", label: "Laporan" } as const,
                   { id: "feedback", label: "Ulasan" } as const,
                 ].map((tab) => (
@@ -916,21 +902,84 @@ export default function ActivityDetailPage() {
 
               {/* ── Tab: Reports ─────────────────────────────── */}
               {activeTab === "reports" && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {activity.reports?.length === 0 ? (
                     <Card><CardContent className="p-12 text-center text-muted-foreground">
                       <FileText className="h-8 w-8 mx-auto mb-3 opacity-40" />Belum ada laporan untuk kegiatan ini.
                     </CardContent></Card>
                   ) : activity.reports?.map(r => (
-                    <Card key={r.id}>
-                      <CardContent className="p-6 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-foreground">{r.title}</p>
-                          <p className="text-sm text-muted-foreground">{formatDate(r.created_at)}</p>
+                    <Card key={r.id} className="overflow-hidden border-primary/10">
+                      <CardHeader className="bg-primary/5">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" /> {r.title}
+                          </CardTitle>
+                          <Badge className={r.status === "validated" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}>
+                            {r.status === "validated" ? "Tervalidasi" : r.status}
+                          </Badge>
                         </div>
-                        <Badge className={r.status === "validated" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}>
-                          {r.status === "validated" ? "Tervalidasi" : r.status}
-                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-1">Diterbitkan pada {formatDate(r.created_at)}</p>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-6">
+                        {r.summary && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 text-foreground">Ringkasan Kegiatan</h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{r.summary}</p>
+                          </div>
+                        )}
+
+                        {/* Dokumentasi Files */}
+                        {r.report_files && r.report_files.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-3 text-foreground">Dokumentasi & Bukti</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              {r.report_files.map((file, fIdx) => (
+                                <button key={fIdx} onClick={() => setSelectedImage(file.file_url)} className="group relative aspect-video rounded-xl overflow-hidden bg-secondary border border-border text-left">
+                                  <Image src={file.file_url} alt={file.file_name} fill className="object-cover transition-transform group-hover:scale-105" />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                    <div className="bg-white/20 backdrop-blur-md p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Users className="h-5 w-5 text-white" /> {/* Menggunakan icon search jika ada, disini placeholder search/view */}
+                                    </div>
+                                  </div>
+                                  <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-[10px] text-white truncate">{file.file_name}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Penggunaan Dana */}
+                        {r.fund_usage && Array.isArray(r.fund_usage) && r.fund_usage.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-3 text-foreground">Alokasi Penggunaan Dana</h4>
+                            <div className="rounded-xl border border-border overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead className="bg-secondary/50">
+                                  <tr>
+                                    <th className="text-left p-3 font-medium">Keterangan</th>
+                                    <th className="text-right p-3 font-medium">Nominal</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                  {r.fund_usage.map((item: any, iIdx: number) => (
+                                    <tr key={iIdx}>
+                                      <td className="p-3 text-muted-foreground">{item.item}</td>
+                                      <td className="p-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                                    </tr>
+                                  ))}
+                                  <tr className="bg-primary/5 font-bold">
+                                    <td className="p-3">Total Penggunaan</td>
+                                    <td className="p-3 text-right text-primary">
+                                      {formatCurrency(r.fund_usage.reduce((sum: number, item: any) => sum + (item.amount || 0), 0))}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -1093,6 +1142,21 @@ export default function ActivityDetailPage() {
                   )}
                 </div>
               )}
+
+              {/* ── Tab: Info Donasi untuk Komunitas ─── */}
+              {activeTab === "info_community" && (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Heart className="h-7 w-7 text-amber-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground mb-2">Akun Komunitas Tidak Dapat Berdonasi</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                      Fitur donasi hanya tersedia untuk akun relawan/pengguna individual. Akun komunitas digunakan untuk mengorganisir kegiatan, bukan berdonasi.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* ── Sidebar ──────────────────────────────────── */}
@@ -1100,14 +1164,23 @@ export default function ActivityDetailPage() {
               <Card className="sticky top-20">
                 <CardHeader>
                   <CardTitle className="text-lg">Progres Kegiatan</CardTitle>
-                  <div className="flex items-center gap-1.5 mt-1 text-sm bg-orange-50 dark:bg-orange-950/30 p-2 rounded-md border border-orange-100 dark:border-orange-900/50">
-                    <Clock className={`h-4 w-4 ${daysLeft > 0 ? "text-orange-500" : "text-red-500"}`} />
-                    {daysLeft > 0 ? (
-                      <span className="text-orange-600 dark:text-orange-400 font-medium tracking-tight">Sisa waktu pengumpulan: {daysLeft} hari lagi</span>
-                    ) : (
-                      <span className="text-red-600 dark:text-red-400 font-medium tracking-tight">Batas waktu pengumpulan habis</span>
-                    )}
-                  </div>
+                  {activity.status === "completed" ? (
+                    <div className="flex items-center gap-1.5 mt-1 text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded-md border border-green-100 dark:border-green-900/50">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-green-600 dark:text-green-400 font-medium tracking-tight">
+                        Kegiatan selesai pada {formatDate(activity.start_date)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 mt-1 text-sm bg-orange-50 dark:bg-orange-950/30 p-2 rounded-md border border-orange-100 dark:border-orange-900/50">
+                      <Clock className={`h-4 w-4 ${daysLeft > 0 ? "text-orange-500" : "text-red-500"}`} />
+                      {daysLeft > 0 ? (
+                        <span className="text-orange-600 dark:text-orange-400 font-medium tracking-tight">Sisa waktu pengumpulan: {daysLeft} hari lagi</span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400 font-medium tracking-tight">Batas waktu pengumpulan habis</span>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-5">
                   <div>
@@ -1151,7 +1224,7 @@ export default function ActivityDetailPage() {
                     </div>
                   )}
 
-                  {profile?.role !== "community" && (
+                  {profile?.role !== "community" && activity.status !== "completed" && (
                   <div className="space-y-3 pt-2">
                     {/* Gated volunteer button */}
                     {!isVolunteerVerified && profile?.role === "user" ? (
@@ -1248,6 +1321,27 @@ export default function ActivityDetailPage() {
       </Dialog>
 
       <Footer />
+
+      {/* Image Lightbox */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-transparent border-none">
+          <DialogTitle className="sr-only">Pratinjau Gambar Laporan</DialogTitle>
+          <div className="absolute top-4 right-4 z-50 flex gap-2">
+            {selectedImage && (
+              <Button size="sm" variant="secondary" className="bg-white/20 backdrop-blur-md hover:bg-white/30 text-white border-none" asChild>
+                <a href={selectedImage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" /> Buka di Tab Baru
+                </a>
+              </Button>
+            )}
+          </div>
+          {selectedImage && (
+            <div className="relative aspect-video w-full">
+              <Image src={selectedImage} alt="Preview" fill className="object-contain" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
