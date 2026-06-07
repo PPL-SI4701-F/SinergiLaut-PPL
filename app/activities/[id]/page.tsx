@@ -13,9 +13,7 @@ import dynamic from "next/dynamic"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -261,11 +259,21 @@ export default function ActivityDetailPage() {
   if (isLoadingActivity) {
     return (
       <div className="min-h-screen flex flex-col">
-        {!isUser && <Navigation />}
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
-            <p className="text-muted-foreground">Memuat data kegiatan...</p>
+        <main className="flex-1">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+            <Link
+              href="/activities"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke Kegiatan
+            </Link>
+          </div>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+              <p className="text-muted-foreground">Memuat data kegiatan...</p>
+            </div>
           </div>
         </main>
         {!isUser && <Footer />}
@@ -490,11 +498,16 @@ export default function ActivityDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!isUser && <Navigation />}
-      <main className={`flex-1 ${isUser ? "" : "pt-24"}`}>
+      <main className="flex-1">
         {/* Breadcrumb / Back Button */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
-          <BackButton fallbackHref="/activities" label="Kembali ke Daftar Kegiatan" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+          <Link
+            href="/activities"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Kembali ke Kegiatan
+          </Link>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">

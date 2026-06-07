@@ -34,6 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single()
     if (!error && data) {
       setProfile(data as Profile)
+    } else {
+      setProfile(null)
     }
   }, [supabase])
 
@@ -75,22 +77,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session — set user dan profile secara atomik agar tidak ada
     // window di mana user sudah ter-set tapi role belum tersedia dari database.
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-        setUser(session.user)
+      try {
+        if (session?.user) {
+          setUser(session.user)
+          await fetchProfile(session.user.id)
+        } else {
+          setUser(null)
+          setProfile(null)
+        }
+      } finally {
+        setIsLoading(false)
       }
+    }).catch(() => {
+      setUser(null)
+      setProfile(null)
       setIsLoading(false)
     })
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-          setUser(session.user)
-        } else {
-          setUser(null)
-          setProfile(null)
+        setIsLoading(true)
+        try {
+          if (session?.user) {
+            setUser(session.user)
+            await fetchProfile(session.user.id)
+          } else {
+            setUser(null)
+            setProfile(null)
+          }
+        } finally {
+          setIsLoading(false)
         }
       }
     )

@@ -62,16 +62,16 @@ export default async function AboutPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalFunding = (fundingData as any[])?.reduce((sum: number, a: any) => sum + (a.funding_raised || 0), 0) ?? 0
   const formatFunding = (n: number) => {
-    if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}M+`
-    if (n >= 1_000_000)     return `Rp ${(n / 1_000_000).toFixed(0)}Jt+`
-    if (n >= 1_000)         return `Rp ${(n / 1_000).toFixed(0)}Rb+`
+    if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)}M`
+    if (n >= 1_000_000)     return `Rp ${(n / 1_000_000).toFixed(0)}Jt`
+    if (n >= 1_000)         return `Rp ${(n / 1_000).toFixed(0)}Rb`
     return `Rp ${n}`
   }
 
   const stats = [
-    { value: `${homeStats.totalVolunteers ?? 0}+`, label: "Relawan Aktif",  icon: Users    },
-    { value: `${communityCount ?? 0}+`,   label: "Komunitas",      icon: Globe    },
-    { value: `${activityCount ?? 0}+`,    label: "Kegiatan",       icon: Award    },
+    { value: `${homeStats.totalVolunteers ?? 0}`, label: "Relawan Aktif",  icon: Users    },
+    { value: `${communityCount ?? 0}`,   label: "Komunitas",      icon: Globe    },
+    { value: `${activityCount ?? 0}`,    label: "Kegiatan",       icon: Award    },
     { value: formatFunding(totalFunding), label: "Dana Terhimpun", icon: Banknote },
   ]
 

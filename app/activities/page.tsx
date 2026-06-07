@@ -216,6 +216,13 @@ const activitiesPageStyles = `
         /* ── Sidebar (user role) variant ── */
         .act-user-search-wrapper { position:relative; padding:0 1.5rem; margin: 0 0 2rem; }
         .act-user-search-wrapper .act-search-bar { margin: 0; }
+
+        /* Align search bar & activity grid with the dashboard page container so
+           the title, search bar and cards all share the same left/right edges */
+        .act-user-dashboard .act-user-search-wrapper { padding: 0; }
+        .act-user-dashboard .act-search-bar { max-width: none; padding: 1.25rem 1.5rem; border-radius: 1rem; }
+        .act-user-dashboard .act-section { padding: 2.5rem 0 5.5rem; }
+        .act-user-dashboard .act-container { max-width: none; margin: 0; }
 `
 
 export default function ActivitiesPage() {
@@ -400,18 +407,22 @@ export default function ActivitiesPage() {
         <UserSidebar />
         <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
           <main className="flex-1">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-10 pb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Kegiatan Konservasi Laut</h1>
-              <p className="text-muted-foreground mt-1">
-                Temukan peluang menjadi relawan atau dukung kegiatan konservasi laut yang sedang berlangsung.
-              </p>
-            </div>
+            <div className="act-user-dashboard max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-10 pb-2">
+              <div className="mb-8">
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-3">
+                  Kegiatan <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">Konservasi Laut</span>
+                </h1>
+                <p className="text-slate-500 text-base sm:text-lg max-w-2xl leading-relaxed">
+                  Temukan peluang menjadi relawan atau dukung kegiatan konservasi laut yang sedang berlangsung.
+                </p>
+              </div>
 
-            <div className="act-user-search-wrapper" id="kegiatan-list">
-              {searchBar}
-            </div>
+              <div className="act-user-search-wrapper" id="kegiatan-list">
+                {searchBar}
+              </div>
 
-            {activityListing}
+              {activityListing}
+            </div>
           </main>
         </div>
       </div>

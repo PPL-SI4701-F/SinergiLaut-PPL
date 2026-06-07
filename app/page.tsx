@@ -36,17 +36,17 @@ export default async function HomePage() {
   const stats = [
     {
       icon: Users,
-      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}${homeStats.totalVolunteers > 10 ? "+" : ""}`,
+      value: `${homeStats.totalVolunteers.toLocaleString("id-ID")}`,
       label: "Relawan Aktif",
     },
     {
       icon: Globe,
-      value: `${homeStats.ongoingActivities}${homeStats.ongoingActivities > 5 ? "+" : ""}`,
+      value: `${homeStats.ongoingActivities}`,
       label: "Kegiatan Berlangsung",
     },
     {
       icon: Building,
-      value: `${homeStats.totalCommunities.toLocaleString("id-ID")}${homeStats.totalCommunities > 5 ? "+" : ""}`,
+      value: `${homeStats.totalCommunities.toLocaleString("id-ID")}`,
       label: "Jumlah Komunitas",
     },
   ]
