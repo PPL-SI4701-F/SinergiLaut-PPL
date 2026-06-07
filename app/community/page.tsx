@@ -10,8 +10,7 @@ import {
   CheckCircle, FileText, Shield, Heart, Star, Activity,
   Sparkles, ChevronDown, CheckCircle2,
 } from "lucide-react"
-import { getRegisteredCommunities, getAdminDashboardStats } from "@/lib/actions/dashboard.actions"
-import { createClient } from "@/lib/supabase/client"
+import { getRegisteredCommunities, getCommunityPageStats } from "@/lib/actions/dashboard.actions"
 
 const requirements = [
   { icon: Building,  title: "Organisasi Legal",   description: "Harus merupakan organisasi, LSM, atau kelompok komunitas terdaftar dengan dokumentasi resmi." },
@@ -41,7 +40,7 @@ export default function CommunityPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getRegisteredCommunities().then((data: any) => setRegisteredCommunities(data))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getAdminDashboardStats().then((data: any) => setGlobalStats(data))
+    getCommunityPageStats().then((data: any) => setGlobalStats(data))
   }, [])
 
   const focusAreas = Array.from(
