@@ -105,7 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Prioritas: database profile (source of truth) → user_metadata (fallback sebelum profile ter-load)
-  const role = profile?.role || user?.user_metadata?.role || "user"
+  // Hanya berikan role jika ada user yang login — tamu (guest) tidak boleh dianggap "user"
+  const role = user ? (profile?.role || user?.user_metadata?.role || "user") : null
 
   return (
     <AuthContext.Provider
