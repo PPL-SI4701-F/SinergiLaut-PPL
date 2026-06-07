@@ -312,3 +312,23 @@ export async function getActivityFinanceSummary(activityId: string) {
     availableBalance,
   }
 }
+
+/** Ringkasan keuangan platform: saldo, pemasukan (donasi masuk), pengeluaran (dana tercairkan) */
+export async function getDisbursementOverview() {
+  const isE2E = await getE2EMock()
+  if (isE2E) {
+    return { balance: 12000000, income: 17750000, expense: 5750000 }
+  }
+
+  const supabase = await createAdminClient()
+
+  const [donationsRes, disbursementsRes] = await Promise.all([
+    supabase.from("donations").select("amount").eq("type", "money").eq("status", "completed"),
+    supabase.from("disbursements").select("net_amount").eq("status", "completed"),
+  ])
+
+  const income = (donationsRes.data ?? []).reduce((sum, d) => sum + Number(d.amount || 0), 0)
+  const expense = (disbursementsRes.data ?? []).reduce((sum, d) => sum + Number(d.net_amount || 0), 0)
+
+  return { balance: income - expense, income, expense }
+}
