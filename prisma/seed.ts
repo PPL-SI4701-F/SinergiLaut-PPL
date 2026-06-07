@@ -118,6 +118,7 @@ async function main() {
           location: i === 1 ? 'Bali' : 'Lombok',
           verification_status: status,
           is_verified: status === 'approved',
+          logo_url: status === 'approved' ? (i === 1 ? '/images/partner-1.jpg' : '/images/partner-2.jpg') : null,
           bank_name: 'BCA',
           bank_account_number: `123456789${i}`,
           bank_account_name: `Rekening Komunitas ${i}`,
@@ -177,6 +178,11 @@ async function main() {
           allow_item_donation: true,
           items_needed: [{ item_name: 'Gloves', target: 50, donated: isCompleted ? 50 : 0 }],
           cover_image_url: activityImages[imgIdx],
+          images: isCompleted ? [
+            '/images/reports/completed-1.png',
+            '/images/reports/completed-2.png',
+            '/images/reports/completed-3.png'
+          ] : [],
           published_at: (status === 'published' || status === 'completed') ? new Date() : null,
         }
       })
