@@ -150,8 +150,10 @@ const communityPageStyles = `
         .comm-cta-btn-ghost:hover { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.32); }
 
         /* ── Sidebar (user role) variant ── */
-        .comm-user-search-wrapper { position:relative; padding:0 1.5rem; margin: 0 0 2rem; }
-        .comm-user-search-wrapper .comm-search-bar { margin: 0; }
+        .comm-user-dashboard .comm-user-search-wrapper { padding: 0; }
+        .comm-user-dashboard .comm-search-bar { max-width: none; padding: 1.25rem 1.5rem; border-radius: 1rem; }
+        .comm-user-dashboard .comm-section { padding: 2.5rem 0 5.5rem; }
+        .comm-user-dashboard .comm-container { max-width: none; margin: 0; }
 `
 
 export default function CommunityPage() {
@@ -182,9 +184,9 @@ export default function CommunityPage() {
   })
 
   const statsDisplay = [
-    { icon: Users,  value: globalStats ? `${globalStats.activeVolunteers}+`   : "...", label: "Anggota Aktif"     },
-    { icon: MapPin, value: globalStats ? `${globalStats.verifiedCommunities}+` : "...", label: "Komunitas Pesisir" },
-    { icon: Globe,  value: globalStats ? `${globalStats.completedActivities}+` : "...", label: "Kegiatan Selesai"  },
+    { icon: Users,  value: globalStats ? `${globalStats.activeVolunteers}`   : "...", label: "Anggota Aktif"     },
+    { icon: MapPin, value: globalStats ? `${globalStats.verifiedCommunities}` : "...", label: "Komunitas Pesisir" },
+    { icon: Globe,  value: globalStats ? `${globalStats.completedActivities}` : "...", label: "Kegiatan Selesai"  },
   ]
 
   // ── Search & filter bar (shared between marketing and dashboard layouts) ──
@@ -283,7 +285,7 @@ export default function CommunityPage() {
         ) : (
           <div className="comm-empty">
             <div className="comm-empty-icon">
-              <Activity style={{ width: 32, height: 32, color: "#06958a" }} />
+               <Activity style={{ width: 32, height: 32, color: "#06958a" }} />
             </div>
             <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#0e2a3a", marginBottom: "0.5rem" }}>
               Komunitas tidak ditemukan
@@ -305,18 +307,22 @@ export default function CommunityPage() {
         <UserSidebar />
         <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
           <main className="flex-1">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-10 pb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Komunitas Konservasi Laut</h1>
-              <p className="text-muted-foreground mt-1">
-                Temukan dan terhubung dengan komunitas konservasi laut terdaftar di seluruh Indonesia.
-              </p>
-            </div>
+            <div className="comm-user-dashboard max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-10 pb-2">
+              <div className="mb-8">
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-3">
+                  Komunitas <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">Konservasi Laut</span>
+                </h1>
+                <p className="text-slate-500 text-base sm:text-lg max-w-2xl leading-relaxed">
+                  Temukan dan terhubung dengan komunitas konservasi laut terdaftar di seluruh Indonesia.
+                </p>
+              </div>
 
-            <div className="comm-user-search-wrapper" id="communities">
-              {searchBar}
-            </div>
+              <div className="comm-user-search-wrapper" id="communities">
+                {searchBar}
+              </div>
 
-            {communityGrid}
+              {communityGrid}
+            </div>
           </main>
         </div>
       </div>

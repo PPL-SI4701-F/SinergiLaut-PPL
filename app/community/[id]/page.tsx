@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import { BackButton } from "@/components/back-button"
 import {
   Users,
   MapPin,
@@ -20,6 +18,7 @@ import {
   Phone,
   Heart,
   Activity,
+  ArrowLeft,
   ArrowRight,
   Share2,
 } from "lucide-react"
@@ -59,7 +58,6 @@ export default async function CommunityProfilePage({
   if (!community) {
     return (
       <div className="min-h-screen flex flex-col">
-        {!isUser && <Navigation />}
         <main className="flex-1 flex items-center justify-center text-muted-foreground p-4 text-center">
           <div>
             <Activity className="h-10 w-10 mx-auto opacity-30 mb-2" />
@@ -74,23 +72,29 @@ export default async function CommunityProfilePage({
   // Fallback defaults mapping to real Supabase fields
   const coverImage = community.cover_url || "/images/community-hero.jpg"
   const logoUrl = community.logo_url || "https://placehold.co/400x400/4f46e5/ffffff?text=" + encodeURIComponent(community.name.substring(0, 2))
-  const memberCount = community.member_count || 0
-  
+
   const allActs = community.activities || []
   const activeActs = allActs.filter((a: any) => a.status === "published" || a.status === "completed")
+  const completedActs = allActs.filter((a: any) => a.status === "completed")
   const totalDonations = activeActs.reduce((acc: number, a: any) => acc + (Number(a.funding_raised) || 0), 0)
+
+  // Partisipan relawan: total relawan yang disetujui pada kegiatan-kegiatan komunitas ini
+  // (volunteer_registrations dibatasi RLS untuk service_role saja, jadi gunakan
+  // activities.volunteer_count yang sudah dipelihara otomatis oleh trigger DB)
+  const participantCount = allActs.reduce((acc: number, a: any) => acc + (Number(a.volunteer_count) || 0), 0)
 
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!isUser && <Navigation />}
-
-      <main className={`flex-1 ${isUser ? "" : "pt-16"}`}>
+      <main className="flex-1">
         <div className="relative z-[60] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
-          <BackButton
-            fallbackHref={isUser ? "/community" : "/"}
-            label={isUser ? "Kembali ke Daftar Komunitas" : "Kembali ke Beranda"}
-          />
+          <Link
+            href="/community"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/5"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {isUser ? "Kembali ke Daftar Komunitas" : "Kembali ke Komunitas"}
+          </Link>
         </div>
 
         {/* Cover Image */}
@@ -160,16 +164,16 @@ export default async function CommunityProfilePage({
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Users className="h-5 w-5 text-primary" />
-                  <span className="text-2xl font-bold text-foreground">{memberCount}</span>
+                  <span className="text-2xl font-bold text-foreground">{participantCount}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Anggota</p>
+                <p className="text-sm text-muted-foreground">Partisipan Relawan</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Activity className="h-5 w-5 text-primary" />
-                  <span className="text-2xl font-bold text-foreground">{allActs.length}</span>
+                  <span className="text-2xl font-bold text-foreground">{completedActs.length}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Kegiatan</p>
+                <p className="text-sm text-muted-foreground">Kegiatan Terlaksana</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">

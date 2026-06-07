@@ -83,23 +83,7 @@ export function CommunitySidebar() {
           )
         })}
 
-        {/* Platform links */}
-        <div className="pt-4 pb-2">
-          <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Platform</p>
-          <Link
-            href="/activities"
-            onClick={() => setMobileOpen(false)}
-            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
-          >
-            <div className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center shrink-0">
-              <Activity className="h-4 w-4 text-slate-500 group-hover:text-slate-700" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="block truncate">Lihat Kegiatan</span>
-              <span className="text-[10px] font-normal text-slate-400">Semua kegiatan platform</span>
-            </div>
-          </Link>
-        </div>
+
       </nav>
 
       {/* Community info + Logout */}

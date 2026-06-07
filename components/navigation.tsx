@@ -44,7 +44,6 @@ const userNavLinks = [
 ];
 
 const communityNavLinks = [
-  { href: "/activities", label: "Kegiatan" },
   { href: "/community/dashboard", label: "Dashboard Komunitas" },
 ];
 
