@@ -331,16 +331,6 @@ export default function CommunityRegisterPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-background relative z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <Button variant="outline" size="sm" className="gap-2" asChild>
-            <Link href="/register">
-              <ArrowLeft className="w-4 h-4" /> Kembali ke Bergabung dengan SinergiLaut
-            </Link>
-          </Button>
-        </div>
-      </div>
-
       {/* Hero Section */}
       <section className="relative pb-16 overflow-hidden">
         <div className="absolute inset-0">
@@ -366,6 +356,12 @@ export default function CommunityRegisterPage() {
           <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto text-pretty">
             Daftarkan organisasi Anda untuk mulai mempublikasikan kegiatan, mengelola relawan, dan menerima donasi
           </p>
+          <div className="mt-8">
+            <Link href="/register" className="sl-btn sl-btn-ghost-dark sl-btn-md">
+              <ArrowLeft style={{ width: 16, height: 16 }} />
+              Kembali ke Bergabung dengan SinergiLaut
+            </Link>
+          </div>
         </div>
       </section>
 
