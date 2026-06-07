@@ -24,6 +24,88 @@ const howItWorks = [
   { step: "03", title: "Buat Perubahan Nyata", desc: "Kontribusimu langsung berdampak pada ekosistem laut dan menginspirasi lebih banyak orang untuk peduli." },
 ]
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ActivityCard({ activity, variant }: { activity: any; variant: 'active' | 'completed' }) {
+  const pct = activity.fundingGoal > 0
+    ? Math.min(Math.round((activity.fundingRaised / activity.fundingGoal) * 100), 100)
+    : 0
+  const isCompleted = variant === 'completed'
+  const accent = isCompleted ? '#64748b' : '#06958a'
+
+  return (
+    <Link href={`/activities/${activity.id}`} className={`act-card${isCompleted ? ' grayscale-[0.3]' : ''}`}>
+      <div className="act-card-img-wrap">
+        <Image src={activity.image} alt={activity.title} fill className="object-cover" />
+        <span className={`act-card-badge${isCompleted ? ' bg-slate-700/80' : ''}`}>{activity.type}</span>
+        {isCompleted && <span className="act-card-status-badge">Selesai</span>}
+      </div>
+      <div className="act-card-body">
+        <div className="act-card-header">
+          <div className={`act-card-icon${isCompleted ? ' opacity-60' : ''}`}>
+            <activity.icon style={{ width: 20, height: 20, color: accent }} />
+          </div>
+          <h3 className={`act-card-title${isCompleted ? ' text-slate-700' : ''}`}>{activity.title}</h3>
+        </div>
+        <p className="act-card-desc">{activity.description}</p>
+        <div className="act-card-meta">
+          <div className="act-card-meta-item">
+            <Calendar style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+            {activity.date}
+          </div>
+          <div className="act-card-meta-item">
+            <MapPin style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+            {activity.location}
+          </div>
+          {!isCompleted && (
+            <div className="act-card-meta-item">
+              <Users style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+              {activity.volunteers} / {activity.slots} relawan
+            </div>
+          )}
+        </div>
+        <div className={`act-progress-wrap${isCompleted ? ' bg-slate-50 border-slate-100' : ''}`}>
+          <div className="act-progress-header">
+            {isCompleted
+              ? <Target style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+              : <Banknote style={{ width: 14, height: 14, color: accent, flexShrink: 0 }} />
+            }
+            <span className={`act-progress-label${isCompleted ? ' text-slate-500' : ''}`}>
+              {isCompleted ? 'Hasil Akhir' : 'Progres Pendanaan'}
+            </span>
+            <span className={`act-progress-pct${isCompleted ? ' text-slate-700' : ''}`}>{pct}%</span>
+          </div>
+          <div className="act-progress-track">
+            <div
+              className={`act-progress-fill${isCompleted ? ' bg-slate-400' : ''}`}
+              style={{ width: `${pct}%`, ...(isCompleted ? { background: 'linear-gradient(90deg, #94a3b8, #64748b)' } : {}) }}
+            />
+          </div>
+          <div className="act-progress-amounts">
+            {isCompleted ? (
+              <span className="act-progress-raised text-slate-500">Terkumpul {formatCurrency(activity.fundingRaised)}</span>
+            ) : (
+              <>
+                <span className="act-progress-raised">{formatCurrency(activity.fundingRaised)}</span>
+                <span className="act-progress-goal">target {formatCurrency(activity.fundingGoal)}</span>
+              </>
+            )}
+          </div>
+        </div>
+        {isCompleted ? (
+          <div className="act-card-btns mt-4">
+            <span className="act-card-btn-ghost border-slate-300 text-slate-600 w-full">Lihat Laporan</span>
+          </div>
+        ) : (
+          <div className="act-card-btns">
+            <span className="act-card-btn-primary">Relawan</span>
+            <span className="act-card-btn-ghost">Donasi</span>
+          </div>
+        )}
+      </div>
+    </Link>
+  )
+}
+
 export default function ActivitiesPage() {
   const [searchQuery, setSearchQuery]           = useState("")
   const [selectedLocation, setSelectedLocation] = useState("All Locations")
@@ -41,7 +123,7 @@ export default function ActivitiesPage() {
       const { data } = await supabase
         .from("activities")
         .select(`*, community:communities(name)`)
-        .eq("status", "published")
+        .in("status", ["published", "completed"])
         .order("created_at", { ascending: false })
 
       if (data) {
@@ -59,6 +141,7 @@ export default function ActivitiesPage() {
           icon: Leaf,
           fundingGoal: d.funding_goal || 0,
           fundingRaised: d.funding_raised || 0,
+          status: d.status,
         }))
         setSupabaseActivities(mapped)
 
@@ -86,6 +169,9 @@ export default function ActivitiesPage() {
                             (activity.type || "").toLowerCase() === selectedType.toLowerCase()
     return matchesSearch && matchesLocation && matchesType
   })
+
+  const activeActivities = filteredActivities.filter(a => a.status === "published")
+  const completedActivities = filteredActivities.filter(a => a.status === "completed")
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "'Inter', sans-serif" }}>
@@ -124,13 +210,16 @@ export default function ActivitiesPage() {
         .act-results-count { color:rgba(255,255,255,0.75); font-size:0.875rem; font-weight:500; margin-left:auto; white-space:nowrap; }
 
         /* ── Layout ── */
-        .act-section { padding:5.5rem 1.5rem; }
+        .act-section { padding:3rem 1.5rem 5.5rem; }
         .act-section-alt { padding:5.5rem 1.5rem; background:#f0f9ff; }
         .act-container { max-width:1200px; margin:0 auto; }
         .act-eyebrow { display:inline-flex; align-items:center; gap:0.5rem; font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#06958a; margin-bottom:0.875rem; }
         .act-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:#06958a; }
         .act-section-title { font-size:clamp(1.75rem,3.5vw,2.625rem); font-weight:800; color:#0e2a3a; line-height:1.2; letter-spacing:-0.02em; margin-bottom:1rem; }
         .act-section-desc { font-size:1.0625rem; color:#475569; line-height:1.7; max-width:580px; }
+        .act-group-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; }
+        .act-group-title { font-size: 1.5rem; font-weight: 800; color: #0e2a3a; display: flex; align-items: center; gap: 0.75rem; }
+        .act-group-count { background: #f1f5f9; color: #64748b; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem; border-radius: 9999px; }
 
         /* ── Activity Cards Grid ── */
         .act-grid { display:grid; gap:1.5rem; grid-template-columns:1fr; }
@@ -142,6 +231,7 @@ export default function ActivitiesPage() {
         .act-card-img-wrap img { transition:transform 0.4s ease; }
         .act-card:hover .act-card-img-wrap img { transform:scale(1.05); }
         .act-card-badge { position:absolute; top:12px; left:12px; background:rgba(14,77,109,0.85); backdrop-filter:blur(8px); color:white; font-size:0.75rem; font-weight:700; padding:0.3rem 0.875rem; border-radius:9999px; text-transform:capitalize; letter-spacing:0.03em; border:1px solid rgba(255,255,255,0.2); }
+        .act-card-status-badge { position:absolute; top:12px; right:12px; background:rgba(255,255,255,0.9); backdrop-filter:blur(8px); color:#0e4d6d; font-size:0.65rem; font-weight:800; padding:0.25rem 0.625rem; border-radius:0.5rem; text-transform:uppercase; letter-spacing:0.05em; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .act-card-body { padding:1.5rem; flex:1; display:flex; flex-direction:column; }
         .act-card-header { display:flex; align-items:flex-start; gap:0.875rem; margin-bottom:0.875rem; }
         .act-card-icon { width:42px; height:42px; flex-shrink:0; background:linear-gradient(135deg,rgba(14,77,109,0.1),rgba(6,149,138,0.12)); border-radius:0.75rem; display:flex; align-items:center; justify-content:center; }
@@ -276,67 +366,10 @@ export default function ActivitiesPage() {
           </section>
         </div>
 
-        {/* ── ACTIVITY CARDS ── */}
+        {/* ── ACTIVITY LIST SECTIONS ── */}
         <section className="act-section">
           <div className="act-container">
-            {filteredActivities.length > 0 ? (
-              <div className="act-grid">
-                {filteredActivities.map((activity) => {
-                  const pct = activity.fundingGoal > 0
-                    ? Math.min(Math.round((activity.fundingRaised / activity.fundingGoal) * 100), 100)
-                    : 0
-                  return (
-                    <Link key={activity.id} href={`/activities/${activity.id}`} className="act-card">
-                      <div className="act-card-img-wrap">
-                        <Image src={activity.image} alt={activity.title} fill className="object-cover" />
-                        <span className="act-card-badge">{activity.type}</span>
-                      </div>
-                      <div className="act-card-body">
-                        <div className="act-card-header">
-                          <div className="act-card-icon">
-                            <activity.icon style={{ width: 20, height: 20, color: "#06958a" }} />
-                          </div>
-                          <h3 className="act-card-title">{activity.title}</h3>
-                        </div>
-                        <p className="act-card-desc">{activity.description}</p>
-                        <div className="act-card-meta">
-                          <div className="act-card-meta-item">
-                            <Calendar style={{ width: 14, height: 14, color: "#06958a", flexShrink: 0 }} />
-                            {activity.date}
-                          </div>
-                          <div className="act-card-meta-item">
-                            <MapPin style={{ width: 14, height: 14, color: "#06958a", flexShrink: 0 }} />
-                            {activity.location}
-                          </div>
-                          <div className="act-card-meta-item">
-                            <Users style={{ width: 14, height: 14, color: "#06958a", flexShrink: 0 }} />
-                            {activity.volunteers} / {activity.slots} relawan
-                          </div>
-                        </div>
-                        <div className="act-progress-wrap">
-                          <div className="act-progress-header">
-                            <Banknote style={{ width: 14, height: 14, color: "#06958a", flexShrink: 0 }} />
-                            <span className="act-progress-label">Progres Pendanaan</span>
-                            <span className="act-progress-pct">{pct}%</span>
-                          </div>
-                          <div className="act-progress-track">
-                            <div className="act-progress-fill" style={{ width: `${pct}%` }} />
-                          </div>
-                          <div className="act-progress-amounts">
-                            <span className="act-progress-raised">{formatCurrency(activity.fundingRaised)}</span>
-                            <span className="act-progress-goal">target {formatCurrency(activity.fundingGoal)}</span>
-                          </div>
-                        </div>
-                        <div className="act-card-btns">
-                          <span className="act-card-btn-primary">Relawan</span>
-                          <span className="act-card-btn-ghost">Donasi</span>
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            ) : (
+            {activeActivities.length === 0 && completedActivities.length === 0 ? (
               <div className="act-empty">
                 <div className="act-empty-icon">
                   <Search style={{ width: 32, height: 32, color: "#06958a" }} />
@@ -344,8 +377,39 @@ export default function ActivitiesPage() {
                 <h3 className="act-empty-title">Tidak ada kegiatan ditemukan</h3>
                 <p className="act-empty-desc">Coba ubah kata kunci, lokasi, atau tipe kegiatan yang kamu cari.</p>
               </div>
-            )}
-          </div>
+            ) : (
+              <>
+                {activeActivities.length > 0 && (
+                  <div className="mb-16">
+                    <div className="act-group-header">
+                      <div className="act-group-title">
+                        <Sparkles className="text-primary h-6 w-6" />
+                        Kegiatan Aktif
+                        <span className="act-group-count">{activeActivities.length}</span>
+                      </div>
+                    </div>
+                    <div className="act-grid">
+                      {activeActivities.map(a => <ActivityCard key={a.id} activity={a} variant="active" />)}
+                    </div>
+                  </div>
+                )}
+                {completedActivities.length > 0 && (
+                  <div>
+                    <div className="act-group-header">
+                      <div className="act-group-title">
+                        <CheckCircle className="text-muted-foreground h-6 w-6" />
+                        Kegiatan Selesai
+                        <span className="act-group-count">{completedActivities.length}</span>
+                      </div>
+                    </div>
+                    <div className="act-grid opacity-85">
+                      {completedActivities.map(a => <ActivityCard key={a.id} activity={a} variant="completed" />)}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          }</div>
         </section>
 
         {/* ── PILLARS ── */}
