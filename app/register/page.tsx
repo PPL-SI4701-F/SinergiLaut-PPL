@@ -7,6 +7,7 @@ import { register } from "@/lib/actions/auth.actions"
 import {
   Mail, Lock, User, Phone, Building, AlertCircle, Loader2,
   Check, ArrowRight, ArrowLeft, Eye, EyeOff, ShieldCheck,
+  Waves, Sparkles, CheckCircle2,
 } from "lucide-react"
 import Image from "next/image"
 
@@ -70,7 +71,9 @@ function RegisterContent() {
           animation: slideCard 0.35s ease forwards;
         }
         @keyframes slideCard { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .reg-card-title { font-size: 1.4rem; font-weight: 800; color: var(--sl-ink); margin-bottom: 0.3rem; letter-spacing: -0.02em; }
+        .reg-card-head { display: flex; align-items: center; gap: 0.875rem; margin-bottom: 0.3rem; }
+        .reg-card-icon { width: 44px; height: 44px; border-radius: 0.875rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(14,77,109,0.12), rgba(6,149,138,0.15)); }
+        .reg-card-title { font-size: 1.4rem; font-weight: 800; color: var(--sl-ink); letter-spacing: -0.02em; }
         .reg-card-subtitle { font-size: 0.875rem; color: var(--sl-body-2); margin-bottom: 1.75rem; line-height: 1.5; }
         .reg-card-subtitle span { color: var(--sl-teal); font-weight: 500; }
 
@@ -258,7 +261,10 @@ function RegisterContent() {
           {/* ── STEP 1: Choose Role ── */}
           {step === 1 && (
             <div className="reg-card">
-              <h2 className="reg-card-title">Bergabung dengan SinergiLaut 🌊</h2>
+              <div className="reg-card-head">
+                <div className="reg-card-icon"><Waves style={{ width: 22, height: 22, color: "#06958a" }} /></div>
+                <h2 className="reg-card-title">Bergabung dengan SinergiLaut</h2>
+              </div>
               <p className="reg-card-subtitle">Pilih bagaimana Anda ingin <span>berkontribusi</span> untuk lingkungan laut</p>
 
               <div className="reg-role-grid">
@@ -290,7 +296,10 @@ function RegisterContent() {
           {/* ── STEP 2: Account Info ── */}
           {step === 2 && (
             <div className="reg-card">
-              <h2 className="reg-card-title">Buat Akun Volunteer 🙌</h2>
+              <div className="reg-card-head">
+                <div className="reg-card-icon"><Sparkles style={{ width: 22, height: 22, color: "#06958a" }} /></div>
+                <h2 className="reg-card-title">Buat Akun Volunteer</h2>
+              </div>
               <p className="reg-card-subtitle">Isi informasi dasar untuk <span>memulai perjalanan</span> konservasi Anda</p>
 
               {error && (
@@ -392,7 +401,10 @@ function RegisterContent() {
           {/* ── STEP 3: Confirmation ── */}
           {step === 3 && (
             <div className="reg-card">
-              <h2 className="reg-card-title">Konfirmasi Data ✅</h2>
+              <div className="reg-card-head">
+                <div className="reg-card-icon"><CheckCircle2 style={{ width: 22, height: 22, color: "#06958a" }} /></div>
+                <h2 className="reg-card-title">Konfirmasi Data</h2>
+              </div>
               <p className="reg-card-subtitle">Periksa kembali informasi Anda sebelum <span>menyelesaikan pendaftaran</span></p>
 
               {error && (
