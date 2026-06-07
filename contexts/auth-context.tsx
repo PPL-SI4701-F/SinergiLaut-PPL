@@ -42,6 +42,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
+    // Check for E2E bypass cookie
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+    };
+
+    const e2eBypassRole = getCookie('e2e-bypass-auth');
+    if (process.env.NODE_ENV === 'development' && e2eBypassRole) {
+      const mockUser = {
+        id: 'mock-user-id',
+        aud: 'authenticated',
+        role: 'authenticated',
+        email: `${e2eBypassRole}@example.com`,
+        user_metadata: { role: e2eBypassRole, full_name: 'Mock ' + e2eBypassRole }
+      } as any;
+
+      const mockProfile = {
+        id: 'mock-user-id',
+        full_name: 'Mock ' + e2eBypassRole,
+        role: e2eBypassRole,
+        volunteer_status: 'approved'
+      } as any;
+
+      setUser(mockUser);
+      setProfile(mockProfile);
+      setIsLoading(false);
+      return;
+    }
+
     // Get initial session — set user dan profile secara atomik agar tidak ada
     // window di mana user sudah ter-set tapi role belum tersedia dari database.
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
