@@ -477,6 +477,29 @@ export async function getHomePageStats() {
   }
 }
 
+/** Statistik publik untuk halaman /community (tidak memerlukan akses admin) */
+export async function getCommunityPageStats() {
+  const adminSupabase = await createAdminClient()
+
+  const [
+    { count: verifiedCommunities },
+    { count: completedActivities },
+    { data: volunteerRows },
+  ] = await Promise.all([
+    adminSupabase.from("communities").select("*", { count: "exact", head: true }).eq("is_verified", true),
+    adminSupabase.from("activities").select("*", { count: "exact", head: true }).eq("status", "completed"),
+    adminSupabase.from("volunteer_registrations").select("user_id").in("status", ["approved", "attended"]),
+  ])
+
+  const activeVolunteers = new Set(volunteerRows?.map(r => r.user_id)).size
+
+  return {
+    activeVolunteers: activeVolunteers || 0,
+    verifiedCommunities: verifiedCommunities || 0,
+    completedActivities: completedActivities || 0,
+  }
+}
+
 // --- COMMUNITY DASHBOARD ---
 
 export async function getCommunityDashboardStats(userId: string) {
