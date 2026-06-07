@@ -124,15 +124,16 @@
 .sl-btn-outline:hover { background: rgba(14,77,109,0.05); border-color: rgba(14,77,109,0.40); }
 
 /* ---------- 6. Badge ---------- */
-.sl-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; font-weight: 600; padding: 0.45rem 1.25rem; border-radius: 9999px; letter-spacing: 0.06em; text-transform: uppercase; backdrop-filter: blur(10px); }
-.sl-badge-cyan { background: rgba(103,232,249,0.12); border: 1px solid rgba(103,232,249,0.28); color: var(--sl-cyan-2); }
+.sl-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; font-weight: 600; padding: 0.5rem 1.4rem; border-radius: 9999px; letter-spacing: 0.06em; text-transform: uppercase; backdrop-filter: blur(10px); }
+.sl-badge-cyan { background: rgba(103,232,249,0.12); border: 1px solid rgba(103,232,249,0.28); color: var(--sl-cyan-2); box-shadow: 0 8px 28px -8px rgba(103,232,249,0.35); }
 
 /* ---------- 7. Hero ---------- */
-.sl-hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; padding: 6rem 1.5rem; text-align: center; color: #fff; }
+.sl-hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; padding: 8rem 1.5rem 6rem; text-align: center; color: #fff; }
 .sl-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center 40%; }
 .sl-hero-overlay { position: absolute; inset: 0; background: var(--sl-grad-hero); }
 .sl-hero-particles { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(103,232,249,0.14) 1px, transparent 1px), radial-gradient(circle, rgba(165,243,252,0.08) 1px, transparent 1px); background-size: 55px 55px, 28px 28px; background-position: 0 0, 14px 14px; animation: sl-particleDrift 28s linear infinite; }
 .sl-hero-content { position: relative; z-index: 10; max-width: 860px; width: 100%; }
+.sl-hero-content > .sl-badge { margin-bottom: 1.75rem; }
 .sl-hero-logo { width: 88px; height: 88px; background: #fff; border-radius: 1.5rem; padding: 1rem; margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; animation: sl-logoPulse 4s ease-in-out infinite; }
 .sl-hero-title { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 900; color: #fff; line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 1.5rem; }
 .sl-shimmer { background: var(--sl-grad-shimmer); background-size: 200%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; animation: sl-shimmer 4s linear infinite; }
