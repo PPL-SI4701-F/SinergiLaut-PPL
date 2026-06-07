@@ -64,6 +64,9 @@ scripts/toggle-rls.ts
 scripts/seed-admin.mjs
 scripts/seed-community.mjs
 
+# Skrip eksperimen lokal sekali-pakai
+update_nav.py
+
 # AI Agent Rules
 .clinerules/
 .cursor/
