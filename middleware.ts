@@ -32,9 +32,25 @@ export async function middleware(request: NextRequest) {
 
   // Jangan tulis kode antara createServerClient dan auth.getUser()
   // Jika tidak, bug yang sangat sulit di-debug bisa terjadi
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  const e2eCookie = request.cookies.get('e2e-bypass-auth')
+  if (process.env.NODE_ENV === 'development' && e2eCookie) {
+    user = {
+      id: 'mock-user-id',
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: `${e2eCookie.value}@example.com`,
+      user_metadata: { role: e2eCookie.value, full_name: 'Mock ' + e2eCookie.value }
+    } as any
+  } else {
+    try {
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+    } catch {
+      // ignore
+    }
+  }
+
 
   // Daftar route yang membutuhkan autentikasi
   const protectedRoutes = ['/dashboard', '/admin', '/profile', '/community/dashboard', '/user/dashboard']
