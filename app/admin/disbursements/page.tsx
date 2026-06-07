@@ -5,7 +5,8 @@ import { format } from "date-fns"
 import { id as localeID } from "date-fns/locale"
 import {
   Banknote, RefreshCw, Plus, CheckCircle2, XCircle, Clock,
-  AlertTriangle, Loader2, CreditCard, Building2, ArrowRight, Info
+  AlertTriangle, Loader2, CreditCard, Building2, ArrowRight, Info,
+  Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp
 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -17,6 +18,7 @@ import {
   createDisbursement,
   updateDisbursementStatus,
   getActivityFinanceSummary,
+  getDisbursementOverview,
 } from "@/lib/actions/disbursement.actions"
 import { getOngoingActivities } from "@/lib/actions/dashboard.actions"
 import { formatCurrency } from "@/lib/utils/helpers"
@@ -43,6 +45,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function AdminDisbursementsPage() {
   const [disbursements, setDisbursements] = useState<Disbursement[]>([])
   const [activities, setActivities] = useState<any[]>([])
+  const [overview, setOverview] = useState<Awaited<ReturnType<typeof getDisbursementOverview>>>({ balance: 0, income: 0, expense: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<StatusFilter>("all")
 
@@ -65,9 +68,10 @@ export default function AdminDisbursementsPage() {
 
   const load = useCallback(async () => {
     setIsLoading(true)
-    const [dis, acts] = await Promise.all([getAllDisbursements(), getOngoingActivities()])
+    const [dis, acts, ov] = await Promise.all([getAllDisbursements(), getOngoingActivities(), getDisbursementOverview()])
     setDisbursements(dis.data as Disbursement[])
     setActivities(acts)
+    setOverview(ov)
     setIsLoading(false)
   }, [])
 
@@ -165,6 +169,30 @@ export default function AdminDisbursementsPage() {
               <Plus className="w-4 h-4" /> Buat Pencairan
             </button>
           </div>
+        </div>
+
+        {/* Finance Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { label: "Saldo",       value: overview.balance, icon: Wallet,          color: "text-teal-600",   bg: "bg-teal-50"   },
+            { label: "Pemasukan",   value: overview.income,  icon: ArrowDownCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: "Pengeluaran", value: overview.expense, icon: ArrowUpCircle,   color: "text-rose-600",   bg: "bg-rose-50"   },
+          ].map((s) => (
+            <div key={s.label} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">{s.label}</p>
+                  <p className="text-2xl font-bold text-foreground">{formatCurrency(s.value)}</p>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-green-500" /> Live
+                  </p>
+                </div>
+                <div className={`w-10 h-10 ${s.bg} rounded-lg flex items-center justify-center`}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Filter Tabs */}
