@@ -227,7 +227,7 @@ export async function suspendCommunityAction(id: string) {
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
     .from("communities")
-    .update({ is_verified: false, verification_status: "suspended" })
+    .update({ is_verified: false, is_suspended: true })
     .eq("id", id)
     .select("name, owner_id")
     .single()
@@ -248,7 +248,7 @@ export async function unsuspendCommunityAction(id: string) {
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
     .from("communities")
-    .update({ is_verified: true, verification_status: "approved" })
+    .update({ is_verified: true, is_suspended: false, verification_status: "approved" })
     .eq("id", id)
     .select("name, owner_id")
     .single()

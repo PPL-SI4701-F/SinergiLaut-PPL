@@ -7,6 +7,7 @@ import {
   Anchor, Shield, Sparkles
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 interface JourneyMilestone {
   id: string; year: number; title: string; description: string;
@@ -50,15 +51,13 @@ export default async function AboutPage() {
   const milestones = await getMilestones()
 
   const supabase = await createClient()
-  const [
-    { count: userCount }, { count: communityCount },
-    { count: activityCount }, { data: fundingData },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("communities").select("*", { count: "exact", head: true }).eq("status", "approved"),
-    supabase.from("activities").select("*", { count: "exact", head: true }),
-    supabase.from("activities").select("funding_raised"),
-  ])
+  const [homeStats, { count: communityCount }, { count: activityCount }, { data: fundingData }] =
+    await Promise.all([
+      getHomePageStats(),
+      supabase.from("communities").select("*", { count: "exact", head: true }).eq("verification_status", "approved"),
+      supabase.from("activities").select("*", { count: "exact", head: true }).in("status", ["published", "completed"]),
+      supabase.from("activities").select("funding_raised").in("status", ["published", "completed"]),
+    ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalFunding = (fundingData as any[])?.reduce((sum: number, a: any) => sum + (a.funding_raised || 0), 0) ?? 0
@@ -70,7 +69,7 @@ export default async function AboutPage() {
   }
 
   const stats = [
-    { value: `${userCount ?? 0}+`,        label: "Relawan Aktif",  icon: Users    },
+    { value: `${homeStats.totalVolunteers ?? 0}+`, label: "Relawan Aktif",  icon: Users    },
     { value: `${communityCount ?? 0}+`,   label: "Komunitas",      icon: Globe    },
     { value: `${activityCount ?? 0}+`,    label: "Kegiatan",       icon: Award    },
     { value: formatFunding(totalFunding), label: "Dana Terhimpun", icon: Banknote },
