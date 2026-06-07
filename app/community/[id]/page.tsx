@@ -20,6 +20,7 @@ import {
   Heart,
   Activity,
   ArrowRight,
+  ArrowLeft,
   Share2,
 } from "lucide-react"
 
@@ -34,6 +35,17 @@ export default async function CommunityProfilePage({
   const { id } = await params
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  let isUser = false
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+    isUser = profile?.role === "user"
+  }
+
   const { data: community, error } = await supabase
     .from("communities")
     .select("*, activities(*)")
@@ -47,14 +59,14 @@ export default async function CommunityProfilePage({
   if (!community) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Navigation />
+        {!isUser && <Navigation />}
         <main className="flex-1 flex items-center justify-center text-muted-foreground p-4 text-center">
           <div>
             <Activity className="h-10 w-10 mx-auto opacity-30 mb-2" />
             <p>Komunitas tidak ditemukan atau telah dihapus.</p>
           </div>
         </main>
-        <Footer />
+        {!isUser && <Footer />}
       </div>
     )
   }
@@ -71,9 +83,19 @@ export default async function CommunityProfilePage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation />
+      {!isUser && <Navigation />}
 
-      <main className="flex-1 pt-16">
+      <main className={`flex-1 ${isUser ? "" : "pt-16"}`}>
+        {isUser && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
+            <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
+              <Link href="/community">
+                <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Komunitas
+              </Link>
+            </Button>
+          </div>
+        )}
+
         {/* Cover Image */}
         <section className="relative h-64 md:h-80 bg-secondary">
           {coverImage && (
@@ -392,7 +414,7 @@ export default async function CommunityProfilePage({
         </section>
       </main>
 
-      <Footer />
+      {!isUser && <Footer />}
     </div>
   )
 }

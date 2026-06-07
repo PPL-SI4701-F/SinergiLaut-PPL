@@ -5,6 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { UserSidebar } from "@/components/user-sidebar"
+import { useAuth } from "@/contexts/auth-context"
 import {
   ArrowRight, Users, MapPin, Globe, Award, Building, Search,
   CheckCircle, FileText, Shield, Heart, Star, Activity,
@@ -28,41 +30,7 @@ const benefits = [
   { icon: Award,     title: "Lencana Terverifikasi",   description: "Dapatkan lencana terverifikasi untuk membangun kepercayaan relawan dan donatur.",          color: "#10b981", bg: "rgba(16,185,129,0.08)"  },
 ]
 
-export default function CommunityPage() {
-  const [searchQuery, setSearchQuery]             = useState("")
-  const [selectedFocus, setSelectedFocus]         = useState<string | null>(null)
-  const [focusOpen, setFocusOpen]                 = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [registeredCommunities, setRegisteredCommunities] = useState<any[]>([])
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [globalStats, setGlobalStats]             = useState<any>(null)
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getRegisteredCommunities().then((data: any) => setRegisteredCommunities(data))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getCommunityPageStats().then((data: any) => setGlobalStats(data))
-  }, [])
-
-  const focusAreas = Array.from(
-    new Set(registeredCommunities.flatMap((c) => c.focus_areas || []))
-  ).sort()
-
-  const filteredCommunities = registeredCommunities.filter((community) => {
-    const matchesSearch = community.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          community.location?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesFocus  = !selectedFocus || (community.focus_areas && community.focus_areas.includes(selectedFocus))
-    return matchesSearch && matchesFocus
-  })
-
-  const statsDisplay = [
-    { icon: Users,  value: globalStats ? `${globalStats.activeVolunteers}+`   : "...", label: "Anggota Aktif"     },
-    { icon: MapPin, value: globalStats ? `${globalStats.verifiedCommunities}+` : "...", label: "Komunitas Pesisir" },
-    { icon: Globe,  value: globalStats ? `${globalStats.completedActivities}+` : "...", label: "Kegiatan Selesai"  },
-  ]
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "'Inter', sans-serif" }}>
-      <style>{`
+const communityPageStyles = `
         /* ── Hero ── */
         .comm-hero { position:relative; min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; padding:6rem 1.5rem 2rem; text-align:center; }
         .comm-hero-bg { position:absolute; inset:0; background-image:url('/images/community-hero.jpg'); background-size:cover; background-position:center 30%; }
@@ -180,7 +148,184 @@ export default function CommunityPage() {
         .comm-cta-btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(6,149,138,0.5); }
         .comm-cta-btn-ghost { padding:0.9rem 2.25rem; background:rgba(255,255,255,0.07); backdrop-filter:blur(10px); color:white; border:1.5px solid rgba(255,255,255,0.18); border-radius:0.875rem; font-size:0.9375rem; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; transition:all 0.25s ease; }
         .comm-cta-btn-ghost:hover { background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.32); }
-      `}</style>
+
+        /* ── Sidebar (user role) variant ── */
+        .comm-user-search-wrapper { position:relative; padding:0 1.5rem; margin: 0 0 2rem; }
+        .comm-user-search-wrapper .comm-search-bar { margin: 0; }
+`
+
+export default function CommunityPage() {
+  const { isUser } = useAuth()
+  const [searchQuery, setSearchQuery]             = useState("")
+  const [selectedFocus, setSelectedFocus]         = useState<string | null>(null)
+  const [focusOpen, setFocusOpen]                 = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [registeredCommunities, setRegisteredCommunities] = useState<any[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [globalStats, setGlobalStats]             = useState<any>(null)
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getRegisteredCommunities().then((data: any) => setRegisteredCommunities(data))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getCommunityPageStats().then((data: any) => setGlobalStats(data))
+  }, [])
+
+  const focusAreas = Array.from(
+    new Set(registeredCommunities.flatMap((c) => c.focus_areas || []))
+  ).sort()
+
+  const filteredCommunities = registeredCommunities.filter((community) => {
+    const matchesSearch = community.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          community.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesFocus  = !selectedFocus || (community.focus_areas && community.focus_areas.includes(selectedFocus))
+    return matchesSearch && matchesFocus
+  })
+
+  const statsDisplay = [
+    { icon: Users,  value: globalStats ? `${globalStats.activeVolunteers}+`   : "...", label: "Anggota Aktif"     },
+    { icon: MapPin, value: globalStats ? `${globalStats.verifiedCommunities}+` : "...", label: "Komunitas Pesisir" },
+    { icon: Globe,  value: globalStats ? `${globalStats.completedActivities}+` : "...", label: "Kegiatan Selesai"  },
+  ]
+
+  // ── Search & filter bar (shared between marketing and dashboard layouts) ──
+  const searchBar = (
+    <section className="comm-search-bar">
+      <div className="comm-search-inner">
+        <div className="comm-search-input-wrap">
+          <Search className="comm-search-icon" style={{ width: 18, height: 18 }} />
+          <input
+            type="text"
+            placeholder="Cari komunitas berdasarkan nama atau lokasi..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="comm-search-input"
+          />
+        </div>
+        {focusAreas.length > 0 && (
+          <div className="comm-dropdown-wrap">
+            <button className="comm-dropdown-btn" onClick={() => setFocusOpen(!focusOpen)}>
+              <Activity style={{ width: 15, height: 15 }} />
+              {selectedFocus || "Semua Fokus"}
+              <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
+            </button>
+            {focusOpen && (
+              <div className="comm-dropdown-menu">
+                <button className="comm-dropdown-item" onClick={() => { setSelectedFocus(null); setFocusOpen(false) }}>
+                  Semua Fokus
+                </button>
+                {focusAreas.map((f) => (
+                  <button key={f} className="comm-dropdown-item" onClick={() => { setSelectedFocus(f); setFocusOpen(false) }}>
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {(selectedFocus || searchQuery !== "") && (
+          <span className="comm-search-count">{filteredCommunities.length} komunitas ditemukan</span>
+        )}
+      </div>
+    </section>
+  )
+
+  // ── Community grid (shared between marketing and dashboard layouts) ──
+  const communityGrid = (
+    <section className="comm-section">
+      <div className="comm-container">
+        {filteredCommunities.length > 0 ? (
+          <div className="comm-grid">
+            {filteredCommunities.map((community) => (
+              <div key={community.id} className="comm-card">
+                <div className="comm-card-body">
+                  <div className="comm-card-header">
+                    <div className="comm-card-avatar">
+                      <Image src={community.logo_url || "/placeholder-logo.png"} alt={community.name} fill className="object-cover" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {community.is_verified && (
+                        <div className="comm-card-verified">
+                          <CheckCircle style={{ width: 10, height: 10 }} /> Terverifikasi
+                        </div>
+                      )}
+                      <h3 className="comm-card-name">{community.name}</h3>
+                      <div className="comm-card-loc">
+                        <MapPin style={{ width: 12, height: 12, color: "#06958a" }} />
+                        {community.location || "Tanpa Lokasi"}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="comm-card-desc">{community.description || "Tidak ada deskripsi"}</p>
+                  {(community.focus_areas || []).length > 0 && (
+                    <div className="comm-card-tags">
+                      {(community.focus_areas || []).map((f: string) => (
+                        <span key={f} className="comm-card-tag">{f}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="comm-card-meta">
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <Users style={{ width: 13, height: 13, color: "#06958a" }} />
+                      {community.member_count || 0} anggota
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <Activity style={{ width: 13, height: 13, color: "#06958a" }} />
+                      Aktif
+                    </span>
+                  </div>
+                  <Link href={`/community/${community.id}`} className="comm-card-btn">
+                    Lihat Komunitas <ArrowRight style={{ width: 14, height: 14 }} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="comm-empty">
+            <div className="comm-empty-icon">
+              <Activity style={{ width: 32, height: 32, color: "#06958a" }} />
+            </div>
+            <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#0e2a3a", marginBottom: "0.5rem" }}>
+              Komunitas tidak ditemukan
+            </h3>
+            <p style={{ fontSize: "0.9375rem", color: "#64748b" }}>
+              Coba ubah kata kunci atau filter fokus area.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+
+  // ── Dashboard-style layout for the "pengguna" (user) role ──
+  if (isUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#f8fafc] to-[#eff6ff] flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <style>{communityPageStyles}</style>
+        <UserSidebar />
+        <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+          <main className="flex-1">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-10 pb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Komunitas Konservasi Laut</h1>
+              <p className="text-muted-foreground mt-1">
+                Temukan dan terhubung dengan komunitas konservasi laut terdaftar di seluruh Indonesia.
+              </p>
+            </div>
+
+            <div className="comm-user-search-wrapper" id="communities">
+              {searchBar}
+            </div>
+
+            {communityGrid}
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "'Inter', sans-serif" }}>
+      <style>{communityPageStyles}</style>
 
       <Navigation />
       <main style={{ flex: 1 }}>
@@ -305,110 +450,10 @@ export default function CommunityPage() {
 
         {/* ── SEARCH + COMMUNITIES ── */}
         <div className="comm-search-wrapper" id="communities">
-          <section className="comm-search-bar">
-            <div className="comm-search-inner">
-              <div className="comm-search-input-wrap">
-                <Search className="comm-search-icon" style={{ width: 18, height: 18 }} />
-                <input
-                  type="text"
-                  placeholder="Cari komunitas berdasarkan nama atau lokasi..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="comm-search-input"
-                />
-              </div>
-              {focusAreas.length > 0 && (
-                <div className="comm-dropdown-wrap">
-                  <button className="comm-dropdown-btn" onClick={() => setFocusOpen(!focusOpen)}>
-                    <Activity style={{ width: 15, height: 15 }} />
-                    {selectedFocus || "Semua Fokus"}
-                    <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
-                  </button>
-                  {focusOpen && (
-                    <div className="comm-dropdown-menu">
-                      <button className="comm-dropdown-item" onClick={() => { setSelectedFocus(null); setFocusOpen(false) }}>
-                        Semua Fokus
-                      </button>
-                      {focusAreas.map((f) => (
-                        <button key={f} className="comm-dropdown-item" onClick={() => { setSelectedFocus(f); setFocusOpen(false) }}>
-                          {f}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {(selectedFocus || searchQuery !== "") && (
-                <span className="comm-search-count">{filteredCommunities.length} komunitas ditemukan</span>
-              )}
-            </div>
-          </section>
+          {searchBar}
         </div>
 
-        <section className="comm-section">
-          <div className="comm-container">
-            {filteredCommunities.length > 0 ? (
-              <div className="comm-grid">
-                {filteredCommunities.map((community) => (
-                  <div key={community.id} className="comm-card">
-                    <div className="comm-card-body">
-                      <div className="comm-card-header">
-                        <div className="comm-card-avatar">
-                          <Image src={community.logo_url || "/placeholder-logo.png"} alt={community.name} fill className="object-cover" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {community.is_verified && (
-                            <div className="comm-card-verified">
-                              <CheckCircle style={{ width: 10, height: 10 }} /> Terverifikasi
-                            </div>
-                          )}
-                          <h3 className="comm-card-name">{community.name}</h3>
-                          <div className="comm-card-loc">
-                            <MapPin style={{ width: 12, height: 12, color: "#06958a" }} />
-                            {community.location || "Tanpa Lokasi"}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="comm-card-desc">{community.description || "Tidak ada deskripsi"}</p>
-                      {(community.focus_areas || []).length > 0 && (
-                        <div className="comm-card-tags">
-                          {(community.focus_areas || []).map((f: string) => (
-                            <span key={f} className="comm-card-tag">{f}</span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="comm-card-meta">
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Users style={{ width: 13, height: 13, color: "#06958a" }} />
-                          {community.member_count || 0} anggota
-                        </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Activity style={{ width: 13, height: 13, color: "#06958a" }} />
-                          Aktif
-                        </span>
-                      </div>
-                      <Link href={`/community/${community.id}`} className="comm-card-btn">
-                        Lihat Komunitas <ArrowRight style={{ width: 14, height: 14 }} />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="comm-empty">
-                <div className="comm-empty-icon">
-                  <Activity style={{ width: 32, height: 32, color: "#06958a" }} />
-                </div>
-                <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#0e2a3a", marginBottom: "0.5rem" }}>
-                  Komunitas tidak ditemukan
-                </h3>
-                <p style={{ fontSize: "0.9375rem", color: "#64748b" }}>
-                  Coba ubah kata kunci atau filter fokus area.
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
+        {communityGrid}
 
         {/* ── CTA ── */}
         <section className="comm-cta">

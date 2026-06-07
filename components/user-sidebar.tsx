@@ -14,7 +14,7 @@ import {
 import { getInitials } from "@/lib/utils/helpers"
 
 const navItems = [
-  { href: "/user/dashboard", label: "Dashboard",   icon: LayoutDashboard, description: "Ringkasan aktivitas saya" },
+  { href: "/user/dashboard", label: "Dashboard Utama", icon: LayoutDashboard, description: "Ringkasan aktivitas saya" },
   { href: "/activities",     label: "Kegiatan",    icon: Calendar,        description: "Jelajahi kegiatan konservasi" },
   { href: "/community",      label: "Komunitas",   icon: Users,           description: "Temukan komunitas konservasi" },
   { href: "/user/profile",   label: "Profil Saya", icon: User,            description: "Edit data & verifikasi"  },
