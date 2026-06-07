@@ -1,6 +1,3 @@
-"use client"
-
-import { use } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -26,58 +23,25 @@ import {
   Share2,
 } from "lucide-react"
 
-import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
-import { formatDate, calcPercentage } from "@/lib/utils/helpers"
+import { createClient } from "@/lib/supabase/server"
+import { formatDate, calcPercentage, formatCurrency } from "@/lib/utils/helpers"
 
-export default function CommunityProfilePage({
+export default async function CommunityProfilePage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = use(params)
-  const supabase = createClient()
-  const [community, setCommunity] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { id } = await params
+  const supabase = await createClient()
 
-  useEffect(() => {
-    async function fetchCommunity() {
-      setIsLoading(true)
-      const { data, error } = await supabase
-        .from("communities")
-        .select("*, activities(*)")
-        .eq("id", id)
-        .single()
-      
-      if (!error && data) {
-        setCommunity(data)
-      } else {
-        console.error(error)
-      }
-      setIsLoading(false)
-    }
-    fetchCommunity()
-  }, [id, supabase])
+  const { data: community, error } = await supabase
+    .from("communities")
+    .select("*, activities(*)")
+    .eq("id", id)
+    .single()
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navigation />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    )
+  if (error) {
+    console.error(error)
   }
 
   if (!community) {
