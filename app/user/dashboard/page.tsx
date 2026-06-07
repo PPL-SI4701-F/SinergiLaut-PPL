@@ -5,16 +5,16 @@ import { getUserDashboardStats } from "@/lib/actions/dashboard.actions"
 import { getMyVolunteerRegistrations } from "@/lib/actions/volunteer.actions"
 import { getMyDonations } from "@/lib/actions/donation.actions"
 import { formatCurrency } from "@/lib/utils/helpers"
-import { Calendar, Heart, CheckCircle2, TrendingUp, ArrowRight, User, AlertCircle, XCircle } from "lucide-react"
+import { Calendar, Heart, CheckCircle2, TrendingUp, User, AlertCircle, XCircle } from "lucide-react"
 import { DashboardClient } from "./dashboard-client"
 
 export default async function UserDashboardPage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) redirect("/login")
+  if (!user) redirect("/login")
 
-  const userId = session.user.id
+  const userId = user.id
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -64,10 +64,6 @@ export default async function UserDashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Link href="/activities"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white rounded-xl bg-teal-600 hover:bg-teal-700 transition-colors shadow-sm">
-              Temukan Kegiatan <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
             <Link href="/user/profile"
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-slate-700 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
               <User className="h-3.5 w-3.5" /> Edit Profil

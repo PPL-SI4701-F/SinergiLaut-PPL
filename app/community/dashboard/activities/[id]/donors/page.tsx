@@ -189,6 +189,7 @@ export default function DonorsManagementPage() {
                   {filtered.map((d) => {
                     const StatusIcon = statusConfig[d.status]?.icon ?? Clock
                     const displayName = d.is_anonymous ? "Donatur Anonim" : d.donor_name
+                    const displayEmail = d.is_anonymous ? "Disembunyikan" : d.donor_email
                     const isExpanded = expandedId === d.id
 
                     return (
@@ -218,7 +219,7 @@ export default function DonorsManagementPage() {
                               </div>
                               <div className="flex items-center gap-3 mt-0.5">
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Mail className="h-3 w-3" /> {d.donor_email}
+                                  <Mail className="h-3 w-3" /> {displayEmail}
                                 </span>
                                 <span className="text-xs text-muted-foreground">{formatDate(d.created_at)}</span>
                               </div>
