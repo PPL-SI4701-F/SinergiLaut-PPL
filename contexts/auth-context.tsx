@@ -42,23 +42,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      setUser(session?.user ?? null)
+    // Get initial session — set user dan profile secara atomik agar tidak ada
+    // window di mana user sudah ter-set tapi role belum tersedia dari database.
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setIsLoading(false))
-      } else {
-        setIsLoading(false)
+        await fetchProfile(session.user.id)
+        setUser(session.user)
       }
+      setIsLoading(false)
     })
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
-        setUser(session?.user ?? null)
         if (session?.user) {
           await fetchProfile(session.user.id)
+          setUser(session.user)
         } else {
+          setUser(null)
           setProfile(null)
         }
       }
@@ -73,7 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null)
   }
 
-  const role = user?.user_metadata?.role || profile?.role || "user"
+  // Prioritas: database profile (source of truth) → user_metadata (fallback sebelum profile ter-load)
+  const role = profile?.role || user?.user_metadata?.role || "user"
 
   return (
     <AuthContext.Provider

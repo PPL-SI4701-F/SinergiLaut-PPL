@@ -55,7 +55,7 @@ export default async function AboutPage() {
     { count: activityCount }, { data: fundingData },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("communities").select("*", { count: "exact", head: true }).eq("status", "approved"),
+    supabase.from("communities").select("*", { count: "exact", head: true }).eq("verification_status", "approved"),
     supabase.from("activities").select("*", { count: "exact", head: true }),
     supabase.from("activities").select("funding_raised"),
   ])
