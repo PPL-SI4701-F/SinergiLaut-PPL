@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react"
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js"
 import type { Profile } from "@/lib/types"
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -42,23 +42,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      setUser(session?.user ?? null)
+    // Check for E2E bypass cookie
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+    };
+
+    const e2eBypassRole = getCookie('e2e-bypass-auth');
+    if (process.env.NODE_ENV === 'development' && e2eBypassRole) {
+      const mockUser = {
+        id: 'mock-user-id',
+        aud: 'authenticated',
+        role: 'authenticated',
+        email: `${e2eBypassRole}@example.com`,
+        user_metadata: { role: e2eBypassRole, full_name: 'Mock ' + e2eBypassRole }
+      } as any;
+
+      const mockProfile = {
+        id: 'mock-user-id',
+        full_name: 'Mock ' + e2eBypassRole,
+        role: e2eBypassRole,
+        volunteer_status: 'approved'
+      } as any;
+
+      setUser(mockUser);
+      setProfile(mockProfile);
+      setIsLoading(false);
+      return;
+    }
+
+    // Get initial session — set user dan profile secara atomik agar tidak ada
+    // window di mana user sudah ter-set tapi role belum tersedia dari database.
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setIsLoading(false))
-      } else {
-        setIsLoading(false)
+        await fetchProfile(session.user.id)
+        setUser(session.user)
       }
+      setIsLoading(false)
     })
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
-        setUser(session?.user ?? null)
         if (session?.user) {
           await fetchProfile(session.user.id)
+          setUser(session.user)
         } else {
+          setUser(null)
           setProfile(null)
         }
       }
@@ -73,7 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null)
   }
 
-  const role = user?.user_metadata?.role || profile?.role || "user"
+  // Prioritas: database profile (source of truth) → user_metadata (fallback sebelum profile ter-load)
+  // Hanya berikan role jika ada user yang login — tamu (guest) tidak boleh dianggap "user"
+  const role = user ? (profile?.role || user?.user_metadata?.role || "user") : null
 
   return (
     <AuthContext.Provider

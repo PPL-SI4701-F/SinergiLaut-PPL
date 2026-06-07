@@ -40,8 +40,6 @@ const publicNavLinks = [
 ];
 
 const userNavLinks = [
-  { href: "/activities", label: "Kegiatan" },
-  { href: "/community", label: "Komunitas" },
   { href: "/user/dashboard", label: "Dashboard" },
 ];
 
@@ -109,7 +107,6 @@ export function Navigation() {
   const isDashboard = pathname.includes("dashboard");
   const isDarkHeroPage = !isDashboard && (
     ["/", "/activities", "/community", "/about"].includes(pathname) ||
-    pathname.startsWith("/activities/") ||
     pathname.startsWith("/community/") ||
     pathname === "/login" ||
     pathname === "/register"

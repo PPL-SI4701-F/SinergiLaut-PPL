@@ -15,6 +15,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -64,7 +65,7 @@ import { ActivityDetailTab } from "@/components/activities/activity-detail-tab"
 export default function ActivityDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, profile, isLoading: authLoading, isVolunteerVerified } = useAuth()
+  const { user, profile, isLoading: authLoading, isVolunteerVerified, isUser } = useAuth()
   const supabase = createClient()
 
   const [activity, setActivity] = useState<Activity & {
@@ -260,14 +261,14 @@ export default function ActivityDetailPage() {
   if (isLoadingActivity) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Navigation />
+        {!isUser && <Navigation />}
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
             <p className="text-muted-foreground">Memuat data kegiatan...</p>
           </div>
         </main>
-        <Footer />
+        {!isUser && <Footer />}
       </div>
     )
   }
@@ -489,15 +490,11 @@ export default function ActivityDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation />
-      <main className="flex-1 pt-24">
+      {!isUser && <Navigation />}
+      <main className={`flex-1 ${isUser ? "" : "pt-24"}`}>
         {/* Breadcrumb / Back Button */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-          <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
-            <Link href="/activities">
-              <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Kegiatan
-            </Link>
-          </Button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
+          <BackButton fallbackHref="/activities" label="Kembali ke Daftar Kegiatan" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
@@ -1320,7 +1317,7 @@ export default function ActivityDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
+      {!isUser && <Footer />}
 
       {/* Image Lightbox */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>

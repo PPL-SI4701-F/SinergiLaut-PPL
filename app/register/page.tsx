@@ -7,6 +7,7 @@ import { register } from "@/lib/actions/auth.actions"
 import {
   Mail, Lock, User, Phone, Building, AlertCircle, Loader2,
   Check, ArrowRight, ArrowLeft, Eye, EyeOff, ShieldCheck,
+  Waves, Sparkles, CheckCircle2,
 } from "lucide-react"
 import Image from "next/image"
 
@@ -58,10 +59,8 @@ function RegisterContent() {
     if (result?.error) { setError(result.error); setIsLoading(false) }
   }
 
-  const stepLabels = ["Pilih Peran", "Isi Data", "Konfirmasi"]
-
   return (
-    <div className="sl-login" style={{ fontFamily: "var(--sl-font)" }}>
+    <div className="sl-login" style={{ fontFamily: "var(--sl-font)", justifyContent: "center", background: "var(--sl-paper-4)" }}>
       <style>{`
         .reg-card {
           background: white; border-radius: 1.5rem;
@@ -70,7 +69,9 @@ function RegisterContent() {
           animation: slideCard 0.35s ease forwards;
         }
         @keyframes slideCard { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .reg-card-title { font-size: 1.4rem; font-weight: 800; color: var(--sl-ink); margin-bottom: 0.3rem; letter-spacing: -0.02em; }
+        .reg-card-head { display: flex; align-items: center; gap: 0.875rem; margin-bottom: 0.3rem; }
+        .reg-card-icon { width: 44px; height: 44px; border-radius: 0.875rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(14,77,109,0.12), rgba(6,149,138,0.15)); }
+        .reg-card-title { font-size: 1.4rem; font-weight: 800; color: var(--sl-ink); letter-spacing: -0.02em; }
         .reg-card-subtitle { font-size: 0.875rem; color: var(--sl-body-2); margin-bottom: 1.75rem; line-height: 1.5; }
         .reg-card-subtitle span { color: var(--sl-teal); font-weight: 500; }
 
@@ -147,79 +148,8 @@ function RegisterContent() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
 
-      {/* ── Left Panel ── */}
-      <div className="sl-login-left">
-        <div
-          className="sl-login-left-bg"
-          style={{ backgroundImage: "url('/images/community-hero.jpg')" }}
-        />
-        <div className="sl-login-left-overlay" />
-
-        <svg
-          style={{ position: "absolute", right: -1, top: 0, height: "100%", width: 80, zIndex: 20 }}
-          viewBox="0 0 80 900"
-          preserveAspectRatio="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M80,0 C60,150 20,200 40,300 C60,400 80,440 60,550 C40,660 10,720 40,800 C60,850 80,880 80,900 L80,0Z" fill="#f0f7ff" />
-        </svg>
-
-        <div className="sl-login-left-content">
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "0.5rem",
-            background: "rgba(255,255,255,0.12)", backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.2)", borderRadius: "9999px",
-            padding: "0.4rem 1rem", fontSize: "0.75rem", fontWeight: 500,
-            color: "rgba(255,255,255,0.9)", marginBottom: "1.5rem", letterSpacing: "0.05em"
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#67e8f9", display: "inline-block" }} />
-            Bergabung Gratis — Mulai Hari Ini
-          </div>
-
-          <h1 className="sl-login-left-title">
-            Jadilah Bagian dari<br />
-            <span className="sl-cyan-text">Gerakan Laut Bersih</span>
-          </h1>
-
-          <p className="sl-login-left-desc">
-            Daftarkan diri Anda dan mulai berkontribusi bagi kelestarian ekosistem laut Indonesia bersama ribuan relawan peduli.
-          </p>
-
-          <ul className="reg-benefits">
-            {[
-              "Akses ke ratusan kegiatan konservasi",
-              "Pantau dampak kontribusi Anda secara real-time",
-              "Terhubung dengan komunitas & organisasi lingkungan",
-              "Terima sertifikat relawan digital",
-            ].map((b, i) => (
-              <li key={i} className="reg-benefit-item">
-                <span className="reg-benefit-check">
-                  <Check style={{ width: 11, height: 11, color: "#67e8f9" }} />
-                </span>
-                {b}
-              </li>
-            ))}
-          </ul>
-
-          <div className="sl-login-left-stats">
-            <div className="sl-login-left-stat">
-              <div className="sl-login-left-stat-val">2.4K+</div>
-              <div className="sl-login-left-stat-lbl">Relawan</div>
-            </div>
-            <div className="sl-login-left-stat">
-              <div className="sl-login-left-stat-val">180+</div>
-              <div className="sl-login-left-stat-lbl">Komunitas</div>
-            </div>
-            <div className="sl-login-left-stat">
-              <div className="sl-login-left-stat-val">560+</div>
-              <div className="sl-login-left-stat-lbl">Kegiatan</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right Panel ── */}
-      <div className="sl-login-right" style={{ width: "100%" }}>
+      {/* ── Form Panel (centered) ── */}
+      <div className="sl-login-right" style={{ background: "transparent" }}>
         <div
           className={`sl-login-right-inner${mounted ? " sl-mount-in" : ""}`}
           style={{ maxWidth: 420 }}
@@ -237,28 +167,36 @@ function RegisterContent() {
           </div>
 
           {/* Stepper */}
-          <div className="reg-stepper" style={{ paddingBottom: "1.5rem", marginBottom: "0.5rem" }}>
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="reg-step-wrap">
-                <div style={{ position: "relative" }}>
-                  <div className={`reg-step-circle ${step > s ? "done" : step === s ? "active" : "inactive"}`}>
-                    {step > s ? <Check style={{ width: 14, height: 14 }} /> : s}
+          {step > 1 && (
+            <div className="reg-stepper" style={{ paddingBottom: "1.5rem", marginBottom: "0.5rem" }}>
+              {[
+                { id: 2, label: "Isi Data", icon: Sparkles },
+                { id: 3, label: "Konfirmasi", icon: CheckCircle2 },
+              ].map(({ id: s, label, icon: Icon }, idx) => (
+                <div key={s} className="reg-step-wrap">
+                  <div style={{ position: "relative" }}>
+                    <div className={`reg-step-circle ${step > s ? "done" : step === s ? "active" : "inactive"}`}>
+                      {step > s ? <Check style={{ width: 14, height: 14 }} /> : <Icon style={{ width: 16, height: 16 }} />}
+                    </div>
+                    <span className={`reg-step-label ${step > s ? "done-label" : step === s ? "active-label" : "inactive-label"}`}>
+                      {label}
+                    </span>
                   </div>
-                  <span className={`reg-step-label ${step > s ? "done-label" : step === s ? "active-label" : "inactive-label"}`}>
-                    {stepLabels[s - 1]}
-                  </span>
+                  {idx < 1 && (
+                    <div className={`reg-step-connector ${step > s ? "done" : "inactive"}`} />
+                  )}
                 </div>
-                {s < 3 && (
-                  <div className={`reg-step-connector ${step > s ? "done" : "inactive"}`} />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* ── STEP 1: Choose Role ── */}
           {step === 1 && (
             <div className="reg-card">
-              <h2 className="reg-card-title">Bergabung dengan SinergiLaut 🌊</h2>
+              <div className="reg-card-head">
+                <div className="reg-card-icon"><Waves style={{ width: 22, height: 22, color: "#06958a" }} /></div>
+                <h2 className="reg-card-title">Bergabung dengan SinergiLaut</h2>
+              </div>
               <p className="reg-card-subtitle">Pilih bagaimana Anda ingin <span>berkontribusi</span> untuk lingkungan laut</p>
 
               <div className="reg-role-grid">
@@ -290,7 +228,10 @@ function RegisterContent() {
           {/* ── STEP 2: Account Info ── */}
           {step === 2 && (
             <div className="reg-card">
-              <h2 className="reg-card-title">Buat Akun Volunteer 🙌</h2>
+              <div className="reg-card-head">
+                <div className="reg-card-icon"><Sparkles style={{ width: 22, height: 22, color: "#06958a" }} /></div>
+                <h2 className="reg-card-title">Buat Akun Volunteer</h2>
+              </div>
               <p className="reg-card-subtitle">Isi informasi dasar untuk <span>memulai perjalanan</span> konservasi Anda</p>
 
               {error && (
@@ -392,7 +333,10 @@ function RegisterContent() {
           {/* ── STEP 3: Confirmation ── */}
           {step === 3 && (
             <div className="reg-card">
-              <h2 className="reg-card-title">Konfirmasi Data ✅</h2>
+              <div className="reg-card-head">
+                <div className="reg-card-icon"><CheckCircle2 style={{ width: 22, height: 22, color: "#06958a" }} /></div>
+                <h2 className="reg-card-title">Konfirmasi Data</h2>
+              </div>
               <p className="reg-card-subtitle">Periksa kembali informasi Anda sebelum <span>menyelesaikan pendaftaran</span></p>
 
               {error && (

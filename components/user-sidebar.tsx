@@ -8,13 +8,15 @@ import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
-  LayoutDashboard, User,
+  LayoutDashboard, User, Calendar, Users,
   LogOut, Menu, X, ChevronRight,
 } from "lucide-react"
 import { getInitials } from "@/lib/utils/helpers"
 
 const navItems = [
-  { href: "/user/dashboard", label: "Dashboard",   icon: LayoutDashboard, description: "Ringkasan aktivitas saya" },
+  { href: "/user/dashboard", label: "Dashboard Utama", icon: LayoutDashboard, description: "Ringkasan aktivitas saya" },
+  { href: "/activities",     label: "Kegiatan",    icon: Calendar,        description: "Jelajahi kegiatan konservasi" },
+  { href: "/community",      label: "Komunitas",   icon: Users,           description: "Temukan komunitas konservasi" },
   { href: "/user/profile",   label: "Profil Saya", icon: User,            description: "Edit data & verifikasi"  },
 ]
 

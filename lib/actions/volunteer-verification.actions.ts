@@ -78,8 +78,8 @@ export async function getVolunteersPendingVerification(statusFilter?: Verificati
   if (statusFilter) {
     query = query.eq("volunteer_status", statusFilter)
   } else {
-    // Show all users who have submitted (have nik filled)
-    query = query.not("nik", "is", null)
+    // Show all users who have gone through verification (status set)
+    query = query.not("volunteer_status", "is", null)
   }
 
   const { data, error } = await query.order("updated_at", { ascending: false })

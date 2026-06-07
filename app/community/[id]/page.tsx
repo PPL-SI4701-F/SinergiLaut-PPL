@@ -1,6 +1,3 @@
-"use client"
-
-import { use } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { BackButton } from "@/components/back-button"
 import {
   Users,
   MapPin,
@@ -26,71 +24,49 @@ import {
   Share2,
 } from "lucide-react"
 
-import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
-import { formatDate, calcPercentage } from "@/lib/utils/helpers"
+import { createClient } from "@/lib/supabase/server"
+import { formatDate, calcPercentage, formatCurrency } from "@/lib/utils/helpers"
 
-export default function CommunityProfilePage({
+export default async function CommunityProfilePage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = use(params)
-  const supabase = createClient()
-  const [community, setCommunity] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { id } = await params
+  const supabase = await createClient()
 
-  useEffect(() => {
-    async function fetchCommunity() {
-      setIsLoading(true)
-      const { data, error } = await supabase
-        .from("communities")
-        .select("*, activities(*)")
-        .eq("id", id)
-        .single()
-      
-      if (!error && data) {
-        setCommunity(data)
-      } else {
-        console.error(error)
-      }
-      setIsLoading(false)
-    }
-    fetchCommunity()
-  }, [id, supabase])
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount)
+  const { data: { user } } = await supabase.auth.getUser()
+  let isUser = false
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+    isUser = profile?.role === "user"
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navigation />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </main>
-        <Footer />
-      </div>
-    )
+  const { data: community, error } = await supabase
+    .from("communities")
+    .select("*, activities(*)")
+    .eq("id", id)
+    .single()
+
+  if (error) {
+    console.error(error)
   }
 
   if (!community) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Navigation />
+        {!isUser && <Navigation />}
         <main className="flex-1 flex items-center justify-center text-muted-foreground p-4 text-center">
           <div>
             <Activity className="h-10 w-10 mx-auto opacity-30 mb-2" />
             <p>Komunitas tidak ditemukan atau telah dihapus.</p>
           </div>
         </main>
-        <Footer />
+        {!isUser && <Footer />}
       </div>
     )
   }
@@ -107,9 +83,16 @@ export default function CommunityProfilePage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation />
+      {!isUser && <Navigation />}
 
-      <main className="flex-1 pt-16">
+      <main className={`flex-1 ${isUser ? "" : "pt-16"}`}>
+        <div className="relative z-[60] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
+          <BackButton
+            fallbackHref={isUser ? "/community" : "/"}
+            label={isUser ? "Kembali ke Daftar Komunitas" : "Kembali ke Beranda"}
+          />
+        </div>
+
         {/* Cover Image */}
         <section className="relative h-64 md:h-80 bg-secondary">
           {coverImage && (
@@ -428,7 +411,7 @@ export default function CommunityProfilePage({
         </section>
       </main>
 
-      <Footer />
+      {!isUser && <Footer />}
     </div>
   )
 }

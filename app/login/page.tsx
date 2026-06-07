@@ -83,20 +83,7 @@ function LoginContent() {
             Bergabunglah dengan ribuan relawan dan komunitas yang peduli terhadap kelestarian ekosistem laut Nusantara.
           </p>
 
-          <div className="sl-login-left-stats">
-            <div className="sl-login-left-stat">
-              <div className="sl-login-left-stat-val">2.4K+</div>
-              <div className="sl-login-left-stat-lbl">Relawan</div>
-            </div>
-            <div className="sl-login-left-stat">
-              <div className="sl-login-left-stat-val">180+</div>
-              <div className="sl-login-left-stat-lbl">Komunitas</div>
-            </div>
-            <div className="sl-login-left-stat">
-              <div className="sl-login-left-stat-val">560+</div>
-              <div className="sl-login-left-stat-lbl">Kegiatan</div>
-            </div>
-          </div>
+
         </div>
 
         <div style={{

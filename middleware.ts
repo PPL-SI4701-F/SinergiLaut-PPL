@@ -32,9 +32,25 @@ export async function middleware(request: NextRequest) {
 
   // Jangan tulis kode antara createServerClient dan auth.getUser()
   // Jika tidak, bug yang sangat sulit di-debug bisa terjadi
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  const e2eCookie = request.cookies.get('e2e-bypass-auth')
+  if (process.env.NODE_ENV === 'development' && e2eCookie) {
+    user = {
+      id: 'mock-user-id',
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: `${e2eCookie.value}@example.com`,
+      user_metadata: { role: e2eCookie.value, full_name: 'Mock ' + e2eCookie.value }
+    } as any
+  } else {
+    try {
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+    } catch {
+      // ignore
+    }
+  }
+
 
   // Daftar route yang membutuhkan autentikasi
   const protectedRoutes = ['/dashboard', '/admin', '/profile', '/community/dashboard', '/user/dashboard']
@@ -52,7 +68,14 @@ export async function middleware(request: NextRequest) {
 
   // Jika user login, jalankan logic RBAC (Role-Based Access Control)
   if (user) {
-    const role = user.user_metadata?.role || 'user'
+    // Baca role dari database (source of truth) agar konsisten dengan auth-context.
+    // user_metadata hanya dipakai sebagai fallback jika query database gagal.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+    const role = profile?.role || user.user_metadata?.role || 'user'
     const pathname = request.nextUrl.pathname
 
     // 1. Redirect /dashboard ke dashboard masing-masing role
@@ -86,8 +109,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect ke dashboard jika sudah login dan mengakses halaman auth
-  const authRoutes = ['/login', '/register', '/forgot-password']
+  // Redirect ke dashboard jika sudah login dan mengakses halaman auth atau registrasi komunitas
+  const authRoutes = ['/login', '/register', '/forgot-password', '/community/register']
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   )

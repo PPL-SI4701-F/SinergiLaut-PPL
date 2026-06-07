@@ -6,6 +6,17 @@
  */
 
 import { createClient } from "@/lib/supabase/server"
+import { cookies } from "next/headers"
+
+async function getE2EMock() {
+  if (process.env.NODE_ENV !== 'development') return null
+  try {
+    const cookieStore = await cookies()
+    return cookieStore.get('e2e-bypass-auth')?.value || null
+  } catch {
+    return null
+  }
+}
 
 export interface SubmitFeedbackPayload {
   activityId: string
@@ -20,6 +31,11 @@ export interface SubmitFeedbackPayload {
  * userId diambil dari server session — tidak bisa dimanipulasi client (cegah IDOR).
  */
 export async function submitFeedback(payload: SubmitFeedbackPayload) {
+  const isE2E = await getE2EMock()
+  if (isE2E) {
+    return { success: true, data: { id: "fb-new", rating: payload.rating, comment: payload.comment } }
+  }
+
   const supabase = await createClient()
 
   // Ambil userId dari server session — tidak bisa dimanipulasi oleh client
@@ -81,6 +97,11 @@ export async function submitFeedback(payload: SubmitFeedbackPayload) {
  * userId diambil dari session server — tidak dari parameter client.
  */
 export async function getMyFeedback(activityId: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) {
+    return { id: "fb-1", rating: 5, comment: "Kegiatan yang sangat bermanfaat!" }
+  }
+
   const supabase = await createClient()
 
   // Ambil userId dari server session
