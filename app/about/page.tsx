@@ -21,9 +21,12 @@ const iconMap: Record<string, React.ElementType> = {
 }
 
 const teamMembers = [
-  { name: "Dr. Arif Wicaksono", role: "Founder & CEO",           image: "/images/testimonial-1.jpg", bio: "Ahli biologi kelautan dengan 15 tahun pengalaman konservasi pesisir." },
-  { name: "Sari Puspita",       role: "Head of Community",        image: "/images/testimonial-2.jpg", bio: "Spesialis pemberdayaan komunitas pesisir di seluruh Indonesia." },
-  { name: "Reza Mahendra",      role: "Chief Technology Officer", image: "/images/testimonial-3.jpg", bio: "Engineer berpengalaman di bidang platform sosial dan lingkungan." },
+  { name: "Muhamad Habibi Budiman",         role: "Founder & CEO (Chief Executive Officer)", image: "/images/team/muhamad-habibi-budiman.png", bio: "Menjadi pemimpin utama yang menentukan visi, misi, dan strategi keseluruhan tim. Mengambil keputusan strategis untuk arah tim." },
+  { name: "Muhammad Alvin Zufar Saputra",   role: "Chief Technology Officer (CTO)",          image: "/images/team/muhammad-alvin-zufar-saputra.png", bio: "Bertanggung jawab atas segala kebutuhan teknologi, pembuatan website, aplikasi, atau platform lingkungan yang akan digunakan tim." },
+  { name: "Raihan Tri Darma",               role: "Head of Community",                       image: "/images/team/raihan-tri-darma.png", bio: "Fokus pada hubungan masyarakat, kemitraan, dan pemberdayaan komunitas target. Menjadi jembatan antara tim dan masyarakat." },
+  { name: "Keysha Aulia Putri",             role: "Chief Operating Officer (COO)",           image: "/images/team/keysha-aulia-putri.png", bio: "Mengatur operasional harian tim, memastikan semua program berjalan lancar, dan mengawasi manajemen proyek internal." },
+  { name: "Auliarahma Yasifaputri Prasetio",role: "Chief Marketing Officer (CMO)",           image: "/images/team/auliarahma-yasifaputri-prasetio.png", bio: "Mengurus strategi promosi, kampanye media sosial, desain konten, dan branding proyek untuk menyebarkan awareness kepada publik." },
+  { name: "Adilio Adaha Putra",             role: "Chief Financial Officer (CFO)",           image: "/images/team/adilio-adaha-putra.png", bio: "Mengelola pendanaan, menyusun anggaran pengeluaran, dan mengatur transparansi keuangan proyek tim." },
 ]
 
 const values = [
@@ -241,7 +244,7 @@ export default async function AboutPage() {
                 Setiap tonggak perjalanan SinergiLaut adalah bukti nyata kekuatan kolaborasi untuk laut Indonesia.
               </p>
             </div>
-            <div className="about-timeline" style={{ paddingLeft: "1.5rem" }}>
+            <div className="about-timeline">
               <div className="about-timeline-line" />
               <div className="about-timeline-items">
                 {milestones.map((m) => {
@@ -277,7 +280,7 @@ export default async function AboutPage() {
                 Tim yang berdedikasi membangun SinergiLaut untuk masa depan laut Indonesia.
               </p>
             </div>
-            <div className="about-team-grid" style={{ maxWidth: 900, margin: "0 auto" }}>
+            <div className="about-team-grid" style={{ maxWidth: 1100, margin: "0 auto" }}>
               {teamMembers.map((member) => (
                 <div key={member.name} className="about-team-card">
                   <div className="about-team-avatar">
