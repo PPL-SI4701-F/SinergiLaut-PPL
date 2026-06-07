@@ -492,7 +492,7 @@ export default function ActivityDetailPage() {
       <Navigation />
       <main className="flex-1 pt-24">
         {/* Breadcrumb / Back Button */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
           <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
             <Link href="/activities">
               <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Kegiatan
