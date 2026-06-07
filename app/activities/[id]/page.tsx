@@ -15,6 +15,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { BackButton } from "@/components/back-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -493,11 +494,7 @@ export default function ActivityDetailPage() {
       <main className={`flex-1 ${isUser ? "" : "pt-24"}`}>
         {/* Breadcrumb / Back Button */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
-          <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
-            <Link href="/activities">
-              <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Kegiatan
-            </Link>
-          </Button>
+          <BackButton fallbackHref="/activities" label="Kembali ke Daftar Kegiatan" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">

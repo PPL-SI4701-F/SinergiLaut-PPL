@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { BackButton } from "@/components/back-button"
 import {
   Users,
   MapPin,
@@ -20,7 +21,6 @@ import {
   Heart,
   Activity,
   ArrowRight,
-  ArrowLeft,
   Share2,
 } from "lucide-react"
 
@@ -86,15 +86,12 @@ export default async function CommunityProfilePage({
       {!isUser && <Navigation />}
 
       <main className={`flex-1 ${isUser ? "" : "pt-16"}`}>
-        {isUser && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
-            <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
-              <Link href="/community">
-                <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Komunitas
-              </Link>
-            </Button>
-          </div>
-        )}
+        <div className="relative z-[60] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
+          <BackButton
+            fallbackHref={isUser ? "/community" : "/"}
+            label={isUser ? "Kembali ke Daftar Komunitas" : "Kembali ke Beranda"}
+          />
+        </div>
 
         {/* Cover Image */}
         <section className="relative h-64 md:h-80 bg-secondary">

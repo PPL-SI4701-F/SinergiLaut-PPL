@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import {
   Building2,
@@ -238,8 +237,16 @@ export default function CommunityRegisterPage() {
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="pt-20">
+        <div className="border-b border-border bg-background">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link href="/register">
+                <ArrowLeft className="w-4 h-4" /> Kembali ke Bergabung dengan SinergiLaut
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <main>
           <div className="max-w-2xl mx-auto px-4 py-16">
             <Card className="border-0 shadow-xl">
               <CardContent className="p-8 text-center">
@@ -324,10 +331,18 @@ export default function CommunityRegisterPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+      <div className="border-b border-border bg-background relative z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            <Link href="/register">
+              <ArrowLeft className="w-4 h-4" /> Kembali ke Bergabung dengan SinergiLaut
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden">
+      <section className="relative pb-16 overflow-hidden">
         <div className="absolute inset-0">
           <Image
             src="/images/community-register-hero.jpg"
@@ -359,46 +374,44 @@ export default function CommunityRegisterPage() {
         <div className="max-w-4xl mx-auto px-4">
           {/* Progress Indicator */}
           <div className="mb-12">
-            <div className="flex items-center justify-between relative">
-              {/* Progress Line */}
-              <div className="absolute top-6 left-0 right-0 h-0.5 bg-border hidden sm:block" />
-              <div
-                className="absolute top-6 left-0 h-0.5 bg-primary transition-all duration-300 hidden sm:block"
-                style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
-              />
-
+            <style>{`
+              .creg-stepper { display: flex; align-items: center; justify-content: center; gap: 0; }
+              .creg-step-wrap { display: flex; align-items: center; }
+              .creg-step-circle {
+                width: 48px; height: 48px; border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                transition: all 0.3s ease; position: relative; z-index: 1;
+              }
+              .creg-step-circle.active   { background: linear-gradient(135deg, #0e4d6d, #06958a); color: white; box-shadow: 0 4px 12px rgba(6,149,138,0.35); transform: scale(1.1); }
+              .creg-step-circle.done     { background: #06958a; color: white; }
+              .creg-step-circle.inactive { background: white; color: #94a3b8; border: 2px solid #e2e8f0; }
+              .creg-step-label { margin-top: 0.5rem; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; display: none; }
+              @media (min-width: 640px) { .creg-step-label { display: block; } }
+              .creg-step-label.active-label   { color: #0e4d6d; }
+              .creg-step-label.done-label     { color: #06958a; }
+              .creg-step-label.inactive-label { color: #94a3b8; }
+              .creg-step-connector { height: 2px; width: 56px; transition: background 0.3s ease; margin: 0 4px; }
+              .creg-step-connector.done     { background: #06958a; }
+              .creg-step-connector.inactive { background: #e2e8f0; }
+            `}</style>
+            <div className="creg-stepper">
               {steps.map((step) => {
                 const Icon = step.icon
                 const isActive = step.id === currentStep
                 const isCompleted = step.id < currentStep
+                const state = isCompleted ? "done" : isActive ? "active" : "inactive"
 
                 return (
-                  <div
-                    key={step.id}
-                    className="flex flex-col items-center relative z-10"
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-lg scale-110"
-                          : isCompleted
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-card text-muted-foreground border-2 border-border"
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-6 h-6" />
-                      ) : (
-                        <Icon className="w-5 h-5" />
-                      )}
+                  <div key={step.id} className="creg-step-wrap">
+                    <div className="flex flex-col items-center">
+                      <div className={`creg-step-circle ${state}`}>
+                        {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <Icon className="w-5 h-5" />}
+                      </div>
+                      <span className={`creg-step-label ${state}-label`}>{step.title}</span>
                     </div>
-                    <span
-                      className={`mt-2 text-xs font-medium hidden sm:block ${
-                        isActive ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
-                      }`}
-                    >
-                      {step.title}
-                    </span>
+                    {step.id < steps.length && (
+                      <div className={`creg-step-connector ${isCompleted ? "done" : "inactive"}`} />
+                    )}
                   </div>
                 )
               })}
