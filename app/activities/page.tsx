@@ -5,6 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
+import { UserSidebar } from "@/components/user-sidebar"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Search, Calendar, MapPin, Users, Filter, ChevronDown, Leaf,
   Banknote, Sparkles, CheckCircle, Target, Heart, Globe,
@@ -106,76 +108,7 @@ function ActivityCard({ activity, variant }: { activity: any; variant: 'active' 
   )
 }
 
-export default function ActivitiesPage() {
-  const [searchQuery, setSearchQuery]           = useState("")
-  const [selectedLocation, setSelectedLocation] = useState("All Locations")
-  const [selectedType, setSelectedType]         = useState("All Types")
-  const [locationOpen, setLocationOpen]         = useState(false)
-  const [typeOpen, setTypeOpen]                 = useState(false)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [supabaseActivities, setSupabaseActivities] = useState<any[]>([])
-  const [availableLocations, setAvailableLocations] = useState<string[]>([])
-  const [availableTypes, setAvailableTypes]         = useState<string[]>([])
-
-  useEffect(() => {
-    async function fetchActivities() {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from("activities")
-        .select(`*, community:communities(name)`)
-        .in("status", ["published", "completed"])
-        .order("created_at", { ascending: false })
-
-      if (data) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapped = data.map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          description: d.description,
-          image: d.cover_image_url || "/images/placeholder.jpg",
-          date: formatDate(d.start_date || new Date().toISOString()),
-          location: d.location || "Online",
-          type: d.category || "other",
-          volunteers: d.volunteer_count || 0,
-          slots: d.volunteer_quota || 0,
-          icon: Leaf,
-          fundingGoal: d.funding_goal || 0,
-          fundingRaised: d.funding_raised || 0,
-          status: d.status,
-        }))
-        setSupabaseActivities(mapped)
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const locs = Array.from(new Set(data.map((d: any) => d.location).filter(Boolean))).sort() as string[]
-        setAvailableLocations(locs)
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const types = Array.from(new Set(data.map((d: any) => d.category || "other"))) as string[]
-        setAvailableTypes(types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).sort())
-      }
-    }
-    fetchActivities()
-  }, [])
-
-  const locations       = ["All Locations", ...availableLocations]
-  const typeOptions     = ["All Types", ...availableTypes]
-
-  const filteredActivities = supabaseActivities.filter((activity) => {
-    const matchesSearch   = (activity.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            (activity.description || "").toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesLocation = selectedLocation === "All Locations" ||
-                            (activity.location || "").toLowerCase() === selectedLocation.toLowerCase()
-    const matchesType     = selectedType === "All Types" ||
-                            (activity.type || "").toLowerCase() === selectedType.toLowerCase()
-    return matchesSearch && matchesLocation && matchesType
-  })
-
-  const activeActivities = filteredActivities.filter(a => a.status === "published")
-  const completedActivities = filteredActivities.filter(a => a.status === "completed")
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "'Inter', sans-serif" }}>
-      <style>{`
+const activitiesPageStyles = `
         /* ── Hero ── */
         .act-hero { position:relative; min-height:80vh; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow:hidden; padding:6rem 1.5rem 5rem; text-align:center; }
         .act-hero-bg { position:absolute; inset:0; background-image:url('/images/donate-hero.jpg'); background-size:cover; background-position:center 40%; }
@@ -279,7 +212,215 @@ export default function ActivitiesPage() {
         .act-how-step { font-size:3rem; font-weight:900; letter-spacing:-0.05em; background:linear-gradient(135deg,#0e4d6d,#06958a); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1; margin-bottom:1rem; opacity:0.5; }
         .act-how-title { font-size:1.0625rem; font-weight:700; color:#0e2a3a; margin-bottom:0.5rem; }
         .act-how-desc { font-size:0.875rem; color:#64748b; line-height:1.65; }
-      `}</style>
+
+        /* ── Sidebar (user role) variant ── */
+        .act-user-search-wrapper { position:relative; padding:0 1.5rem; margin: 0 0 2rem; }
+        .act-user-search-wrapper .act-search-bar { margin: 0; }
+`
+
+export default function ActivitiesPage() {
+  const { isUser } = useAuth()
+  const [searchQuery, setSearchQuery]           = useState("")
+  const [selectedLocation, setSelectedLocation] = useState("All Locations")
+  const [selectedType, setSelectedType]         = useState("All Types")
+  const [locationOpen, setLocationOpen]         = useState(false)
+  const [typeOpen, setTypeOpen]                 = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [supabaseActivities, setSupabaseActivities] = useState<any[]>([])
+  const [availableLocations, setAvailableLocations] = useState<string[]>([])
+  const [availableTypes, setAvailableTypes]         = useState<string[]>([])
+
+  useEffect(() => {
+    async function fetchActivities() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from("activities")
+        .select(`*, community:communities(name)`)
+        .in("status", ["published", "completed"])
+        .order("created_at", { ascending: false })
+
+      if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped = data.map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          image: d.cover_image_url || "/images/placeholder.jpg",
+          date: formatDate(d.start_date || new Date().toISOString()),
+          location: d.location || "Online",
+          type: d.category || "other",
+          volunteers: d.volunteer_count || 0,
+          slots: d.volunteer_quota || 0,
+          icon: Leaf,
+          fundingGoal: d.funding_goal || 0,
+          fundingRaised: d.funding_raised || 0,
+          status: d.status,
+        }))
+        setSupabaseActivities(mapped)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const locs = Array.from(new Set(data.map((d: any) => d.location).filter(Boolean))).sort() as string[]
+        setAvailableLocations(locs)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const types = Array.from(new Set(data.map((d: any) => d.category || "other"))) as string[]
+        setAvailableTypes(types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).sort())
+      }
+    }
+    fetchActivities()
+  }, [])
+
+  const locations       = ["All Locations", ...availableLocations]
+  const typeOptions     = ["All Types", ...availableTypes]
+
+  const filteredActivities = supabaseActivities.filter((activity) => {
+    const matchesSearch   = (activity.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (activity.description || "").toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesLocation = selectedLocation === "All Locations" ||
+                            (activity.location || "").toLowerCase() === selectedLocation.toLowerCase()
+    const matchesType     = selectedType === "All Types" ||
+                            (activity.type || "").toLowerCase() === selectedType.toLowerCase()
+    return matchesSearch && matchesLocation && matchesType
+  })
+
+  const activeActivities = filteredActivities.filter(a => a.status === "published")
+  const completedActivities = filteredActivities.filter(a => a.status === "completed")
+
+  // ── Search & filter bar (shared between marketing and dashboard layouts) ──
+  const searchBar = (
+    <section className="act-search-bar">
+      <div className="act-search-inner">
+        <div className="act-search-input-wrap">
+          <Search className="act-search-icon" style={{ width: 18, height: 18 }} />
+          <input
+            type="text"
+            placeholder="Cari kegiatan konservasi..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="act-search-input"
+          />
+        </div>
+
+        {/* Location dropdown */}
+        <div className="act-dropdown-wrap">
+          <button className="act-dropdown-btn" onClick={() => { setLocationOpen(!locationOpen); setTypeOpen(false) }}>
+            <MapPin style={{ width: 15, height: 15 }} />
+            {selectedLocation}
+            <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
+          </button>
+          {locationOpen && (
+            <div className="act-dropdown-menu">
+              {locations.map((loc) => (
+                <button key={loc} className="act-dropdown-item" onClick={() => { setSelectedLocation(loc); setLocationOpen(false) }}>
+                  {loc}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Type dropdown */}
+        <div className="act-dropdown-wrap">
+          <button className="act-dropdown-btn" onClick={() => { setTypeOpen(!typeOpen); setLocationOpen(false) }}>
+            <Filter style={{ width: 15, height: 15 }} />
+            {selectedType}
+            <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
+          </button>
+          {typeOpen && (
+            <div className="act-dropdown-menu">
+              {typeOptions.map((t) => (
+                <button key={t} className="act-dropdown-item" onClick={() => { setSelectedType(t); setTypeOpen(false) }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {filteredActivities.length > 0 && (selectedLocation !== "All Locations" || selectedType !== "All Types" || searchQuery !== "") && (
+          <span className="act-results-count">{filteredActivities.length} kegiatan ditemukan</span>
+        )}
+      </div>
+    </section>
+  )
+
+  // ── Activity listing grid (shared between marketing and dashboard layouts) ──
+  const activityListing = (
+    <section className="act-section">
+      <div className="act-container">
+        {activeActivities.length === 0 && completedActivities.length === 0 ? (
+          <div className="act-empty">
+            <div className="act-empty-icon">
+              <Search style={{ width: 32, height: 32, color: "#06958a" }} />
+            </div>
+            <h3 className="act-empty-title">Tidak ada kegiatan ditemukan</h3>
+            <p className="act-empty-desc">Coba ubah kata kunci, lokasi, atau tipe kegiatan yang kamu cari.</p>
+          </div>
+        ) : (
+          <>
+            {activeActivities.length > 0 && (
+              <div className="mb-16">
+                <div className="act-group-header">
+                  <div className="act-group-title">
+                    <Sparkles className="text-primary h-6 w-6" />
+                    Kegiatan Aktif
+                    <span className="act-group-count">{activeActivities.length}</span>
+                  </div>
+                </div>
+                <div className="act-grid">
+                  {activeActivities.map(a => <ActivityCard key={a.id} activity={a} variant="active" />)}
+                </div>
+              </div>
+            )}
+            {completedActivities.length > 0 && (
+              <div>
+                <div className="act-group-header">
+                  <div className="act-group-title">
+                    <CheckCircle className="text-muted-foreground h-6 w-6" />
+                    Kegiatan Selesai
+                    <span className="act-group-count">{completedActivities.length}</span>
+                  </div>
+                </div>
+                <div className="act-grid opacity-85">
+                  {completedActivities.map(a => <ActivityCard key={a.id} activity={a} variant="completed" />)}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  )
+
+  // ── Dashboard-style layout for the "pengguna" (user) role ──
+  if (isUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#f8fafc] to-[#eff6ff] flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <style>{activitiesPageStyles}</style>
+        <UserSidebar />
+        <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+          <main className="flex-1">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 md:pt-10 pb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Kegiatan Konservasi Laut</h1>
+              <p className="text-muted-foreground mt-1">
+                Temukan peluang menjadi relawan atau dukung kegiatan konservasi laut yang sedang berlangsung.
+              </p>
+            </div>
+
+            <div className="act-user-search-wrapper" id="kegiatan-list">
+              {searchBar}
+            </div>
+
+            {activityListing}
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: "'Inter', sans-serif" }}>
+      <style>{activitiesPageStyles}</style>
 
       <Navigation />
       <main style={{ flex: 1 }}>
@@ -310,107 +451,11 @@ export default function ActivitiesPage() {
 
         {/* ── SEARCH & FILTER BAR ── */}
         <div className="act-search-wrapper" id="kegiatan-list">
-          <section className="act-search-bar">
-            <div className="act-search-inner">
-              <div className="act-search-input-wrap">
-                <Search className="act-search-icon" style={{ width: 18, height: 18 }} />
-                <input
-                  type="text"
-                  placeholder="Cari kegiatan konservasi..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="act-search-input"
-                />
-              </div>
-
-              {/* Location dropdown */}
-              <div className="act-dropdown-wrap">
-                <button className="act-dropdown-btn" onClick={() => { setLocationOpen(!locationOpen); setTypeOpen(false) }}>
-                  <MapPin style={{ width: 15, height: 15 }} />
-                  {selectedLocation}
-                  <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
-                </button>
-                {locationOpen && (
-                  <div className="act-dropdown-menu">
-                    {locations.map((loc) => (
-                      <button key={loc} className="act-dropdown-item" onClick={() => { setSelectedLocation(loc); setLocationOpen(false) }}>
-                        {loc}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Type dropdown */}
-              <div className="act-dropdown-wrap">
-                <button className="act-dropdown-btn" onClick={() => { setTypeOpen(!typeOpen); setLocationOpen(false) }}>
-                  <Filter style={{ width: 15, height: 15 }} />
-                  {selectedType}
-                  <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
-                </button>
-                {typeOpen && (
-                  <div className="act-dropdown-menu">
-                    {typeOptions.map((t) => (
-                      <button key={t} className="act-dropdown-item" onClick={() => { setSelectedType(t); setTypeOpen(false) }}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {filteredActivities.length > 0 && (selectedLocation !== "All Locations" || selectedType !== "All Types" || searchQuery !== "") && (
-                <span className="act-results-count">{filteredActivities.length} kegiatan ditemukan</span>
-              )}
-            </div>
-          </section>
+          {searchBar}
         </div>
 
         {/* ── ACTIVITY LIST SECTIONS ── */}
-        <section className="act-section">
-          <div className="act-container">
-            {activeActivities.length === 0 && completedActivities.length === 0 ? (
-              <div className="act-empty">
-                <div className="act-empty-icon">
-                  <Search style={{ width: 32, height: 32, color: "#06958a" }} />
-                </div>
-                <h3 className="act-empty-title">Tidak ada kegiatan ditemukan</h3>
-                <p className="act-empty-desc">Coba ubah kata kunci, lokasi, atau tipe kegiatan yang kamu cari.</p>
-              </div>
-            ) : (
-              <>
-                {activeActivities.length > 0 && (
-                  <div className="mb-16">
-                    <div className="act-group-header">
-                      <div className="act-group-title">
-                        <Sparkles className="text-primary h-6 w-6" />
-                        Kegiatan Aktif
-                        <span className="act-group-count">{activeActivities.length}</span>
-                      </div>
-                    </div>
-                    <div className="act-grid">
-                      {activeActivities.map(a => <ActivityCard key={a.id} activity={a} variant="active" />)}
-                    </div>
-                  </div>
-                )}
-                {completedActivities.length > 0 && (
-                  <div>
-                    <div className="act-group-header">
-                      <div className="act-group-title">
-                        <CheckCircle className="text-muted-foreground h-6 w-6" />
-                        Kegiatan Selesai
-                        <span className="act-group-count">{completedActivities.length}</span>
-                      </div>
-                    </div>
-                    <div className="act-grid opacity-85">
-                      {completedActivities.map(a => <ActivityCard key={a.id} activity={a} variant="completed" />)}
-                    </div>
-                  </div>
-                )}
-              </>
-            )
-          }</div>
-        </section>
+        {activityListing}
 
         {/* ── PILLARS ── */}
         <section className="act-section-alt">

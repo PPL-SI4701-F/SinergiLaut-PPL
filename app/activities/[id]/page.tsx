@@ -64,7 +64,7 @@ import { ActivityDetailTab } from "@/components/activities/activity-detail-tab"
 export default function ActivityDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, profile, isLoading: authLoading, isVolunteerVerified } = useAuth()
+  const { user, profile, isLoading: authLoading, isVolunteerVerified, isUser } = useAuth()
   const supabase = createClient()
 
   const [activity, setActivity] = useState<Activity & {
@@ -260,14 +260,14 @@ export default function ActivityDetailPage() {
   if (isLoadingActivity) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Navigation />
+        {!isUser && <Navigation />}
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
             <p className="text-muted-foreground">Memuat data kegiatan...</p>
           </div>
         </main>
-        <Footer />
+        {!isUser && <Footer />}
       </div>
     )
   }
@@ -489,8 +489,8 @@ export default function ActivityDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation />
-      <main className="flex-1 pt-24">
+      {!isUser && <Navigation />}
+      <main className={`flex-1 ${isUser ? "" : "pt-24"}`}>
         {/* Breadcrumb / Back Button */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-4">
           <Button variant="outline" size="sm" className="gap-2 text-foreground hover:bg-secondary" asChild>
@@ -1320,7 +1320,7 @@ export default function ActivityDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <Footer />
+      {!isUser && <Footer />}
 
       {/* Image Lightbox */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
