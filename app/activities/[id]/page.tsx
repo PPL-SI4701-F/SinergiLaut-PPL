@@ -31,6 +31,7 @@ import { formatCurrency, calcPercentage, formatDate } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { createClient } from "@/lib/supabase/client"
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 import { registerVolunteer } from "@/lib/actions/volunteer.actions"
 import {
   createMoneyDonation,
@@ -197,10 +198,10 @@ export default function ActivityDetailPage() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "activities", filter: `id=eq.${params.id}` },
-        (payload) => {
-          const raised = payload.new?.funding_raised
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          const raised = (payload.new as Record<string, unknown>)?.funding_raised
           if (raised !== undefined) {
-            setActivity(prev => prev ? { ...prev, funding_raised: raised } : prev)
+            setActivity(prev => prev ? { ...prev, funding_raised: raised as number } : prev)
           }
         }
       )
