@@ -99,6 +99,24 @@ export default function MapPicker({ lat, lng, onChange, defaultCenter = [106.816
     map.addControl(geocoder, "top-right")
     map.addControl(new maplibregl.NavigationControl(), "top-right")
 
+    // Picking a search result should drop the pin too, not just fly the map there
+    geocoder.on("result", (e: any) => {
+      const center = e?.result?.center
+      if (Array.isArray(center) && center.length === 2) {
+        const [resultLng, resultLat] = center
+        onChange(resultLat, resultLng)
+      }
+    })
+
+    // Geocoder renders a plain <input>; pressing Enter there would otherwise
+    // trigger implicit submission of the surrounding activity form.
+    const handleSearchKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.target as HTMLElement)?.tagName === "INPUT") {
+        e.preventDefault()
+      }
+    }
+    mapContainerRef.current.addEventListener("keydown", handleSearchKeyDown)
+
     // Handle map click to place pin
     map.on("click", (e) => {
       const { lng: clickLng, lat: clickLat } = e.lngLat
@@ -107,7 +125,10 @@ export default function MapPicker({ lat, lng, onChange, defaultCenter = [106.816
 
     mapRef.current = map
 
-    return () => map.remove()
+    return () => {
+      mapContainerRef.current?.removeEventListener("keydown", handleSearchKeyDown)
+      map.remove()
+    }
   }, [])
 
   // Sync marker position when lat/lng props change

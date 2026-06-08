@@ -23,25 +23,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isAuthReady, setIsAuthReady] = useState(false)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
   const supabase = useMemo(() => createClient(), [])
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single()
-    if (!error && data) {
-      setProfile(data as Profile)
-    } else {
-      setProfile(null)
+      .maybeSingle()
+
+    if (error) {
+      console.error("[AuthProvider] Gagal memuat profile:", error)
+      return null
     }
+
+    return (data as Profile | null) ?? null
   }, [supabase])
 
   const refreshProfile = useCallback(async () => {
-    if (user) await fetchProfile(user.id)
-  }, [user, fetchProfile])
+    if (!user) {
+      setProfile(null)
+      return
+    }
+
+    const nextProfile = await loadProfile(user.id)
+    setProfile(nextProfile)
+  }, [user, loadProfile])
 
   useEffect(() => {
     // Check for E2E bypass cookie
@@ -70,50 +79,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(mockUser);
       setProfile(mockProfile);
-      setIsLoading(false);
+      setIsAuthReady(true);
+      setIsProfileLoading(false);
       return;
     }
 
     // Get initial session — set user dan profile secara atomik agar tidak ada
     // window di mana user sudah ter-set tapi role belum tersedia dari database.
-    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
-      try {
-        if (session?.user) {
-          setUser(session.user)
-          await fetchProfile(session.user.id)
-        } else {
-          setUser(null)
-          setProfile(null)
-        }
-      } finally {
-        setIsLoading(false)
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+      if (session?.user) {
+        setUser(session.user)
+      } else {
+        setUser(null)
+        setProfile(null)
       }
     }).catch(() => {
       setUser(null)
       setProfile(null)
-      setIsLoading(false)
+    }).finally(() => {
+      setIsAuthReady(true)
     })
 
     // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
-        setIsLoading(true)
-        try {
-          if (session?.user) {
-            setUser(session.user)
-            await fetchProfile(session.user.id)
-          } else {
-            setUser(null)
-            setProfile(null)
-          }
-        } finally {
-          setIsLoading(false)
+      (_event: AuthChangeEvent, session: Session | null) => {
+        if (session?.user) {
+          setUser(session.user)
+        } else {
+          setUser(null)
+          setProfile(null)
         }
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase, fetchProfile])
+  }, [supabase])
+
+  useEffect(() => {
+    if (!isAuthReady) return
+
+    if (!user?.id) {
+      setProfile(null)
+      setIsProfileLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setIsProfileLoading(true)
+
+    loadProfile(user.id)
+      .then((nextProfile) => {
+        if (!cancelled) setProfile(nextProfile)
+      })
+      .catch((error) => {
+        console.error("[AuthProvider] Error saat memuat profile:", error)
+        if (!cancelled) setProfile(null)
+      })
+      .finally(() => {
+        if (!cancelled) setIsProfileLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthReady, user?.id, loadProfile])
 
   const signOut = async () => {
     await supabase.auth.signOut()
@@ -121,9 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null)
   }
 
-  // Prioritas: database profile (source of truth) → user_metadata (fallback sebelum profile ter-load)
-  // Hanya berikan role jika ada user yang login — tamu (guest) tidak boleh dianggap "user"
-  const role = user ? (profile?.role || user?.user_metadata?.role || "user") : null
+  // Role hanya berasal dari profile database agar konsisten dengan server guard.
+  const isLoading = !isAuthReady || isProfileLoading
+  const role = user ? (profile?.role ?? null) : null
 
   return (
     <AuthContext.Provider

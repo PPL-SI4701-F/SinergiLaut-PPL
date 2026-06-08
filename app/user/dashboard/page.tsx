@@ -22,7 +22,7 @@ export default async function UserDashboardPage() {
 
   if (isE2E) {
     userId = "e2e-user-id"
-    profile = { full_name: "Mock User", role: "user", volunteer_status: "approved" }
+    profile = { full_name: "Mock User", role: "user", volunteer_status: "approved", nik: "1234567890123456", volunteer_reject_note: null }
     stats = { totalActivities: 1, activeActivities: 1, totalDonations: 0 }
     const volunteersResult = await getMyVolunteerRegistrations(userId)
     volunteers = volunteersResult.data ?? []
@@ -34,11 +34,28 @@ export default async function UserDashboardPage() {
 
     userId = session.user.id
 
-    const { data: prof } = await supabase
+    const { data: prof, error: profileError } = await supabase
       .from("profiles")
-      .select("full_name, role, volunteer_status")
+      .select("full_name, role, volunteer_status, nik, volunteer_reject_note")
       .eq("id", userId)
-      .single()
+      .maybeSingle()
+
+    if (profileError || !prof) {
+      redirect("/unauthorized")
+    }
+
+    if (prof.role === "admin") {
+      redirect("/admin/dashboard")
+    }
+
+    if (prof.role === "community") {
+      redirect("/community/dashboard")
+    }
+
+    if (prof.role !== "user") {
+      redirect("/unauthorized")
+    }
+
     profile = prof
 
     const [s, volunteersResult, donationsResult] = await Promise.all([
@@ -52,6 +69,51 @@ export default async function UserDashboardPage() {
   }
 
   const firstName  = profile?.full_name?.split(" ")[0] ?? "Pengguna"
+  const volunteerStatus = profile?.volunteer_status ?? "pending"
+  const hasSubmittedVolunteerData = Boolean(profile?.nik)
+  const volunteerStatusView =
+    volunteerStatus === "approved"
+      ? {
+          title: "Relawan Terverifikasi",
+          description: "Akun Anda sudah disetujui admin. Anda bisa mendaftar dan mengikuti kegiatan konservasi.",
+          actionLabel: "Cari Kegiatan",
+          actionHref: "/activities",
+          icon: CheckCircle2,
+          tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+          button: "bg-teal-600 text-white hover:bg-teal-700",
+        }
+      : volunteerStatus === "rejected"
+        ? {
+            title: "Verifikasi Relawan Ditolak",
+            description: profile?.volunteer_reject_note
+              ? `Alasan: ${profile.volunteer_reject_note}`
+              : "Data relawan Anda ditolak. Silakan perbaiki data diri dan ajukan ulang.",
+            actionLabel: "Perbaiki Data",
+            actionHref: "/user/profile",
+            icon: XCircle,
+            tone: "border-red-200 bg-red-50 text-red-700",
+            button: "bg-red-600 text-white hover:bg-red-700",
+          }
+        : hasSubmittedVolunteerData
+          ? {
+              title: "Menunggu Verifikasi Admin",
+              description: "Data relawan Anda sudah dikirim. Anda bisa memantau statusnya dari halaman profil.",
+              actionLabel: "Lihat Profil",
+              actionHref: "/user/profile",
+              icon: AlertCircle,
+              tone: "border-yellow-200 bg-yellow-50 text-yellow-700",
+              button: "bg-white text-yellow-700 border border-yellow-200 hover:bg-yellow-100",
+            }
+          : {
+              title: "Lengkapi Verifikasi Relawan",
+              description: "Lengkapi data diri dan KTP agar Anda bisa mendaftar sebagai relawan kegiatan.",
+              actionLabel: "Lengkapi Data",
+              actionHref: "/user/profile",
+              icon: User,
+              tone: "border-sky-200 bg-sky-50 text-sky-700",
+              button: "bg-teal-600 text-white hover:bg-teal-700",
+            }
+  const VolunteerStatusIcon = volunteerStatusView.icon
 
   return (
     <main className="flex-1 bg-slate-50">
@@ -92,12 +154,34 @@ export default async function UserDashboardPage() {
           </div>
         </div>
 
+        <section className={`mb-6 rounded-2xl border p-5 shadow-sm ${volunteerStatusView.tone}`}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80">
+                <VolunteerStatusIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold">{volunteerStatusView.title}</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+                  {volunteerStatusView.description}
+                </p>
+              </div>
+            </div>
+            <Link
+              href={volunteerStatusView.actionHref}
+              className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-bold shadow-sm transition-colors ${volunteerStatusView.button}`}
+            >
+              {volunteerStatusView.actionLabel}
+            </Link>
+          </div>
+        </section>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { label: "Kegiatan Diikuti",  value: stats.totalActivities,              icon: Calendar,     color: "text-teal-600", bg: "bg-teal-50" },
             { label: "Total Donasi",       value: formatCurrency(stats.totalDonations), icon: Heart,       color: "text-teal-600", bg: "bg-teal-50" },
-            { label: "Status Aktif",       value: stats.activeActivities,             icon: CheckCircle2, color: "text-teal-600", bg: "bg-teal-50" },
+            { label: "Kegiatan Aktif",     value: stats.activeActivities,             icon: CheckCircle2, color: "text-teal-600", bg: "bg-teal-50" },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">

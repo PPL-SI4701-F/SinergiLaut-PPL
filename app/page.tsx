@@ -11,6 +11,10 @@ import { createClient } from "@/lib/supabase/server"
 import { formatDate } from "@/lib/utils/helpers"
 import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
+// ISR: cache halaman selama 60 detik — menghindari 3 DB query per request
+// Ubah ke nilai lebih kecil jika data harus selalu real-time
+export const revalidate = 60
+
 const pillars = [
   { icon: ShieldCheck, title: "100% Transparan",  description: "Setiap donasi dan kegiatan dipantau secara publik. Laporan real-time tersedia untuk semua kontributor.", color: "#3b82f6", bg: "rgba(59,130,246,0.08)" },
   { icon: Users,       title: "Komunitas Lokal",  description: "Dipimpin oleh komunitas yang memahami kebutuhan nyata ekosistem laut di wilayah mereka.",             color: "#06958a", bg: "rgba(6,149,138,0.08)"  },

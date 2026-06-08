@@ -24,6 +24,21 @@ async function requireAdmin(): Promise<{ authorized: true; userId: string } | { 
   return { authorized: true, userId: user.id }
 }
 
+async function requireCommunityUser(userId: string): Promise<{ authorized: true } | { authorized: false }> {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user || user.id !== userId) return { authorized: false }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role !== "community") return { authorized: false }
+  return { authorized: true }
+}
+
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
@@ -352,6 +367,106 @@ export async function rejectActivityAction(id: string, adminNote?: string) {
   return { success: true }
 }
 
+// --- ACTIVITY EDIT REQUESTS ---
+
+export async function getPendingEditRequests() {
+  const isE2E = await getE2EMock()
+  if (isE2E) {
+    return [
+      {
+        id: "edit-request-1",
+        reason: "Lokasi kegiatan berubah karena cuaca buruk.",
+        status: "pending",
+        created_at: new Date().toISOString(),
+        community: { name: "Eco Ocean" },
+        activity: { id: "activity-3", title: "Ongoing Activity 1" }
+      }
+    ] as any
+  }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return []
+
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
+    .from("activity_edit_requests")
+    .select("*, community:communities(name), activity:activities(id, title)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+
+  if (error) console.error("Error fetching pending edit requests:", error)
+  return data || []
+}
+
+export async function approveEditRequestAction(id: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data: request, error } = await adminSupabase
+    .from("activity_edit_requests")
+    .update({ status: "approved", reviewed_by: auth.userId, reviewed_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("activity_id, reason, activity:activities(title, community:communities(owner_id))")
+    .single()
+
+  if (error) return { success: false, error: error.message }
+
+  const ownerId = ((request?.activity as any)?.community as any)?.owner_id
+  const activityTitle = (request?.activity as any)?.title ?? "kegiatan"
+  if (ownerId) {
+    await createNotification(
+      ownerId,
+      "Pengajuan Edit Disetujui ✅",
+      `Pengajuan edit untuk kegiatan "${activityTitle}" telah disetujui. Anda kini dapat mengedit kegiatan tersebut.`,
+      "success",
+      `/community/dashboard/activities/${request.activity_id}/edit`
+    )
+  }
+  return { success: true }
+}
+
+export async function rejectEditRequestAction(id: string, adminNote?: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data: request, error } = await adminSupabase
+    .from("activity_edit_requests")
+    .update({
+      status: "rejected",
+      admin_note: adminNote?.trim() || "Ditolak oleh admin",
+      reviewed_by: auth.userId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("activity_id, activity:activities(title, community:communities(owner_id))")
+    .single()
+
+  if (error) return { success: false, error: error.message }
+
+  const ownerId = ((request?.activity as any)?.community as any)?.owner_id
+  const activityTitle = (request?.activity as any)?.title ?? "kegiatan"
+  if (ownerId) {
+    await createNotification(
+      ownerId,
+      "Pengajuan Edit Ditolak ❌",
+      `Pengajuan edit untuk kegiatan "${activityTitle}" ditolak oleh admin. Silakan periksa catatan admin.`,
+      "error",
+      "/community/dashboard"
+    )
+  }
+  return { success: true }
+}
+
 export async function approveReportAction(id: string) {
   const isE2E = await getE2EMock()
   if (isE2E) return { success: true }
@@ -670,9 +785,29 @@ export async function getCommunityDashboardStats(userId: string) {
   if (isE2E) {
     return {
       totalActivities: 2,
+      activeActivities: 1,
+      completedActivities: 1,
+      pendingReviewActivities: 0,
       totalVolunteers: 15,
+      activeVolunteers: 8,
       totalDonations: 5000000,
+      activeDonations: 3000000,
       verifiedReports: "1/2"
+    }
+  }
+
+  const auth = await requireCommunityUser(userId)
+  if (!auth.authorized) {
+    return {
+      totalActivities: 0,
+      activeActivities: 0,
+      completedActivities: 0,
+      pendingReviewActivities: 0,
+      totalVolunteers: 0,
+      activeVolunteers: 0,
+      totalDonations: 0,
+      activeDonations: 0,
+      verifiedReports: "0/0",
     }
   }
 
@@ -688,28 +823,74 @@ export async function getCommunityDashboardStats(userId: string) {
     .maybeSingle()
 
   if (!community) {
-    return { totalActivities: 0, totalVolunteers: 0, totalDonations: 0, verifiedReports: "0/0" }
+    return {
+      totalActivities: 0,
+      activeActivities: 0,
+      completedActivities: 0,
+      pendingReviewActivities: 0,
+      totalVolunteers: 0,
+      activeVolunteers: 0,
+      totalDonations: 0,
+      activeDonations: 0,
+      verifiedReports: "0/0",
+    }
   }
 
   const communityId = community.id
 
   // Stats
-  const { count: totalActivities } = await adminSupabase
-    .from("activities")
-    .select("*", { count: "exact", head: true })
-    .eq("community_id", communityId)
-
   const { data: acts } = await adminSupabase
     .from("activities")
-    .select("volunteer_count, funding_raised")
+    .select("id, status")
     .eq("community_id", communityId)
 
-  let totalVolunteers = 0
-  let totalDonations = 0
+  const activityIds = acts?.map(a => a.id).filter(Boolean) || []
+  const activeActivityIds = acts
+    ?.filter(a => ["published", "ongoing"].includes(a.status))
+    .map(a => a.id)
+    .filter(Boolean) || []
+
+  let activeActivities = 0
+  let completedActivities = 0
+  let pendingReviewActivities = 0
+
   acts?.forEach(a => {
-    totalVolunteers += a.volunteer_count || 0
-    totalDonations += Number(a.funding_raised || 0)
+    if (a.status === "published" || a.status === "ongoing") {
+      activeActivities++
+    } else if (a.status === "completed") {
+      completedActivities++
+    } else if (a.status === "pending_review") {
+      pendingReviewActivities++
+    }
   })
+
+  let totalVolunteers = 0
+  let activeVolunteers = 0
+  let totalDonations = 0
+  let activeDonations = 0
+
+  if (activityIds.length > 0) {
+    const [{ data: volunteerRows }, { data: donationRows }] = await Promise.all([
+      adminSupabase
+        .from("volunteer_registrations")
+        .select("activity_id")
+        .in("activity_id", activityIds)
+        .in("status", ["approved", "attended"]),
+      adminSupabase
+        .from("donations")
+        .select("activity_id, amount")
+        .in("activity_id", activityIds)
+        .eq("type", "money")
+        .eq("status", "completed"),
+    ])
+
+    totalVolunteers = volunteerRows?.length || 0
+    activeVolunteers = volunteerRows?.filter(v => activeActivityIds.includes(v.activity_id)).length || 0
+    totalDonations = donationRows?.reduce((sum, donation) => sum + Number(donation.amount || 0), 0) || 0
+    activeDonations = donationRows
+      ?.filter(donation => activeActivityIds.includes(donation.activity_id))
+      .reduce((sum, donation) => sum + Number(donation.amount || 0), 0) || 0
+  }
 
   // Reports
   const { count: totalReports } = await adminSupabase
@@ -724,9 +905,14 @@ export async function getCommunityDashboardStats(userId: string) {
     .eq("status", "validated")
 
   return {
-    totalActivities: totalActivities || 0,
+    totalActivities: acts?.length || 0,
+    activeActivities,
+    completedActivities,
+    pendingReviewActivities,
     totalVolunteers,
+    activeVolunteers,
     totalDonations,
+    activeDonations,
     verifiedReports: `${verifiedReports || 0}/${totalReports || 0}`
   }
 }
@@ -749,6 +935,9 @@ export async function getCommunityActivities(userId: string) {
       }
     ] as any
   }
+
+  const auth = await requireCommunityUser(userId)
+  if (!auth.authorized) return []
 
   const adminSupabase = await createAdminClient()
 
@@ -795,6 +984,18 @@ export async function getUserDashboardStats(userId: string) {
       activeActivities: 1,
       totalDonations: 0,
       avgRating: null,
+    }
+  }
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user || user.id !== userId) {
+    console.warn("[getUserDashboardStats] Invalid user session or userId mismatch")
+    return {
+      totalActivities: 0,
+      activeActivities: 0,
+      totalDonations: 0,
+      avgRating: null as number | null,
     }
   }
 
@@ -846,7 +1047,7 @@ export async function getCommunityProfile() {
     .from("communities")
     .select("*")
     .eq("owner_id", user.id)
-    .eq("is_verified", true)
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
 
@@ -865,6 +1066,7 @@ export async function updateCommunityProfile(communityId: string, payload: {
   website: string | null
   phone: string | null
   email: string | null
+  admin_name: string | null
   instagram: string | null
   facebook: string | null
   twitter: string | null
@@ -899,6 +1101,7 @@ export async function updateCommunityProfile(communityId: string, payload: {
       website: payload.website?.trim() || null,
       phone: payload.phone?.trim() || null,
       email: payload.email?.trim() || null,
+      admin_name: payload.admin_name?.trim() || null,
       instagram: payload.instagram?.trim() || null,
       facebook: payload.facebook?.trim() || null,
       twitter: payload.twitter?.trim() || null,

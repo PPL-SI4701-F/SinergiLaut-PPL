@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Footer } from "@/components/footer"
+import { CommunityTermsDialog, CommunityPrivacyDialog } from "@/components/community-legal-dialogs"
 import {
   Building2,
   Mail,
@@ -192,6 +193,9 @@ export default function CommunityRegisterPage() {
     submitData.append("phone", formData.phone)
     submitData.append("password", formData.password)
     submitData.append("website", formData.website)
+    submitData.append("instagram", formData.instagram)
+    submitData.append("facebook", formData.facebook)
+    submitData.append("twitter", formData.twitter)
     submitData.append("region", formData.region)
     submitData.append("operationalArea", formData.operationalArea)
     submitData.append("selectedActivities", JSON.stringify(formData.selectedActivities))
@@ -870,13 +874,21 @@ export default function CommunityRegisterPage() {
                       />
                       <label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer">
                         Saya menyetujui{" "}
-                        <Link href="#" className="text-primary hover:underline">
-                          Syarat & Ketentuan
-                        </Link>{" "}
+                        <CommunityTermsDialog
+                          trigger={
+                            <button type="button" className="text-primary hover:underline font-medium">
+                              Syarat & Ketentuan
+                            </button>
+                          }
+                        />{" "}
                         dan{" "}
-                        <Link href="#" className="text-primary hover:underline">
-                          Kebijakan Privasi
-                        </Link>
+                        <CommunityPrivacyDialog
+                          trigger={
+                            <button type="button" className="text-primary hover:underline font-medium">
+                              Kebijakan Privasi
+                            </button>
+                          }
+                        />
                         . Saya menyatakan bahwa semua informasi yang diberikan akurat dan saya berwenang untuk mendaftarkan komunitas ini di SinergiLaut.
                       </label>
                     </div>

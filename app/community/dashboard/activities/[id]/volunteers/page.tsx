@@ -13,13 +13,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import {
   ArrowLeft, Search, Users, CheckCircle, XCircle, UserCheck,
-  Loader2, Phone, Mail, Shirt, Brain, AlertCircle, Download
+  Loader2, Phone, Mail, Shirt, Brain, AlertCircle, Download, Banknote,
+  MapPin, Calendar, Clock, Camera, Image as ImageIcon
 } from "lucide-react"
-import { getActivityVolunteers, updateVolunteerStatus } from "@/lib/actions/volunteer.actions"
-import { formatDate } from "@/lib/utils/helpers"
+import { getCommunityActivitySummary } from "@/lib/actions/activity.actions"
+import { getActivityVolunteers, updateVolunteerStatus, markVolunteerAttended } from "@/lib/actions/volunteer.actions"
+import { formatDate, formatCurrency } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import type { VolunteerRegistration } from "@/lib/types"
 
@@ -29,13 +33,25 @@ type VolunteerWithUser = VolunteerRegistration & {
   emergency_contact_phone?: string
   skills?: string[]
   t_shirt_size?: string
+  attendance_proof_url?: string | null
 }
+
+// Urutan status yang ditampilkan: menunggu → diterima → hadir → ditolak
+const statusOrder: Record<string, number> = { pending: 0, approved: 1, attended: 2, rejected: 3 }
 
 const statusConfig = {
   pending: { label: "Menunggu", className: "bg-yellow-100 text-yellow-700" },
   approved: { label: "Diterima", className: "bg-green-100 text-green-700" },
   rejected: { label: "Ditolak", className: "bg-red-100 text-red-700" },
   attended: { label: "Hadir", className: "bg-blue-100 text-blue-700" },
+}
+
+const activityStatusConfig: Record<string, { label: string; className: string }> = {
+  published: { label: "Aktif", className: "bg-green-100 text-green-700" },
+  pending_review: { label: "Menunggu Review", className: "bg-yellow-100 text-yellow-700" },
+  draft: { label: "Draft", className: "bg-gray-100 text-gray-700" },
+  completed: { label: "Selesai", className: "bg-blue-100 text-blue-700" },
+  cancelled: { label: "Dibatalkan", className: "bg-red-100 text-red-700" },
 }
 
 type FilterStatus = "all" | "pending" | "approved" | "rejected" | "attended"
@@ -50,13 +66,45 @@ export default function VolunteersManagementPage() {
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all")
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [activityTitle, setActivityTitle] = useState("")
+  const [attendanceModal, setAttendanceModal] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
+  const [attendanceProof, setAttendanceProof] = useState<File | null>(null)
+  const [attendanceProofPreview, setAttendanceProofPreview] = useState<string | null>(null)
+  const [submittingAttendance, setSubmittingAttendance] = useState(false)
+  const [activity, setActivity] = useState<{
+    title: string
+    description: string | null
+    cover_image_url: string | null
+    funding_raised: number
+    funding_goal: number
+    volunteer_count: number
+    volunteer_quota: number
+    status: string
+    location: string
+    start_date: string
+    end_date: string | null
+    execution_date: string | null
+  } | null>(null)
 
   useEffect(() => {
     if (!authLoading && !isCommunity && !isAdmin) {
       router.push("/login")
     }
   }, [authLoading, isCommunity, isAdmin, router])
+
+  useEffect(() => {
+    if (!params.id) return
+
+    async function loadActivity() {
+      const result = await getCommunityActivitySummary(params.id as string)
+      if (result.success && result.data) {
+        setActivity(result.data)
+      } else {
+        toast.error(result.error ?? "Gagal memuat ringkasan kegiatan.")
+      }
+    }
+
+    loadActivity()
+  }, [params.id])
 
   useEffect(() => {
     if (!params.id) return
@@ -77,7 +125,7 @@ export default function VolunteersManagementPage() {
 
   async function handleStatusUpdate(
     id: string,
-    status: "approved" | "rejected" | "attended"
+    status: "approved" | "rejected"
   ) {
     setUpdatingId(id)
     const result = await updateVolunteerStatus(id, status)
@@ -92,14 +140,67 @@ export default function VolunteersManagementPage() {
     setUpdatingId(null)
   }
 
-  const filtered = volunteers.filter(v => {
-    const matchSearch =
-      v.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      v.email.toLowerCase().includes(search.toLowerCase()) ||
-      v.phone.includes(search)
-    const matchStatus = filterStatus === "all" || v.status === filterStatus
-    return matchSearch && matchStatus
-  })
+  function openAttendanceModal(id: string, name: string) {
+    setAttendanceProof(null)
+    setAttendanceProofPreview(null)
+    setAttendanceModal({ open: true, id, name })
+  }
+
+  function closeAttendanceModal() {
+    if (attendanceProofPreview) URL.revokeObjectURL(attendanceProofPreview)
+    setAttendanceProof(null)
+    setAttendanceProofPreview(null)
+    setAttendanceModal({ open: false, id: "", name: "" })
+  }
+
+  function handleAttendanceProofChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      toast.error("Bukti kehadiran harus berupa file gambar.")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran bukti kehadiran maksimal 5MB.")
+      return
+    }
+    if (attendanceProofPreview) URL.revokeObjectURL(attendanceProofPreview)
+    setAttendanceProof(file)
+    setAttendanceProofPreview(URL.createObjectURL(file))
+  }
+
+  async function handleConfirmAttendance() {
+    if (!attendanceProof) {
+      toast.error("Mohon unggah bukti foto/gambar kehadiran terlebih dahulu.")
+      return
+    }
+    const id = attendanceModal.id
+    setSubmittingAttendance(true)
+    setUpdatingId(id)
+    const result = await markVolunteerAttended(id, attendanceProof)
+    if (result.success) {
+      setVolunteers(prev =>
+        prev.map(v => v.id === id ? { ...v, status: "attended", attendance_proof_url: (result.data as any)?.attendance_proof_url ?? v.attendance_proof_url } : v)
+      )
+      toast.success("Kehadiran relawan berhasil dikonfirmasi.")
+      closeAttendanceModal()
+    } else {
+      toast.error(result.error ?? "Gagal mengkonfirmasi kehadiran.")
+    }
+    setSubmittingAttendance(false)
+    setUpdatingId(null)
+  }
+
+  const filtered = volunteers
+    .filter(v => {
+      const matchSearch =
+        v.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        v.email.toLowerCase().includes(search.toLowerCase()) ||
+        v.phone.includes(search)
+      const matchStatus = filterStatus === "all" || v.status === filterStatus
+      return matchSearch && matchStatus
+    })
+    .sort((a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99))
 
   const counts = {
     all: volunteers.length,
@@ -128,9 +229,84 @@ export default function VolunteersManagementPage() {
             </div>
           </div>
 
+          {/* Ringkasan Kegiatan */}
+          {activity && (
+            <Card className="mb-6 overflow-hidden">
+              <div className="sm:flex">
+                {activity.cover_image_url && (
+                  <div className="sm:w-64 aspect-video sm:aspect-auto shrink-0">
+                    <img src={activity.cover_image_url} alt={activity.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <CardContent className="p-5 flex-1 space-y-4">
+                  <div>
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <h2 className="font-semibold text-foreground">{activity.title}</h2>
+                      <Badge className={`shrink-0 ${activityStatusConfig[activity.status]?.className ?? "bg-gray-100 text-gray-700"}`}>
+                        {activityStatusConfig[activity.status]?.label ?? activity.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{activity.description || "Belum ada deskripsi."}</p>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4 shrink-0" />
+                      <span>
+                        Waktu pelaksanaan:{" "}
+                        <span className="text-foreground font-medium">
+                          {activity.execution_date ? formatDate(activity.execution_date) : "Belum ditentukan"}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4 shrink-0" />
+                      <span>
+                        Lokasi: <span className="text-foreground font-medium">{activity.location || "Belum ditentukan"}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
+                      <Calendar className="h-4 w-4 shrink-0" />
+                      <span>
+                        Periode penggalangan donasi & pendaftaran relawan:{" "}
+                        <span className="text-foreground font-medium">
+                          {formatDate(activity.start_date)}
+                          {activity.end_date ? ` – ${formatDate(activity.end_date)}` : ""}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-muted-foreground flex items-center gap-1.5"><Banknote className="h-4 w-4" /> Total Donasi</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(activity.funding_raised || 0)}</span>
+                      </div>
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${activity.funding_goal ? Math.min(100, Math.round((activity.funding_raised / activity.funding_goal) * 100)) : 0}%` }} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">dari target {formatCurrency(activity.funding_goal || 0)}</p>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-muted-foreground flex items-center gap-1.5"><Users className="h-4 w-4" /> Total Relawan</span>
+                        <span className="font-semibold text-foreground">{activity.volunteer_count || 0}/{activity.volunteer_quota || 0}</span>
+                      </div>
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-accent rounded-full" style={{ width: `${activity.volunteer_quota ? Math.min(100, Math.round((activity.volunteer_count / activity.volunteer_quota) * 100)) : 0}%` }} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">slot relawan terisi</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </div>
+            </Card>
+          )}
+
           {/* Stats Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {(["pending", "approved", "rejected", "attended"] as const).map(s => (
+            {(["pending", "approved", "attended", "rejected"] as const).map(s => (
               <Card key={s} className={`cursor-pointer transition-all ${filterStatus === s ? "ring-2 ring-primary" : "hover:shadow-md"}`}
                 onClick={() => setFilterStatus(filterStatus === s ? "all" : s)}>
                 <CardContent className="p-4">
@@ -237,12 +413,22 @@ export default function VolunteersManagementPage() {
                           {v.status === "approved" && (
                             <Button size="sm" className="bg-blue-600 hover:bg-blue-700"
                               disabled={updatingId === v.id}
-                              onClick={() => handleStatusUpdate(v.id, "attended")}>
+                              onClick={() => openAttendanceModal(v.id, v.full_name)}>
                               {updatingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
                               <span className="ml-1">Tandai Hadir</span>
                             </Button>
                           )}
-                          {(v.status === "attended" || v.status === "rejected") && (
+                          {v.status === "attended" && (
+                            v.attendance_proof_url ? (
+                              <a href={v.attendance_proof_url} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-100 transition-colors">
+                                <ImageIcon className="h-3.5 w-3.5" /> Lihat Bukti Hadir
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted-foreground self-center">—</span>
+                            )
+                          )}
+                          {v.status === "rejected" && (
                             <span className="text-xs text-muted-foreground self-center">—</span>
                           )}
                         </div>
@@ -255,6 +441,48 @@ export default function VolunteersManagementPage() {
           </Card>
         </div>
       </main>
+
+      {/* Modal Konfirmasi Kehadiran */}
+      <Dialog open={attendanceModal.open} onOpenChange={(open) => { if (!open) closeAttendanceModal() }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-blue-600" /> Konfirmasi Kehadiran
+            </DialogTitle>
+            <DialogDescription>
+              Tandai <span className="font-semibold text-foreground">{attendanceModal.name}</span> sebagai hadir. Unggah bukti foto/gambar kehadiran relawan untuk melanjutkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Bukti Foto/Gambar Kehadiran *</Label>
+            {attendanceProofPreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={attendanceProofPreview} alt="Pratinjau bukti kehadiran" className="w-full max-h-64 object-cover" />
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-8 cursor-pointer text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                <Camera className="h-7 w-7" />
+                <span className="text-sm font-medium">Klik untuk unggah foto/gambar</span>
+                <span className="text-xs">Format JPG/PNG, maks. 5MB</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleAttendanceProofChange} disabled={submittingAttendance} />
+              </label>
+            )}
+            {attendanceProofPreview && (
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer hover:underline">
+                <Camera className="h-3.5 w-3.5" /> Ganti foto
+                <input type="file" accept="image/*" className="hidden" onChange={handleAttendanceProofChange} disabled={submittingAttendance} />
+              </label>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAttendanceModal} disabled={submittingAttendance}>Batal</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleConfirmAttendance} disabled={submittingAttendance || !attendanceProof}>
+              {submittingAttendance ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <UserCheck className="h-4 w-4 mr-1.5" />}
+              Konfirmasi Hadir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
