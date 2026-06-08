@@ -35,14 +35,6 @@ const ROLE_DASHBOARDS: Record<AppRole, string> = {
   user: '/user/dashboard',
 }
 
-/**
- * Memeriksa route secara aman.
- *
- * Contoh:
- * /admin          -> cocok dengan /admin
- * /admin/dashboard -> cocok dengan /admin
- * /administrator   -> tidak cocok dengan /admin
- */
 function matchesRoute(pathname: string, route: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`)
 }
@@ -54,9 +46,6 @@ function matchesAnyRoute(
   return routes.some((route) => matchesRoute(pathname, route))
 }
 
-/**
- * Mengubah unknown menjadi object yang aman dibaca.
- */
 function asRecord(value: unknown): JwtClaims | null {
   if (
     typeof value !== 'object' ||
@@ -69,9 +58,6 @@ function asRecord(value: unknown): JwtClaims | null {
   return value as JwtClaims
 }
 
-/**
- * Memastikan role hanya berisi nilai yang dikenal aplikasi.
- */
 function parseRole(value: unknown): AppRole | null {
   if (
     value === 'admin' ||
@@ -84,12 +70,6 @@ function parseRole(value: unknown): AppRole | null {
   return null
 }
 
-/**
- * Menyalin seluruh cookie Supabase yang diperbarui ke response redirect.
- *
- * Ini penting agar access token atau refresh token yang diperbarui
- * tidak hilang ketika Proxy mengembalikan redirect.
- */
 function copyResponseCookies(
   sourceResponse: NextResponse,
   targetResponse: NextResponse
@@ -101,9 +81,6 @@ function copyResponseCookies(
   return targetResponse
 }
 
-/**
- * Membuat redirect sambil mempertahankan cookie Supabase.
- */
 function redirectWithCookies(
   request: NextRequest,
   sourceResponse: NextResponse,
@@ -120,7 +97,16 @@ function redirectWithCookies(
 }
 
 /**
- * Proxy autentikasi dan otorisasi SinergiLaut.
+ * Proxy autentikasi SinergiLaut.
+ *
+ * Tanggung jawab proxy:
+ * 1. Refresh session cookie Supabase.
+ * 2. Redirect unauthenticated user yang mengakses protected route ke /login.
+ * 3. Redirect authenticated user yang membuka halaman login/register ke dashboard.
+ *
+ * Role-based access control (admin/community/user) diserahkan ke masing-masing
+ * layout (/app/admin/layout.tsx, /app/community/dashboard/layout.tsx, /app/user/layout.tsx)
+ * agar lebih reliable dan tidak bergantung pada ketersediaan database di edge.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -128,20 +114,11 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = matchesAnyRoute(pathname, AUTH_ROUTES)
   const isProtectedRoute = matchesAnyRoute(pathname, PROTECTED_ROUTES)
 
-  /**
-   * Perlindungan tambahan jika matcher nanti berubah.
-   * Route yang tidak berhubungan dengan autentikasi langsung diteruskan.
-   */
   if (!isAuthRoute && !isProtectedRoute) {
     return NextResponse.next()
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-
-  /**
-   * Supabase sekarang menggunakan istilah Publishable Key.
-   * ANON_KEY tetap didukung agar kompatibel dengan konfigurasi proyek lama.
-   */
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -156,9 +133,6 @@ export async function proxy(request: NextRequest) {
     })
   }
 
-  /**
-   * Response utama yang akan membawa cookie Supabase yang diperbarui.
-   */
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -173,10 +147,6 @@ export async function proxy(request: NextRequest) {
         },
 
         setAll(cookiesToSet) {
-          /**
-           * Perbarui cookie pada request agar Server Component berikutnya
-           * langsung mendapatkan session terbaru.
-           */
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value)
           }
@@ -185,10 +155,6 @@ export async function proxy(request: NextRequest) {
             request,
           })
 
-          /**
-           * Perbarui cookie pada response agar browser menyimpan
-           * access token dan refresh token terbaru.
-           */
           for (const { name, value, options } of cookiesToSet) {
             supabaseResponse.cookies.set(name, value, options)
           }
@@ -199,111 +165,30 @@ export async function proxy(request: NextRequest) {
 
   /**
    * E2E bypass hanya aktif ketika development.
-   *
-   * Nilai cookie yang diperbolehkan:
-   * - admin
-   * - community
-   * - user
    */
   const e2eRole =
     process.env.NODE_ENV === 'development'
       ? parseRole(request.cookies.get('e2e-bypass-auth')?.value)
       : null
 
-  let userId: string | null = e2eRole ? 'mock-user-id' : null
+  let isAuthenticated = Boolean(e2eRole)
 
-  /**
-   * getClaims() memverifikasi JWT.
-   * Tidak menggunakan getSession() sebagai sumber otorisasi.
-   */
   if (!e2eRole) {
     try {
       const { data, error } = await supabase.auth.getClaims()
 
       if (!error) {
         const claims = asRecord(data?.claims)
-
-        userId =
-          typeof claims?.sub === 'string'
-            ? claims.sub
-            : null
-
-      } else if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          '[Proxy] Session tidak valid atau sudah kedaluwarsa.'
-        )
+        const userId = typeof claims?.sub === 'string' ? claims.sub : null
+        isAuthenticated = Boolean(userId)
       }
     } catch {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          '[Proxy] Gagal memverifikasi session Supabase.'
-        )
-      }
-
-      userId = null
+      isAuthenticated = false
     }
   }
 
-  const isAuthenticated = Boolean(userId)
-
   /**
-   * Mengambil role pengguna.
-   *
-   * Prioritas:
-   * 1. E2E development role
-   * 2. profiles.role
-   */
-  const resolveRole = async (): Promise<AppRole | null> => {
-    if (e2eRole) {
-      return e2eRole
-    }
-
-    if (!userId) {
-      return null
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (
-      profileError &&
-      process.env.NODE_ENV === 'development'
-    ) {
-      console.warn(
-        `[Proxy] Gagal membaca role profile: ${profileError.code}`
-      )
-    }
-
-    return parseRole(profile?.role)
-  }
-
-  /**
-   * Pengguna sudah login tetapi membuka login/register.
-   * Langsung arahkan ke dashboard sesuai role.
-   */
-  if (isAuthRoute && isAuthenticated) {
-    const role = await resolveRole()
-
-    if (!role) {
-      return redirectWithCookies(
-        request,
-        supabaseResponse,
-        '/unauthorized'
-      )
-    }
-
-    return redirectWithCookies(
-      request,
-      supabaseResponse,
-      ROLE_DASHBOARDS[role]
-    )
-  }
-
-  /**
-   * Pengguna belum login tetapi membuka route terlindungi.
+   * Pengguna belum login tetapi membuka route terlindungi → redirect ke /login.
    */
   if (isProtectedRoute && !isAuthenticated) {
     const loginUrl = request.nextUrl.clone()
@@ -317,113 +202,63 @@ export async function proxy(request: NextRequest) {
 
     const redirectResponse = NextResponse.redirect(loginUrl)
 
-    return copyResponseCookies(
-      supabaseResponse,
-      redirectResponse
-    )
+    return copyResponseCookies(supabaseResponse, redirectResponse)
   }
 
   /**
-   * Di bawah bagian ini pengguna sudah terautentikasi.
-   *
-   * /profile tidak memerlukan pemeriksaan role sehingga langsung lanjut.
-   * Hal ini menghindari query tabel profiles yang tidak diperlukan.
+   * Pengguna sudah login tetapi membuka login/register.
+   * Coba arahkan ke dashboard sesuai role. Jika role tidak bisa dibaca
+   * (misalnya database sedang tidak tersedia), arahkan ke /user/dashboard
+   * sebagai fallback aman — layout akan menangani redirect role yang benar.
    */
-  if (matchesRoute(pathname, '/profile')) {
-    return supabaseResponse
+  if (isAuthRoute && isAuthenticated) {
+    if (e2eRole) {
+      return redirectWithCookies(
+        request,
+        supabaseResponse,
+        ROLE_DASHBOARDS[e2eRole]
+      )
+    }
+
+    try {
+      const { data, error } = await supabase.auth.getClaims()
+      if (!error) {
+        const claims = asRecord(data?.claims)
+        const userId = typeof claims?.sub === 'string' ? claims.sub : null
+
+        if (userId) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle()
+
+          const role = parseRole(profile?.role)
+
+          if (role) {
+            return redirectWithCookies(
+              request,
+              supabaseResponse,
+              ROLE_DASHBOARDS[role]
+            )
+          }
+        }
+      }
+    } catch {
+      // ignored — gunakan fallback
+    }
+
+    // Fallback: layout akan menangani redirect yang benar
+    return redirectWithCookies(request, supabaseResponse, '/user/dashboard')
   }
 
   /**
-   * Pemeriksaan role hanya dilakukan untuk route yang memerlukannya.
+   * Pengguna sudah terautentikasi mengakses protected route.
+   * Langsung lanjutkan — role-based access control ditangani oleh layout.
    */
-  const needsRoleCheck =
-    pathname === '/dashboard' ||
-    matchesRoute(pathname, '/admin') ||
-    matchesRoute(pathname, '/community/dashboard') ||
-    matchesRoute(pathname, '/user')
-
-  if (!needsRoleCheck) {
-    return supabaseResponse
-  }
-
-  const role = await resolveRole()
-
-  if (!role) {
-    return redirectWithCookies(
-      request,
-      supabaseResponse,
-      '/unauthorized'
-    )
-  }
-
-  /**
-   * Dashboard umum diarahkan ke dashboard spesifik berdasarkan role.
-   */
-  if (pathname === '/dashboard') {
-    return redirectWithCookies(
-      request,
-      supabaseResponse,
-      ROLE_DASHBOARDS[role]
-    )
-  }
-
-  /**
-   * Proteksi dashboard admin.
-   */
-  if (
-    matchesRoute(pathname, '/admin') &&
-    role !== 'admin'
-  ) {
-    return redirectWithCookies(
-      request,
-      supabaseResponse,
-      '/unauthorized'
-    )
-  }
-
-  /**
-   * Proteksi dashboard komunitas.
-   */
-  if (
-    matchesRoute(pathname, '/community/dashboard') &&
-    role !== 'community'
-  ) {
-    return redirectWithCookies(
-      request,
-      supabaseResponse,
-      '/unauthorized'
-    )
-  }
-
-  /**
-   * Proteksi dashboard pengguna biasa.
-   */
-  if (
-    matchesRoute(pathname, '/user') &&
-    role !== 'user'
-  ) {
-    return redirectWithCookies(
-      request,
-      supabaseResponse,
-      '/unauthorized'
-    )
-  }
-
   return supabaseResponse
 }
 
-/**
- * Proxy hanya dijalankan pada route autentikasi dan route terlindungi.
- *
- * Halaman publik seperti:
- * - /
- * - /about
- * - /activities
- * - /community
- * - /contact
- *
- * tidak menjalankan Proxy dan tidak memanggil Supabase Auth.
- */
 export const config = {
   matcher: [
     '/login/:path*',
