@@ -28,9 +28,48 @@ export const ACTIVITY_STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   pending_review: "Menunggu Review",
   published: "Dipublikasikan",
+  ongoing: "Sedang Berlangsung",
   cancelled: "Dibatalkan",
   completed: "Selesai",
 }
+
+// Daftar bank untuk pemilihan rekening pencairan dana komunitas (bank umum nasional di atas, BPD daerah di bawah)
+export const INDONESIAN_BANKS = [
+  "BCA",
+  "Bank Mandiri",
+  "BRI",
+  "BNI",
+  "BSI (Bank Syariah Indonesia)",
+  "CIMB Niaga",
+  "Bank Danamon",
+  "Permata Bank",
+  "BTN",
+  "Bank Mega",
+  "Maybank Indonesia",
+  "OCBC NISP",
+  "Panin Bank",
+  "BTPN",
+  "Bank Jago",
+  "SeaBank",
+  "Bank Neo Commerce (BNC)",
+  "Allo Bank",
+  "Bank DBS Indonesia",
+  "Bank UOB Indonesia",
+  "Bank Sinarmas",
+  "KB Bank (Bukopin)",
+  "Bank DKI",
+  "Bank Jateng",
+  "Bank Jatim",
+  "Bank BJB",
+  "Bank Sumut",
+  "Bank Nagari",
+  "Bank Riau Kepri",
+  "Bank Kalbar",
+  "Bank Sumsel Babel",
+  "Bank Aceh Syariah",
+  "Bank NTB Syariah",
+  "Bank Papua",
+] as const
 
 // Verification Status Labels
 export const VERIFICATION_STATUS_LABELS: Record<string, string> = {
@@ -89,6 +128,7 @@ export const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700 border-gray-200",
   pending_review: "bg-yellow-100 text-yellow-700 border-yellow-200",
   published: "bg-green-100 text-green-700 border-green-200",
+  ongoing: "bg-indigo-100 text-indigo-700 border-indigo-200",
   cancelled: "bg-red-100 text-red-700 border-red-200",
   completed: "bg-blue-100 text-blue-700 border-blue-200",
   // Volunteer

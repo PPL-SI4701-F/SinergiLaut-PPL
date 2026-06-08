@@ -239,16 +239,6 @@ export default function CommunityProfilePage() {
               }`}>
                 {getVerificationMessage(community)}
               </p>
-              <p className={`hidden text-sm font-medium ${
-                community.verification_status === "approved" && !community.is_suspended ? "text-green-800" :
-                community.verification_status === "rejected" || community.is_suspended ? "text-red-700" : "text-yellow-700"
-              }`}>
-                {community.is_suspended
-                  ? "✅ Komunitas Anda sudah terverifikasi oleh admin."
-                  : community.verification_status === "rejected"
-                  ? "❌ Verifikasi komunitas ditolak. Hubungi admin untuk informasi lebih lanjut."
-                  : "⏳ Komunitas Anda sedang menunggu verifikasi admin."}
-              </p>
             </div>
 
             {/* Foto & Cover */}

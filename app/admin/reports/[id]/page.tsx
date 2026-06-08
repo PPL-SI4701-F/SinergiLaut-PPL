@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { format } from "date-fns"
 import { id as localeID } from "date-fns/locale"
 import {
@@ -12,7 +11,7 @@ import {
   Loader2, ExternalLink, Users, UserCheck, UserX, Image as ImageIcon
 } from "lucide-react"
 import { toast } from "sonner"
-import { approveReportAction, rejectReportAction } from "@/lib/actions/dashboard.actions"
+import { approveReportAction, getAdminReportDetail, rejectReportAction } from "@/lib/actions/dashboard.actions"
 import { getActivityVolunteers } from "@/lib/actions/volunteer.actions"
 import { formatCurrency } from "@/lib/utils/helpers"
 
@@ -55,26 +54,13 @@ export default function AdminReportDetailPage() {
 
   async function loadReport() {
     setIsLoading(true)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("reports")
-      .select(`
-        id, title, summary, status, completion_status, fund_usage,
-        admin_note, created_at, reviewed_at, activity_id,
-        activity:activities(title),
-        community:communities(name),
-        profiles!reports_submitted_by_fkey(full_name),
-        report_files(id, file_name, file_url, file_type, file_size)
-      `)
-      .eq("id", reportId)
-      .single()
-
-    if (error || !data) {
-      toast.error("Laporan tidak ditemukan")
+    const result = await getAdminReportDetail(reportId)
+    if (!result.success || !result.data) {
+      toast.error(result.error ?? "Laporan tidak ditemukan")
       router.push("/admin/reports")
       return
     }
-    const reportData = data as unknown as ReportDetail
+    const reportData = result.data as unknown as ReportDetail
     setReport(reportData)
     setIsLoading(false)
 

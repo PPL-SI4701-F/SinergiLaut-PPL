@@ -229,21 +229,14 @@ export function Navigation() {
                   className={`px-4 py-2 text-sm font-bold transition-all rounded-full relative group ${
                     isActive
                       ? showPillNav
-                        ? "text-primary bg-primary/5"
-                        : "text-white bg-white/10"
+                        ? "text-primary bg-primary/10 shadow-sm"
+                        : "text-white bg-white/15 shadow-sm"
                       : showPillNav
                         ? "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                         : "text-white/70 hover:text-white hover:bg-white/5"
                   }`}
                 >
                   {link.label}
-                  {isActive && (
-                    <span
-                      className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
-                        showPillNav ? "bg-primary" : "bg-white"
-                      }`}
-                    />
-                  )}
                 </Link>
               );
             })}

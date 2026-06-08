@@ -49,7 +49,7 @@ export default function AdminUsersPage() {
     setUpdatingId(userId)
     const result = await approveVolunteerVerification(userId)
     if (result.success) {
-      toast.success("Volunteer berhasil diverifikasi ✅")
+      toast.success("Volunteer berhasil diverifikasi")
       setVolunteers(prev => prev.map(v => v.id === userId ? { ...v, volunteer_status: "approved" as const } : v))
     } else toast.error(result.error ?? "Gagal memverifikasi.")
     setUpdatingId(null)

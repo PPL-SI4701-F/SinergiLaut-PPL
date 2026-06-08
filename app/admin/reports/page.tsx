@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { createClient } from "@/lib/supabase/client"
 import { format } from "date-fns"
 import { id as localeID } from "date-fns/locale"
 import Link from "next/link"
@@ -10,7 +9,7 @@ import {
   FileBarChart, ThumbsUp, ThumbsDown, Loader2, RefreshCw, Eye
 } from "lucide-react"
 import { toast } from "sonner"
-import { approveReportAction, rejectReportAction } from "@/lib/actions/dashboard.actions"
+import { approveReportAction, getAdminReportsList, rejectReportAction } from "@/lib/actions/dashboard.actions"
 
 type Report = {
   id: string
@@ -32,21 +31,11 @@ export default function AdminReportsPage() {
 
   const fetchReports = useCallback(async () => {
     setIsLoading(true)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("reports")
-      .select(`
-        id, title, summary, status, created_at, activity_id,
-        community:communities(name),
-        profiles!reports_submitted_by_fkey(full_name)
-      `)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("Gagal memuat laporan:", error)
-      toast.error("Gagal memuat laporan")
+    const result = await getAdminReportsList()
+    if (!result.success) {
+      toast.error(result.error ?? "Gagal memuat laporan")
     } else {
-      setReports(data as unknown as Report[])
+      setReports(result.data as unknown as Report[])
     }
     setIsLoading(false)
   }, [])

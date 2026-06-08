@@ -252,7 +252,7 @@ export default function ActivitiesPage() {
           id: d.id,
           title: d.title,
           description: d.description,
-          image: d.cover_image_url || "/images/placeholder.jpg",
+          image: d.cover_image_url || "/placeholder.jpg",
           date: formatDate(d.start_date || new Date().toISOString()),
           location: d.location || "Online",
           type: d.category || "other",
@@ -276,6 +276,19 @@ export default function ActivitiesPage() {
     }
     fetchActivities()
   }, [])
+
+  // Setelah data kegiatan selesai dimuat, scroll halus ke section yang dituju
+  // lewat anchor URL (mis. /activities#completed dari tombol di landing page)
+  // supaya transisinya tidak terasa "lompat"/refresh mendadak.
+  useEffect(() => {
+    if (supabaseActivities.length === 0) return
+    const hash = window.location.hash.replace("#", "")
+    if (!hash) return
+    const target = document.getElementById(hash)
+    if (target) {
+      requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }))
+    }
+  }, [supabaseActivities])
 
   const locations       = ["All Locations", ...availableLocations]
   const typeOptions     = ["All Types", ...availableTypes]
@@ -366,7 +379,7 @@ export default function ActivitiesPage() {
         ) : (
           <>
             {activeActivities.length > 0 && (
-              <div className="mb-16">
+              <div id="active" className="mb-16">
                 <div className="act-group-header">
                   <div className="act-group-title">
                     <Sparkles className="text-primary h-6 w-6" />

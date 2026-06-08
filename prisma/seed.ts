@@ -144,7 +144,7 @@ async function main() {
   console.log('📋 Membuat kegiatan...')
   const approvedComm = comms.find(c => c.verification_status === 'approved')!
   const activityStatuses: activity_status[] = ['draft', 'pending_review', 'published', 'cancelled', 'completed']
-  const activities = []
+  const activities: Awaited<ReturnType<typeof prisma.activities.create>>[] = []
   
   const activityImages = [
     '/images/activities/activity-template-1.png',
@@ -156,12 +156,12 @@ async function main() {
 
   for (const status of activityStatuses) {
     for (let i = 1; i <= 2; i++) {
-      const imgIdx = (activities.length) % activityImages.length
+      const imgIdx: number = activities.length % activityImages.length
       const isCompleted = status === 'completed'
       const goal = 10000000
       const quota = 20
       
-      const act = await prisma.activities.create({
+      const act: Awaited<ReturnType<typeof prisma.activities.create>> = await prisma.activities.create({
         data: {
           community_id: approvedComm.id,
           title: `Kegiatan ${status} ${i}`,

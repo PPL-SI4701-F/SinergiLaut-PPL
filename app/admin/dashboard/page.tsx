@@ -15,13 +15,20 @@ import {
   getPendingCommunities,
   getPendingActivities,
   getPendingReports,
-  approveCommunityAction, rejectCommunityAction,
+  approveCommunityAction,
   approveActivityAction, rejectActivityAction,
 } from "@/lib/actions/dashboard.actions"
 import { getVolunteersPendingVerification } from "@/lib/actions/volunteer-verification.actions"
 
+const DEFAULT_ADMIN_STATS = {
+  totalCommunities: 0,
+  totalUsers: 0,
+  totalActivities: 0,
+  totalDonations: 0,
+}
+
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState({ totalCommunities: 0, totalUsers: 0, totalActivities: 0, totalDonations: 0 })
+  const [stats, setStats] = useState(DEFAULT_ADMIN_STATS)
   const [pendingCommunities, setPendingCommunities] = useState<any[]>([])
   const [pendingActivities, setPendingActivities] = useState<any[]>([])
   const [pendingReports, setPendingReports] = useState<any[]>([])
@@ -38,7 +45,7 @@ export default function AdminDashboardPage() {
         getPendingReports(),
         getVolunteersPendingVerification("pending"),
       ])
-      setStats(st)
+      setStats(st ?? DEFAULT_ADMIN_STATS)
       setPendingCommunities(pc)
       setPendingActivities(pa)
       setPendingReports(pr)
@@ -51,14 +58,14 @@ export default function AdminDashboardPage() {
   const handleApprove = async (entity: "Komunitas" | "Kegiatan", id: string) => {
     const result = entity === "Komunitas" ? await approveCommunityAction(id) : await approveActivityAction(id)
     if (result.success) {
-      toast.success(`${entity} berhasil disetujui ✅`)
+      toast.success(`${entity} berhasil disetujui`)
       if (entity === "Komunitas") setPendingCommunities(p => p.filter(c => c.id !== id))
       else setPendingActivities(p => p.filter(a => a.id !== id))
     } else toast.error(result.error ?? "Gagal.")
   }
 
   const handleReject = async (entity: "Komunitas" | "Kegiatan", id: string) => {
-    const result = entity === "Komunitas" ? await rejectCommunityAction(id) : await rejectActivityAction(id)
+    const result = entity === "Kegiatan" ? await rejectActivityAction(id) : { success: false, error: "Buka halaman Kelola Komunitas untuk menolak dengan alasan." }
     if (result.success) {
       toast.info(`${entity} ditolak.`)
       if (entity === "Komunitas") setPendingCommunities(p => p.filter(c => c.id !== id))
@@ -105,7 +112,7 @@ export default function AdminDashboardPage() {
                       <p className="text-sm text-muted-foreground">{stat.label}</p>
                       <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
                       <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3 text-green-500" /> Live
+                        <TrendingUp className="h-3 w-3 text-green-500" /> Data terbaru
                       </p>
                     </div>
                     <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
@@ -122,7 +129,15 @@ export default function AdminDashboardPage() {
             {alertCards.map(a => (
               <Link key={a.href + a.label} href={a.href}
                 className={`p-4 ${a.color} border rounded-xl flex items-center gap-3 hover:shadow-md transition-all group`}>
-                <span className="text-2xl">{a.icon}</span>
+                {a.href === "/admin/communities" ? (
+                  <Building2 className="h-5 w-5 flex-shrink-0" />
+                ) : a.href === "/admin/activities" ? (
+                  <Activity className="h-5 w-5 flex-shrink-0" />
+                ) : a.href === "/admin/reports" ? (
+                  <FileText className="h-5 w-5 flex-shrink-0" />
+                ) : (
+                  <UserCheck className="h-5 w-5 flex-shrink-0" />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{a.label}</p>
                   <p className="text-xs opacity-80">{a.sub}</p>
@@ -163,8 +178,8 @@ export default function AdminDashboardPage() {
                           <Button size="sm" className="h-7 px-2 bg-green-600 hover:bg-green-700 text-xs" onClick={() => handleApprove("Komunitas", c.id)}>
                             <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Setujui
                           </Button>
-                          <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={() => handleReject("Komunitas", c.id)}>
-                            <X className="h-3.5 w-3.5" />
+                          <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" asChild>
+                            <Link href="/admin/communities"><X className="h-3.5 w-3.5" /></Link>
                           </Button>
                         </div>
                       </div>

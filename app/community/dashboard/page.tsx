@@ -237,32 +237,32 @@ export default function CommunityDashboardPage() {
     {
       label: "Total Kegiatan",
       value: stats.totalActivities,
-      sub: `${stats.completedActivities} terlaksana · ${stats.activeActivities} aktif · ${stats.pendingReviewActivities} menunggu verifikasi`,
+      sub: `${stats.completedActivities} terlaksana - ${stats.activeActivities} aktif - ${stats.pendingReviewActivities} menunggu verifikasi`,
       icon: Calendar,
-      change: "Live",
+      change: "Data terbaru",
     },
     {
       label: "Total Relawan",
       value: stats.totalVolunteers,
       sub: `${stats.activeVolunteers} relawan kegiatan aktif`,
       icon: Users,
-      change: "Live",
+      change: "Data terbaru",
     },
     {
       label: "Total Donasi",
       value: formatCurrency(stats.totalDonations),
       sub: `${formatCurrency(stats.activeDonations)} dari kegiatan aktif`,
       icon: Banknote,
-      change: "Live",
+      change: "Data terbaru",
     },
     {
       label: "Total Saldo Komunitas",
       value: formatCurrency(stats.totalBalance),
       sub: "Dana yang telah dicairkan admin ke komunitas",
       icon: Wallet,
-      change: "Live",
+      change: "Data terbaru",
     },
-    { label: "Laporan Terverifikasi", value: stats.verifiedReports, icon: FileText, change: "Live" },
+    { label: "Laporan Terverifikasi", value: stats.verifiedReports, icon: FileText, change: "Data terbaru" },
   ]
 
   return (

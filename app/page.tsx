@@ -5,10 +5,10 @@ import { Footer } from "@/components/footer"
 import {
   ArrowRight, Users, Heart, Leaf, Calendar, MapPin,
   CheckCircle, Search, Gift, LineChart, FileText,
-  Sparkles, Anchor, Zap, ShieldCheck, TrendingUp, Globe, Building,
+  Sparkles, Zap, ShieldCheck, TrendingUp, Globe, Building, Target, Banknote, Activity,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
-import { formatDate } from "@/lib/utils/helpers"
+import { formatDate, formatCurrency } from "@/lib/utils/helpers"
 import { getHomePageStats } from "@/lib/actions/dashboard.actions"
 
 // ISR: cache halaman selama 60 detik — menghindari 3 DB query per request
@@ -64,7 +64,7 @@ export default async function HomePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const featuredActivities: any[] = (realActivities ?? []).map(d => ({
     ...d,
-    image: d.cover_image_url || "/images/placeholder.jpg",
+    image: d.cover_image_url || "/placeholder.jpg",
     date: formatDate(d.start_date || new Date().toISOString()),
     location: d.location || "Online",
     volunteers: d.volunteer_count || 0,
@@ -77,10 +77,20 @@ export default async function HomePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const completedActivities: any[] = (realCompletedActivities ?? []).map(d => ({
     ...d,
-    image: d.cover_image_url || "/images/placeholder.jpg",
+    image: d.cover_image_url || "/placeholder.jpg",
     date: formatDate(d.start_date || new Date().toISOString()),
     location: d.location || "Online",
     volunteers: d.volunteer_count || 0,
+  }))
+
+  const { data: realCommunities } = await supabase
+    .from("communities").select("*").eq("is_verified", true)
+    .order("member_count", { ascending: false }).limit(3)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const featuredCommunities: any[] = (realCommunities ?? []).map(c => ({
+    ...c,
+    avatar: c.logo_url || "/placeholder-logo.png",
   }))
 
   return (
@@ -200,35 +210,65 @@ export default async function HomePage() {
 
             {featuredActivities.length > 0 ? (
               <div className="sl-grid-acts">
-                {featuredActivities.map((activity) => (
-                  <Link key={activity.id} href={`/activities/${activity.id}`} className="sl-act-card">
-                    <div className="sl-act-img">
-                      <Image src={activity.image} alt={activity.title} fill className="object-cover" />
-                      <span className="sl-act-badge">{activity.category || "Konservasi"}</span>
-                    </div>
-                    <div className="sl-act-body">
-                      <h3 className="sl-act-title">{activity.title}</h3>
-                      <p className="sl-act-desc">{activity.description}</p>
-                      <div className="sl-act-meta">
-                        <div className="sl-act-meta-item">
-                          <Calendar style={{ width: 14, height: 14, color: "#06958a" }} />
-                          {activity.date}
+                {featuredActivities.map((activity) => {
+                  const pct = activity.funding_goal > 0
+                    ? Math.min(Math.round((activity.funding_raised / activity.funding_goal) * 100), 100)
+                    : 0
+                  return (
+                    <Link key={activity.id} href={`/activities/${activity.id}`} className="sl-act-card">
+                      <div className="sl-act-img">
+                        <Image src={activity.image} alt={activity.title} fill className="object-cover" />
+                        <span className="sl-act-badge">{activity.category || "Konservasi"}</span>
+                        <span className="sl-act-status-badge">Aktif</span>
+                      </div>
+                      <div className="sl-act-body">
+                        <div className="sl-act-header">
+                          <div className="sl-act-icon">
+                            <Leaf style={{ width: 20, height: 20, color: "#06958a" }} />
+                          </div>
+                          <h3 className="sl-act-title">{activity.title}</h3>
                         </div>
-                        <div className="sl-act-meta-item">
-                          <MapPin style={{ width: 14, height: 14, color: "#06958a" }} />
-                          {activity.location}
+                        <p className="sl-act-desc">{activity.description}</p>
+                        <div className="sl-act-meta">
+                          <div className="sl-act-meta-item">
+                            <Calendar style={{ width: 14, height: 14, color: "#06958a" }} />
+                            {activity.date}
+                          </div>
+                          <div className="sl-act-meta-item">
+                            <MapPin style={{ width: 14, height: 14, color: "#06958a" }} />
+                            {activity.location}
+                          </div>
+                          <div className="sl-act-meta-item">
+                            <Users style={{ width: 14, height: 14, color: "#06958a" }} />
+                            {activity.volunteers} / {activity.volunteer_quota || 0} relawan
+                          </div>
                         </div>
-                        <div className="sl-act-meta-item">
-                          <Users style={{ width: 14, height: 14, color: "#06958a" }} />
-                          {activity.volunteers} relawan
+                        <div className="sl-act-progress">
+                          <div className="sl-act-progress-header">
+                            <Banknote style={{ width: 14, height: 14, color: "#06958a" }} />
+                            <span className="sl-act-progress-label">Progres Pendanaan</span>
+                            <span className="sl-act-progress-pct">{pct}%</span>
+                          </div>
+                          <div className="sl-act-progress-track">
+                            <div className="sl-act-progress-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                          <div className="sl-act-progress-amounts">
+                            <span>{formatCurrency(activity.funding_raised || 0)}</span>
+                            <span className="sl-act-progress-goal">target {formatCurrency(activity.funding_goal || 0)}</span>
+                          </div>
+                        </div>
+                        <div className="sl-act-btns">
+                          <span className="sl-act-btn-primary">
+                            <Users style={{ width: 14, height: 14 }} /> Relawan
+                          </span>
+                          <span className="sl-act-btn-ghost">
+                            <Heart style={{ width: 14, height: 14 }} /> Donasi
+                          </span>
                         </div>
                       </div>
-                      <span className="sl-btn sl-btn-outline sl-btn-sm" style={{ marginTop: "auto" }}>
-                        Lihat Detail <ArrowRight style={{ width: 14, height: 14 }} />
-                      </span>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </div>
             ) : (
               <div style={{ textAlign: "center", padding: "3rem", color: "var(--sl-body-2)" }}>
@@ -238,7 +278,7 @@ export default async function HomePage() {
             )}
 
             <div style={{ textAlign: "center", marginTop: "3rem" }}>
-              <Link href="/activities" className="sl-btn sl-btn-brand sl-btn-md">
+              <Link href="/activities#active" className="sl-btn sl-btn-brand sl-btn-md">
                 Lihat Semua Kegiatan <ArrowRight style={{ width: 16, height: 16 }} />
               </Link>
             </div>
@@ -257,35 +297,124 @@ export default async function HomePage() {
                 </p>
               </div>
               <div className="sl-grid-comps">
-                {completedActivities.map((activity) => (
-                  <div key={activity.id} className="sl-comp-card">
-                    <div className="sl-comp-img">
-                      <Image src={activity.image} alt={activity.title} fill className="object-cover" />
-                      <div className="sl-comp-badge">
-                        <CheckCircle style={{ width: 10, height: 10 }} /> Selesai
+                {completedActivities.map((activity) => {
+                  const pct = activity.funding_goal > 0
+                    ? Math.min(Math.round((activity.funding_raised / activity.funding_goal) * 100), 100)
+                    : 0
+                  return (
+                    <Link key={activity.id} href={`/activities/${activity.id}#reports`} className="sl-comp-card">
+                      <div className="sl-comp-img">
+                        <Image src={activity.image} alt={activity.title} fill className="object-cover" />
+                        <span className="sl-comp-cat-badge">{activity.category || "Konservasi"}</span>
+                        <div className="sl-comp-badge">
+                          <CheckCircle style={{ width: 10, height: 10 }} /> Selesai
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ padding: "1.5rem", flex: 1, display: "flex", flexDirection: "column" }}>
-                      <h3 style={{ fontSize: "0.9375rem", fontWeight: 700, color: "var(--sl-ink)", marginBottom: "0.5rem", lineHeight: 1.3 }}>{activity.title}</h3>
-                      <p style={{ fontSize: "0.8125rem", color: "var(--sl-body-2)", lineHeight: 1.65, marginBottom: "1rem", flex: 1, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{activity.description}</p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontSize: "0.8rem", color: "var(--sl-body-2)", marginBottom: "1rem" }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <Users style={{ width: 13, height: 13, color: "var(--sl-success)" }} /> {activity.volunteers} relawan
-                        </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <MapPin style={{ width: 13, height: 13, color: "var(--sl-success)" }} /> {activity.location.split(",")[0]}
+                      <div className="sl-comp-body">
+                        <div className="sl-comp-header">
+                          <div className="sl-comp-icon">
+                            <Leaf style={{ width: 20, height: 20, color: "#64748b" }} />
+                          </div>
+                          <h3 className="sl-comp-title">{activity.title}</h3>
+                        </div>
+                        <p className="sl-comp-desc">{activity.description}</p>
+                        <div className="sl-comp-meta">
+                          <span className="sl-comp-meta-item">
+                            <Calendar style={{ width: 13, height: 13, color: "var(--sl-success)" }} /> {activity.date}
+                          </span>
+                          <span className="sl-comp-meta-item">
+                            <MapPin style={{ width: 13, height: 13, color: "var(--sl-success)" }} /> {activity.location.split(",")[0]}
+                          </span>
+                          <span className="sl-comp-meta-item">
+                            <Users style={{ width: 13, height: 13, color: "var(--sl-success)" }} /> {activity.volunteers} relawan
+                          </span>
+                        </div>
+                        <div className="sl-comp-progress">
+                          <div className="sl-comp-progress-header">
+                            <Target style={{ width: 14, height: 14, color: "var(--sl-success)" }} />
+                            <span className="sl-comp-progress-label">Hasil Akhir</span>
+                            <span className="sl-comp-progress-pct">{pct}%</span>
+                          </div>
+                          <div className="sl-comp-progress-track">
+                            <div className="sl-comp-progress-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="sl-comp-progress-amount">Terkumpul {formatCurrency(activity.funding_raised || 0)}</span>
+                        </div>
+                        <span className="sl-comp-btn">
+                          Lihat Laporan <ArrowRight style={{ width: 13, height: 13 }} />
                         </span>
                       </div>
-                      <Link href={`/activities/${activity.id}#reports`} className="sl-btn sl-btn-primary sl-btn-sm" style={{ background: "var(--sl-grad-success)", boxShadow: "0 2px 8px rgba(22,163,74,0.3)" }}>
-                        Lihat Laporan <ArrowRight style={{ width: 13, height: 13 }} />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                    </Link>
+                  )
+                })}
               </div>
               <div style={{ textAlign: "center", marginTop: "3rem" }}>
                 <Link href="/activities#completed" className="sl-btn sl-btn-brand sl-btn-md">
                   Lihat Semua Konservasi yang Berhasil <ArrowRight style={{ width: 16, height: 16 }} />
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── COMMUNITIES ── */}
+        {featuredCommunities.length > 0 && (
+          <section className="sl-section">
+            <div className="sl-container">
+              <div className="sl-text-center" style={{ marginBottom: "3rem" }}>
+                <div className="sl-eyebrow is-center sl-mx-auto">Komunitas Kami</div>
+                <h2 className="sl-section-title">Digerakkan oleh Komunitas Lokal</h2>
+                <p className="sl-section-desc is-center sl-mx-auto">
+                  Komunitas terverifikasi yang memimpin aksi konservasi laut di berbagai wilayah Indonesia.
+                </p>
+              </div>
+              <div className="sl-grid-comm">
+                {featuredCommunities.map((community) => (
+                  <Link key={community.id} href={`/community/${community.id}`} className="sl-comm-card">
+                    <div className="sl-comm-header">
+                      <div className="sl-comm-avatar">
+                        <Image src={community.avatar} alt={community.name} fill className="object-cover" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {community.is_verified && (
+                          <div className="sl-comm-verified">
+                            <ShieldCheck style={{ width: 10, height: 10 }} /> Terverifikasi
+                          </div>
+                        )}
+                        <h3 className="sl-comm-name">{community.name}</h3>
+                        <div className="sl-comm-loc">
+                          <MapPin style={{ width: 12, height: 12, color: "#06958a" }} />
+                          {community.location || "Tanpa Lokasi"}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="sl-comm-desc">{community.description || "Tidak ada deskripsi"}</p>
+                    {(community.focus_areas || []).length > 0 && (
+                      <div className="sl-comm-tags">
+                        {(community.focus_areas || []).slice(0, 3).map((f: string) => (
+                          <span key={f} className="sl-comm-tag">{f}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="sl-comm-meta">
+                      <span className="sl-comm-meta-item">
+                        <Users style={{ width: 13, height: 13, color: "#06958a" }} />
+                        {community.member_count || 0} anggota
+                      </span>
+                      <span className="sl-comm-meta-item">
+                        <Activity style={{ width: 13, height: 13, color: "#06958a" }} />
+                        Aktif
+                      </span>
+                    </div>
+                    <span className="sl-comm-btn">
+                      Lihat Komunitas <ArrowRight style={{ width: 14, height: 14 }} />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              <div style={{ textAlign: "center", marginTop: "3rem" }}>
+                <Link href="/community" className="sl-btn sl-btn-brand sl-btn-md">
+                  Lihat Semua Komunitas <ArrowRight style={{ width: 16, height: 16 }} />
                 </Link>
               </div>
             </div>

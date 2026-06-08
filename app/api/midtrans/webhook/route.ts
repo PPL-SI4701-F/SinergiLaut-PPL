@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
         const isExpired = transaction_status === "expire"
         await supabase.from("notifications").insert({
           user_id: donation.user_id,
-          title: isExpired ? "Donasi Kedaluwarsa ⏰" : "Donasi Gagal ❌",
+          title: isExpired ? "Donasi Kedaluwarsa" : "Donasi Gagal",
           message: isExpired
             ? `Donasi ${formattedAmount} untuk kegiatan "${activityTitle}" kedaluwarsa karena tidak dibayar tepat waktu. Silakan coba kembali.`
             : `Donasi ${formattedAmount} untuk kegiatan "${activityTitle}" gagal diproses. Silakan coba kembali.`,

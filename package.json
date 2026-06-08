@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev",
+        "dev": "cross-env NODE_OPTIONS=--max-old-space-size=1536 next dev",
         "dev:turbo": "cross-env NODE_OPTIONS=--max-old-space-size=2048 next dev --turbo",
         "dev:lowmem": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next dev",
         "build": "next build",

@@ -48,7 +48,7 @@ export function VolunteerManagementTab({ activity, volunteerPercent, setActivity
     }
 
     if (action === "approved") {
-      toast.success("Relawan berhasil disetujui! ✅")
+      toast.success("Relawan berhasil disetujui")
       setActivity((prev: any) => prev ? { ...prev, volunteer_count: prev.volunteer_count + 1 } : prev)
     } else {
       toast.info("Pendaftaran relawan ditolak.");

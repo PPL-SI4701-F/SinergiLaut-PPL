@@ -285,7 +285,7 @@ export default function DonorsManagementPage() {
                                       </div>
                                       <div className="flex flex-wrap gap-2 text-muted-foreground">
                                         <Badge className="text-xs">{conditionLabel[item.item_condition] ?? item.item_condition}</Badge>
-                                        {item.description && <span>· {item.description}</span>}
+                                        {item.description && <span>- {item.description}</span>}
                                         {item.tracking_number && (
                                           <span className="flex items-center gap-1">
                                             <Truck className="h-3 w-3" />

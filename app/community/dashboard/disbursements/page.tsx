@@ -256,10 +256,10 @@ export default function CommunityDisbursementsPage() {
                             <div className="grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5" /> Jumlah: <span className="font-medium text-foreground">{formatCurrency(d.amount ?? 0)}</span></div>
                               <div className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Diterima bersih: <span className="font-medium text-foreground">{formatCurrency(d.net_amount ?? (d.amount ?? 0) - (d.platform_fee ?? 0))}</span></div>
-                              <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> {d.bank_name} · {d.account_number} a.n. {d.account_name}</div>
+                              <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> {d.bank_name} - {d.account_number} a.n. {d.account_name}</div>
                               <div className="flex items-center gap-1.5">
-                                <Calendar className="h-3.5 w-3.5" /> Diajukan: {d.created_at ? formatDate(d.created_at) : "—"}
-                                {d.disbursed_at && <span> · Selesai: {formatDate(d.disbursed_at)}</span>}
+                                <Calendar className="h-3.5 w-3.5" /> Diajukan: {d.created_at ? formatDate(d.created_at) : "-"}
+                                {d.disbursed_at && <span> - Selesai: {formatDate(d.disbursed_at)}</span>}
                               </div>
                             </div>
                             {d.reference_number && (
@@ -344,7 +344,7 @@ export default function CommunityDisbursementsPage() {
               {hasBankAccount ? (
                 <div className="flex items-center gap-2 px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-600">
                   <Building2 className="w-4 h-4 text-slate-400" />
-                  {community?.bank_name} · {community?.bank_account_number} a.n. {community?.bank_account_name}
+                  {community?.bank_name} - {community?.bank_account_number} a.n. {community?.bank_account_name}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">Belum ada rekening terdaftar pada profil komunitas.</p>

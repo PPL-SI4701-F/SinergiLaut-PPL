@@ -25,6 +25,7 @@ import {
 } from "@/lib/actions/dashboard.actions"
 
 interface SanctionModal { open: boolean; communityId: string | null; communityName: string }
+interface RejectModal { open: boolean; communityId: string | null; communityName: string }
 
 export default function AdminCommunitiesPage() {
   const [search, setSearch] = useState("")
@@ -33,6 +34,8 @@ export default function AdminCommunitiesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [sanctionModal, setSanctionModal] = useState<SanctionModal>({ open: false, communityId: null, communityName: "" })
   const [sanctionForm, setSanctionForm] = useState({ type: "warning", reason: "" })
+  const [rejectModal, setRejectModal] = useState<RejectModal>({ open: false, communityId: null, communityName: "" })
+  const [rejectReason, setRejectReason] = useState("")
 
   useEffect(() => {
     async function load() {
@@ -48,17 +51,25 @@ export default function AdminCommunitiesPage() {
   const handleApprove = async (id: string) => {
     const result = await approveCommunityAction(id)
     if (result.success) {
-      toast.success("Komunitas berhasil diverifikasi ✅")
+      toast.success("Komunitas berhasil diverifikasi")
       setPendingCommunities(p => p.filter(c => c.id !== id))
       setAllCommunities(prev => prev.map(c => c.id === id ? { ...c, verification_status: "approved", is_verified: true } : c))
     } else toast.error(result.error ?? "Gagal menyetujui.")
   }
 
-  const handleReject = async (id: string) => {
-    const result = await rejectCommunityAction(id)
+  const handleReject = async () => {
+    if (!rejectModal.communityId) return
+    if (!rejectReason.trim()) {
+      toast.error("Alasan penolakan wajib diisi.")
+      return
+    }
+    const result = await rejectCommunityAction(rejectModal.communityId, rejectReason)
     if (result.success) {
       toast.info("Komunitas ditolak.")
-      setPendingCommunities(p => p.filter(c => c.id !== id))
+      setPendingCommunities(p => p.filter(c => c.id !== rejectModal.communityId))
+      setAllCommunities(prev => prev.map(c => c.id === rejectModal.communityId ? { ...c, verification_status: "rejected", is_verified: false } : c))
+      setRejectModal({ open: false, communityId: null, communityName: "" })
+      setRejectReason("")
     } else toast.error(result.error ?? "Gagal menolak.")
   }
 
@@ -120,7 +131,7 @@ export default function AdminCommunitiesPage() {
                             <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleApprove(c.id)}>
                               <CheckCircle2 className="h-4 w-4 mr-1" /> Verifikasi
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleReject(c.id)}>
+                            <Button size="sm" variant="destructive" onClick={() => setRejectModal({ open: true, communityId: c.id, communityName: c.name })}>
                               <X className="h-4 w-4 mr-1" /> Tolak
                             </Button>
                           </div>
@@ -213,6 +224,40 @@ export default function AdminCommunitiesPage() {
           </div>
         </div>
       </main>
+
+      <Dialog open={rejectModal.open} onOpenChange={open => {
+        if (!open) {
+          setRejectModal({ open: false, communityId: null, communityName: "" })
+          setRejectReason("")
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tolak Verifikasi Komunitas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">
+              Berikan alasan yang jelas untuk komunitas {rejectModal.communityName}. Alasan ini akan dikirim sebagai notifikasi.
+            </p>
+            <Label>Alasan Penolakan *</Label>
+            <Textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Contoh: dokumen/legalitas belum lengkap, profil komunitas belum jelas, atau data kontak tidak valid..."
+              rows={4}
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => {
+              setRejectModal({ open: false, communityId: null, communityName: "" })
+              setRejectReason("")
+            }}>Batal</Button>
+            <Button variant="destructive" className="flex-1" onClick={handleReject} disabled={!rejectReason.trim()}>
+              <X className="h-4 w-4 mr-2" /> Tolak Komunitas
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Sanction Modal */}
       <Dialog open={sanctionModal.open} onOpenChange={open => setSanctionModal({ ...sanctionModal, open })}>

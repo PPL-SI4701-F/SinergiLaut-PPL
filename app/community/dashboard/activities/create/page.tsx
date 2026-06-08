@@ -11,9 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { AlertCircle, ArrowLeft, Loader2, Calendar, MapPin, Users, Banknote, Image as ImageIcon, Package, X, Plus, Trash2, Receipt } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import {
+  AlertCircle, ArrowLeft, Loader2, Calendar, MapPin, Users, Banknote, Image as ImageIcon,
+  Package, X, Plus, Trash2, Receipt, Check, ChevronsUpDown, ShieldCheck, ShieldAlert, SearchCheck
+} from "lucide-react"
 import Link from "next/link"
-import { ACTIVITY_CATEGORIES } from "@/lib/constants"
+import { ACTIVITY_CATEGORIES, INDONESIAN_BANKS } from "@/lib/constants"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 // Import MapPicker dynamically to avoid SSR issues
@@ -79,23 +85,23 @@ export default function CreateActivityPage() {
     setMinStartDateTime((new Date(d.getTime() - offset)).toISOString().slice(0, 16))
   }, [])
 
-  // Pra-isi rekening pencairan dana dari profil komunitas (jika sudah pernah diisi)
   useEffect(() => {
     getCommunityProfile().then(result => {
       if (result.success && result.data) {
         const d = result.data as any
         setCanCreate(Boolean(d.is_verified && d.verification_status === "approved" && !d.is_suspended))
-        setForm(f => ({
-          ...f,
-          bankName: d.bank_name ?? f.bankName,
-          bankAccountNumber: d.bank_account_number ?? f.bankAccountNumber,
-          bankAccountName: d.bank_account_name ?? f.bankAccountName,
-        }))
       } else {
         setCanCreate(false)
       }
     })
   }, [])
+
+  // --- Rekening Pencairan Dana: pemilihan bank & cek rekening (simulasi) ---
+  const [bankPickerOpen, setBankPickerOpen] = useState(false)
+  const [accountCheck, setAccountCheck] = useState<{
+    status: "idle" | "checking" | "valid" | "invalid"
+    message: string | null
+  }>({ status: "idle", message: null })
 
   // ── Cover Image Handlers ──────────────────────────────────
   const handleDragOver = (e: React.DragEvent) => {
@@ -172,6 +178,29 @@ export default function CreateActivityPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     setForm({ ...form, [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value })
+    if (name === "bankAccountNumber" || name === "bankAccountName") {
+      setAccountCheck({ status: "idle", message: null })
+    }
+  }
+
+  // ── Cek Rekening (simulasi — tidak ada integrasi bank sungguhan) ──
+  const handleCheckAccount = () => {
+    if (!form.bankName || !form.bankAccountNumber.trim() || !form.bankAccountName.trim()) {
+      toast.error("Pilih bank dan isi nomor rekening serta nama penerima terlebih dahulu.")
+      return
+    }
+    if (!/^\d{6,20}$/.test(form.bankAccountNumber.trim())) {
+      setAccountCheck({ status: "invalid", message: "Format nomor rekening tidak valid. Pastikan hanya berisi angka (6-20 digit)." })
+      return
+    }
+
+    setAccountCheck({ status: "checking", message: null })
+    setTimeout(() => {
+      setAccountCheck({
+        status: "valid",
+        message: `Rekening ${form.bankName} a.n. ${form.bankAccountName} ditemukan dan aktif.`,
+      })
+    }, 1200)
   }
 
   // ── Submit ────────────────────────────────────────────────
@@ -437,19 +466,78 @@ export default function CreateActivityPage() {
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="bankName">Nama Bank</Label>
-                      <Input id="bankName" name="bankName" value={form.bankName}
-                        onChange={handleChange} placeholder="Contoh: BCA, Mandiri, BRI..." />
+                      <Popover open={bankPickerOpen} onOpenChange={setBankPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={bankPickerOpen}
+                            className="w-full justify-between font-normal"
+                          >
+                            {form.bankName || <span className="text-muted-foreground">Pilih bank...</span>}
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Cari nama bank..." />
+                            <CommandList>
+                              <CommandEmpty>Bank tidak ditemukan.</CommandEmpty>
+                              <CommandGroup>
+                                {INDONESIAN_BANKS.map((bank) => (
+                                  <CommandItem
+                                    key={bank}
+                                    value={bank}
+                                    onSelect={() => {
+                                      setForm(f => ({ ...f, bankName: bank }))
+                                      setAccountCheck({ status: "idle", message: null })
+                                      setBankPickerOpen(false)
+                                    }}
+                                  >
+                                    <Check className={cn("h-4 w-4 mr-2", form.bankName === bank ? "opacity-100" : "opacity-0")} />
+                                    {bank}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="bankAccountNumber">Nomor Rekening</Label>
                       <Input id="bankAccountNumber" name="bankAccountNumber" value={form.bankAccountNumber}
-                        onChange={handleChange} placeholder="1234567890" />
+                        onChange={handleChange} placeholder="1234567890" inputMode="numeric" />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="bankAccountName">Nama Penerima (Sesuai Rekening)</Label>
                     <Input id="bankAccountName" name="bankAccountName" value={form.bankAccountName}
                       onChange={handleChange} placeholder="Nama pemilik rekening" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Button type="button" variant="outline" size="sm"
+                      onClick={handleCheckAccount} disabled={accountCheck.status === "checking"}>
+                      {accountCheck.status === "checking"
+                        ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        : <SearchCheck className="h-3.5 w-3.5 mr-1.5" />}
+                      Cek Rekening
+                    </Button>
+                    {accountCheck.status === "valid" && (
+                      <p className="flex items-start gap-1.5 text-xs text-green-700">
+                        <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" /> {accountCheck.message}
+                      </p>
+                    )}
+                    {accountCheck.status === "invalid" && (
+                      <p className="flex items-start gap-1.5 text-xs text-red-600">
+                        <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" /> {accountCheck.message}
+                      </p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      *Pengecekan rekening menggunakan simulasi, bukan koneksi langsung ke pihak bank.
+                    </p>
                   </div>
                 </div>
 
