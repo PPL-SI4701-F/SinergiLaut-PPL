@@ -375,6 +375,9 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Enable Realtime for notifications table
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
 -- ============================================
 -- AUDIT LOGS
 -- ============================================
