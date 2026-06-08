@@ -386,6 +386,45 @@ export async function markVolunteerAttended(registrationId: string, proofFile: F
   return { success: true, data: { ...data, attendance_proof_url: urlData.publicUrl } }
 }
 
+/** Tandai relawan tidak hadir */
+export async function markVolunteerAbsent(registrationId: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true, data: { id: registrationId } as any }
+
+  const auth = await requireCommunityOrAdminRegistrationAccess(registrationId)
+  if (!auth.authorized) return { success: false, error: auth.error }
+
+  const adminSupabase = await createAdminClient()
+
+  const { data, error } = await adminSupabase
+    .from("volunteer_registrations")
+    .update({ status: "absent", attendance_proof_url: null })
+    .eq("id", registrationId)
+    .select("user_id, full_name, activity_id, activity:activities(title)")
+    .single()
+
+  if (error) {
+    console.error("[markVolunteerAbsent] error:", error)
+    return { success: false, error: "Gagal mengubah status kehadiran relawan." }
+  }
+
+  // volunteer_count diperbarui otomatis oleh DB trigger update_volunteer_count
+
+  const userId = data?.user_id
+  const activityTitle = (data?.activity as any)?.title ?? "kegiatan"
+  if (userId) {
+    await createNotification(
+      userId,
+      "Kehadiran Volunteer Tidak Tercatat ⚠️",
+      `Anda tercatat tidak hadir pada kegiatan "${activityTitle}". Hubungi pengelola komunitas jika ini tidak sesuai.`,
+      "warning",
+      "/user/dashboard"
+    )
+  }
+
+  return { success: true, data }
+}
+
 /** Ambil riwayat pendaftaran relawan untuk user yang sedang login */
 export async function getMyVolunteerRegistrations(userId: string) {
   const isE2E = await getE2EMock()

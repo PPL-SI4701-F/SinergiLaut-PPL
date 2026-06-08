@@ -294,6 +294,7 @@
 }
 @media (min-width: 1024px) {
   .sl-grid-acts    { grid-template-columns: repeat(3, 1fr); }
+  .sl-grid-comps   { grid-template-columns: repeat(3, 1fr); }
   .sl-grid-how     { grid-template-columns: repeat(4, 1fr); }
   .sl-grid-mission { grid-template-columns: 1fr 1fr; }
 }

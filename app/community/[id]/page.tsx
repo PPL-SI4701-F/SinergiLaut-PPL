@@ -361,26 +361,34 @@ export default async function CommunityProfilePage({
                                 <div className="flex items-center justify-between text-sm mb-1">
                                   <span className="text-muted-foreground">Relawan</span>
                                   <span className="font-medium text-foreground">
-                                    {activity.volunteer_count || 0}/{activity.volunteer_quota || 0}
+                                    {activity.volunteer_quota > 0
+                                      ? `${activity.volunteer_count || 0}/${activity.volunteer_quota}`
+                                      : `${activity.volunteer_count || 0} terdaftar`}
                                   </span>
                                 </div>
-                                <Progress
-                                  value={calcPercentage(activity.volunteer_count || 0, activity.volunteer_quota || 0)}
-                                  className="h-2"
-                                />
+                                {activity.volunteer_quota > 0 && (
+                                  <Progress
+                                    value={calcPercentage(activity.volunteer_count || 0, activity.volunteer_quota)}
+                                    className="h-2"
+                                  />
+                                )}
                               </div>
 
                               <div>
                                 <div className="flex items-center justify-between text-sm mb-1">
                                   <span className="text-muted-foreground">Dana Terkumpul</span>
                                   <span className="font-medium text-foreground">
-                                    {formatCurrency(activity.funding_raised || 0)} / {formatCurrency(activity.funding_goal || 0)}
+                                    {activity.funding_goal > 0
+                                      ? `${formatCurrency(activity.funding_raised || 0)} / ${formatCurrency(activity.funding_goal)}`
+                                      : formatCurrency(activity.funding_raised || 0)}
                                   </span>
                                 </div>
-                                <Progress
-                                  value={calcPercentage(activity.funding_raised || 0, activity.funding_goal || 0)}
-                                  className="h-2"
-                                />
+                                {activity.funding_goal > 0 && (
+                                  <Progress
+                                    value={calcPercentage(activity.funding_raised || 0, activity.funding_goal)}
+                                    className="h-2"
+                                  />
+                                )}
                               </div>
                             </div>
 
