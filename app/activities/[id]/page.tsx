@@ -1196,27 +1196,47 @@ export default function ActivityDetailPage() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground flex items-center gap-1"><Banknote className="h-4 w-4" /> Dana Terkumpul</span>
-                      <span className="font-semibold text-foreground">{fundingPercent}%</span>
+                      <span className="font-semibold text-foreground">
+                        {activity.funding_goal > 0 ? `${fundingPercent}%` : "Tanpa target"}
+                      </span>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${fundingPercent}%` }} />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatCurrency(activity.funding_raised)} dari {formatCurrency(activity.funding_goal)}
-                    </p>
+                    {activity.funding_goal > 0 ? (
+                      <>
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${fundingPercent}%` }} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatCurrency(activity.funding_raised)} dari {formatCurrency(activity.funding_goal)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total terkumpul: <span className="font-semibold text-foreground">{formatCurrency(activity.funding_raised)}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground flex items-center gap-1"><Users className="h-4 w-4" /> Relawan</span>
-                      <span className="font-semibold text-foreground">{volunteerPercent}%</span>
+                      <span className="font-semibold text-foreground">
+                        {activity.volunteer_quota > 0 ? `${volunteerPercent}%` : "Tanpa batas kuota"}
+                      </span>
                     </div>
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full" style={{ width: `${volunteerPercent}%` }} />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {activity.volunteer_count} dari {activity.volunteer_quota} slot terisi
-                    </p>
+                    {activity.volunteer_quota > 0 ? (
+                      <>
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-accent rounded-full" style={{ width: `${volunteerPercent}%` }} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {activity.volunteer_count} dari {activity.volunteer_quota} slot terisi
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        <span className="font-semibold text-foreground">{activity.volunteer_count}</span> relawan telah mendaftar
+                      </p>
+                    )}
                   </div>
 
                   {totalItemNeeded > 0 && (

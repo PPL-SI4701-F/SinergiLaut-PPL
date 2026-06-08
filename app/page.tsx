@@ -71,8 +71,8 @@ export default async function HomePage() {
   }))
 
   const { data: realCompletedActivities } = await supabase
-    .from("activities").select("*").eq("status", "completed")
-    .order("start_date", { ascending: false }).limit(2)
+    .from("activities").select("*").eq("status", "completed").eq("is_featured", true)
+    .order("updated_at", { ascending: false }).limit(3)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const completedActivities: any[] = (realCompletedActivities ?? []).map(d => ({
@@ -282,6 +282,11 @@ export default async function HomePage() {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div style={{ textAlign: "center", marginTop: "3rem" }}>
+                <Link href="/activities#completed" className="sl-btn sl-btn-brand sl-btn-md">
+                  Lihat Semua Konservasi yang Berhasil <ArrowRight style={{ width: 16, height: 16 }} />
+                </Link>
               </div>
             </div>
           </section>

@@ -7,7 +7,7 @@ export type VerificationStatus = "pending" | "approved" | "rejected"
 export type ActivityStatus = "draft" | "pending_review" | "published" | "ongoing" | "cancelled" | "completed"
 export type DonationStatus = "pending" | "completed" | "refunded"
 export type DonationType = "money" | "item"
-export type VolunteerStatus = "pending" | "approved" | "rejected" | "attended"
+export type VolunteerStatus = "pending" | "approved" | "rejected" | "attended" | "absent"
 export type SanctionType = "warning" | "suspend" | "ban"
 export type ReportStatus = "draft" | "submitted" | "validated" | "rejected"
 
@@ -93,6 +93,7 @@ export interface Activity {
   volunteer_count: number
   funding_goal: number
   funding_raised: number
+  is_featured: boolean
   allow_item_donation: boolean
   cover_image_url: string | null
   images: string[]

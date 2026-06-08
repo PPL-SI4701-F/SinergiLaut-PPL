@@ -483,9 +483,18 @@ export async function approveReportAction(id: string) {
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .select("title, community_id, community:communities(owner_id)")
+    .select("title, activity_id, community_id, activity:activities(status), community:communities(owner_id)")
     .single()
   if (error) return { success: false, error: error.message }
+
+  // Kegiatan yang sudah selesai otomatis ditampilkan di bagian "Konservasi yang Berhasil" begitu laporannya divalidasi
+  if (report?.activity_id && (report.activity as any)?.status === "completed") {
+    await adminSupabase
+      .from("activities")
+      .update({ is_featured: true })
+      .eq("id", report.activity_id)
+  }
+
   const ownerId = (report?.community as any)?.owner_id
   if (ownerId) {
     await createNotification(
@@ -792,7 +801,8 @@ export async function getCommunityDashboardStats(userId: string) {
       activeVolunteers: 8,
       totalDonations: 5000000,
       activeDonations: 3000000,
-      verifiedReports: "1/2"
+      verifiedReports: "1/2",
+      totalBalance: 4500000,
     }
   }
 
@@ -808,6 +818,7 @@ export async function getCommunityDashboardStats(userId: string) {
       totalDonations: 0,
       activeDonations: 0,
       verifiedReports: "0/0",
+      totalBalance: 0,
     }
   }
 
@@ -833,6 +844,7 @@ export async function getCommunityDashboardStats(userId: string) {
       totalDonations: 0,
       activeDonations: 0,
       verifiedReports: "0/0",
+      totalBalance: 0,
     }
   }
 
@@ -904,6 +916,17 @@ export async function getCommunityDashboardStats(userId: string) {
     .eq("community_id", communityId)
     .eq("status", "validated")
 
+  // Saldo komunitas: total dana yang sudah dicairkan admin (status completed) dikurangi platform fee
+  const { data: completedDisbursements } = await adminSupabase
+    .from("disbursements")
+    .select("amount, platform_fee")
+    .eq("community_id", communityId)
+    .eq("status", "completed")
+
+  const totalBalance = (completedDisbursements ?? []).reduce(
+    (sum, d) => sum + (Number(d.amount || 0) - Number(d.platform_fee || 0)), 0
+  )
+
   return {
     totalActivities: acts?.length || 0,
     activeActivities,
@@ -913,7 +936,8 @@ export async function getCommunityDashboardStats(userId: string) {
     activeVolunteers,
     totalDonations,
     activeDonations,
-    verifiedReports: `${verifiedReports || 0}/${totalReports || 0}`
+    verifiedReports: `${verifiedReports || 0}/${totalReports || 0}`,
+    totalBalance,
   }
 }
 

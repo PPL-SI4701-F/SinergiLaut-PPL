@@ -203,6 +203,101 @@ export async function createDisbursement(payload: Omit<CreateDisbursementPayload
   return { success: true, data }
 }
 
+export interface RequestDisbursementPayload {
+  activityId: string
+  communityId: string
+  amount: number
+  notes?: string
+}
+
+/** [Community] Ajukan pencairan dana untuk salah satu kegiatan miliknya — menunggu persetujuan admin */
+export async function requestDisbursement(payload: RequestDisbursementPayload) {
+  const auth = await requireCommunityOwner(payload.communityId)
+  if (!auth.authorized) return { success: false, error: auth.error }
+
+  if (!payload.amount || payload.amount <= 0) {
+    return { success: false, error: "Jumlah pengajuan harus lebih dari 0." }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+
+  const adminSupabase = await createAdminClient()
+
+  const [{ data: activity }, { data: community }] = await Promise.all([
+    adminSupabase.from("activities").select("community_id, title").eq("id", payload.activityId).maybeSingle(),
+    adminSupabase.from("communities").select("id, name, owner_id, bank_name, bank_account_number, bank_account_name").eq("id", payload.communityId).maybeSingle(),
+  ])
+
+  if (!activity || activity.community_id !== payload.communityId) {
+    return { success: false, error: "Kegiatan tidak ditemukan atau bukan milik komunitas Anda." }
+  }
+  if (!community) {
+    return { success: false, error: "Komunitas tidak ditemukan." }
+  }
+  if (!community.bank_name || !community.bank_account_number || !community.bank_account_name) {
+    return { success: false, error: "Lengkapi data rekening bank pada profil komunitas Anda terlebih dahulu sebelum mengajukan pencairan." }
+  }
+
+  // Saldo tersedia = donasi completed dikurangi pencairan yang sudah diajukan/diproses/selesai
+  const [{ data: donationSum }, { data: existingDisbursements }] = await Promise.all([
+    adminSupabase.from("donations").select("amount").eq("activity_id", payload.activityId).eq("status", "completed").eq("type", "money"),
+    adminSupabase.from("disbursements").select("amount").eq("activity_id", payload.activityId).in("status", ["pending", "processing", "completed"]),
+  ])
+
+  const totalCollected = (donationSum ?? []).reduce((sum: number, d) => sum + (d.amount ?? 0), 0)
+  const totalReserved = (existingDisbursements ?? []).reduce((sum: number, d) => sum + (d.amount ?? 0), 0)
+  const availableBalance = totalCollected - totalReserved
+
+  if (payload.amount > availableBalance) {
+    return {
+      success: false,
+      error: `Jumlah pengajuan (Rp ${payload.amount.toLocaleString("id-ID")}) melebihi saldo tersedia (Rp ${availableBalance.toLocaleString("id-ID")}).`,
+    }
+  }
+
+  const { data, error } = await adminSupabase
+    .from("disbursements")
+    .insert({
+      activity_id: payload.activityId,
+      community_id: payload.communityId,
+      amount: payload.amount,
+      platform_fee: 0,
+      status: "pending",
+      bank_name: community.bank_name,
+      account_number: community.bank_account_number,
+      account_name: community.bank_account_name,
+      notes: payload.notes ?? null,
+      disbursed_by: user.id,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[requestDisbursement] error:", error)
+    return { success: false, error: "Gagal mengajukan pencairan dana." }
+  }
+
+  // Notifikasi ke seluruh admin agar pengajuan dapat ditinjau
+  const { data: admins } = await adminSupabase.from("profiles").select("id").eq("role", "admin")
+  const formatted = new Intl.NumberFormat("id-ID", {
+    style: "currency", currency: "IDR", minimumFractionDigits: 0,
+  }).format(payload.amount)
+
+  await Promise.all((admins ?? []).map((admin) =>
+    createNotification(
+      admin.id,
+      "Pengajuan Pencairan Dana Baru 💸",
+      `Komunitas "${community.name}" mengajukan pencairan dana sebesar ${formatted} untuk kegiatan "${activity.title}". Mohon ditinjau.`,
+      "info",
+      "/admin/disbursements"
+    )
+  ))
+
+  return { success: true, data }
+}
+
 /** [Admin] Update status disbursement ke processing atau completed */
 export async function updateDisbursementStatus(
   disbursementId: string,
@@ -417,11 +512,14 @@ export async function getDisbursementOverview() {
 
   const [donationsRes, disbursementsRes] = await Promise.all([
     supabase.from("donations").select("amount").eq("type", "money").eq("status", "completed"),
-    supabase.from("disbursements").select("net_amount").eq("status", "completed"),
+    supabase.from("disbursements").select("amount, platform_fee").eq("status", "completed"),
   ])
 
   const income = (donationsRes.data ?? []).reduce((sum, d) => sum + Number(d.amount || 0), 0)
-  const expense = (disbursementsRes.data ?? []).reduce((sum, d) => sum + Number(d.net_amount || 0), 0)
+  const expense = (disbursementsRes.data ?? []).reduce(
+    (sum, d) => sum + (Number(d.amount || 0) - Number(d.platform_fee || 0)),
+    0,
+  )
 
   return { balance: income - expense, income, expense }
 }
