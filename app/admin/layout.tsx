@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 import { AdminSidebar } from "@/components/admin-sidebar"
+import { AdminTopBar } from "@/components/admin-topbar"
 import { createClient } from "@/lib/supabase/server"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -48,6 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-slate-50 flex">
       <AdminSidebar />
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+        <AdminTopBar />
         {children}
       </div>
     </div>
