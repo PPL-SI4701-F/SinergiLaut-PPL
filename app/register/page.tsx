@@ -56,7 +56,8 @@ function RegisterContent() {
     actionData.append("phone", formData.phone)
 
     const result = await register(actionData)
-    if (result?.error) { setError(result.error); setIsLoading(false) }
+    if (result?.error) { setError(result.error); setIsLoading(false); return }
+    router.push("/user/dashboard")
   }
 
   return (
