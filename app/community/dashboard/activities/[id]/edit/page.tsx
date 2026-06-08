@@ -128,6 +128,7 @@ export default function EditActivityPage() {
       if (!result.success) throw new Error(result.error)
 
       toast.success("Kegiatan berhasil diperbarui!")
+      router.refresh()
       router.push(`/community/dashboard`)
       return
     } catch (error: any) {

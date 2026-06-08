@@ -297,6 +297,7 @@ export default function CreateActivityPage() {
       } else {
         toast.success("Kegiatan diajukan untuk review admin. Tunggu persetujuan dalam 1-2 hari kerja.")
       }
+      router.refresh()
       router.push("/community/dashboard")
     } catch (err: any) {
       toast.error(err.message || "Terjadi kesalahan saat menyimpan kegiatan.")

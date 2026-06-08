@@ -109,10 +109,17 @@ export default function AdminDisbursementsPage() {
     })
     if (result.success) {
       toast.success("Pencairan dana berhasil dibuat!")
+      const selectedActivity = activities.find(a => a.id === createForm.activityId)
+      const optimisticDisb = {
+        ...(result.data as any),
+        activity: selectedActivity ? { id: selectedActivity.id, title: selectedActivity.title } : null,
+        community: selectedActivity?.community ?? null,
+        admin: null,
+      } as Disbursement
+      setDisbursements(prev => [optimisticDisb, ...prev])
       setShowCreate(false)
       setCreateForm({ activityId: "", communityId: "", amount: "", platformFee: "", bankName: "", accountNumber: "", accountName: "", notes: "" })
       setFinanceSummary(null)
-      await load()
     } else {
       toast.error(result.error ?? "Gagal membuat pencairan.")
     }

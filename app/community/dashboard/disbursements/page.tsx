@@ -112,9 +112,16 @@ export default function CommunityDisbursementsPage() {
     })
     if (result.success) {
       toast.success("Pengajuan pencairan dana berhasil dikirim. Menunggu persetujuan admin.")
+      const selectedActivity = activities.find(a => a.id === requestForm.activityId)
+      const optimisticDisb = {
+        ...(result.data as any),
+        activity: selectedActivity
+          ? { id: selectedActivity.id, title: selectedActivity.title, start_date: selectedActivity.start_date }
+          : null,
+      } as Disbursement
+      setDisbursements(prev => [optimisticDisb, ...prev])
       setShowRequest(false)
       resetRequestForm()
-      await load()
     } else {
       toast.error(result.error ?? "Gagal mengajukan pencairan dana.")
     }
