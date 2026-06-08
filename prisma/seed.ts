@@ -223,6 +223,13 @@ async function main() {
   // 6. DONATIONS
   // ============================================
   console.log('💰 Membuat donasi...')
+  // Completed donations dibuat lebih besar agar total pemasukan > pengeluaran (saldo positif).
+  // pending & refunded tetap kecil untuk variasi data test.
+  const donationAmountByStatus: Record<donation_status, number> = {
+    pending:   500_000,
+    completed: 3_000_000,
+    refunded:  500_000,
+  }
   const dStatuses: donation_status[] = ['pending', 'completed', 'refunded']
   for (const dStatus of dStatuses) {
     for (let i = 1; i <= 2; i++) {
@@ -233,18 +240,26 @@ async function main() {
           donor_name: userApproved1.full_name!,
           donor_email: userApproved1.email,
           type: 'money',
-          amount: 500000,
+          amount: donationAmountByStatus[dStatus],
           status: dStatus,
           midtrans_order_id: `ORDER-${dStatus}-${i}-${Date.now()}`,
         }
       })
     }
   }
+  // Sinkronkan funding_raised kegiatan dengan total donasi completed (2 × 3.000.000).
+  await prisma.activities.update({
+    where: { id: activeAct.id },
+    data: { funding_raised: donationAmountByStatus.completed * 2 },
+  })
   console.log('   ✅ Donasi dibuat.')
 
   // ============================================
   // 7. DISBURSEMENTS
   // ============================================
+  // Total completed donations (pemasukan) = 2 × 3.000.000 = 6.000.000
+  // Total completed disbursements (pengeluaran, net) harus < 6.000.000 agar saldo positif.
+  // Completed: 2 × (2.000.000 - 200.000) = 3.600.000  →  Saldo = +2.400.000
   console.log('💸 Membuat pencairan dana...')
   const disbStatuses: disbursement_status[] = ['pending', 'processing', 'completed', 'failed']
   for (const status of disbStatuses) {
@@ -253,7 +268,8 @@ async function main() {
         data: {
           activity_id: activeAct.id,
           community_id: approvedComm.id,
-          amount: 2000000,
+          amount: 2_000_000,
+          platform_fee: 200_000,
           status: status,
           bank_name: 'BCA',
           account_number: '123456789',
