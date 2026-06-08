@@ -189,6 +189,25 @@ export default function ActivityDetailPage() {
     fetchActivity()
   }, [params.id, router, supabase])
 
+  // ── Realtime: live funding_raised from other users' donations ─────────────
+  useEffect(() => {
+    if (!params.id) return
+    const channel = supabase
+      .channel(`activity-funding-${params.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "activities", filter: `id=eq.${params.id}` },
+        (payload) => {
+          const raised = payload.new?.funding_raised
+          if (raised !== undefined) {
+            setActivity(prev => prev ? { ...prev, funding_raised: raised } : prev)
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [params.id, supabase])
+
   // ── Pre-fill form jika sudah login ───────────────────────
   useEffect(() => {
     if (profile) {
@@ -975,7 +994,7 @@ export default function ActivityDetailPage() {
                                 <tbody className="divide-y divide-border">
                                   {r.fund_usage.map((item: any, iIdx: number) => (
                                     <tr key={iIdx}>
-                                      <td className="p-3 text-muted-foreground">{item.item}</td>
+                                      <td className="p-3 text-muted-foreground">{item.category}</td>
                                       <td className="p-3 text-right font-medium">{formatCurrency(item.amount)}</td>
                                     </tr>
                                   ))}

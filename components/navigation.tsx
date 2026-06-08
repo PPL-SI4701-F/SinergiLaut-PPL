@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -74,6 +75,7 @@ export function Navigation() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { user, profile, role, signOut, isLoading } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -129,13 +131,20 @@ export function Navigation() {
     }
   }, [user]);
 
-  // Fetch on mount + setiap 30 detik
+  // Fetch on mount + Realtime on new notifications
   useEffect(() => {
     if (!user) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications, user]);
+    const channel = supabase
+      .channel(`nav-notif-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => fetchNotifications()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel) };
+  }, [fetchNotifications, user, supabase]);
 
   // Fetch ulang saat dropdown dibuka
   useEffect(() => {

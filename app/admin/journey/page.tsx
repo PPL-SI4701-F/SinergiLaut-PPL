@@ -113,8 +113,18 @@ export default function AdminJourneyPage() {
 
     if (result.success) {
       toast.success(editingId ? "Milestone berhasil diupdate." : "Milestone baru berhasil dibuat.")
+      const saved = result.data as JourneyMilestone
+      if (editingId) {
+        setMilestones(prev =>
+          prev.map(m => m.id === editingId ? saved : m)
+              .sort((a, b) => a.order_index - b.order_index)
+        )
+      } else {
+        setMilestones(prev =>
+          [...prev, saved].sort((a, b) => a.order_index - b.order_index)
+        )
+      }
       cancelForm()
-      await loadMilestones()
     } else {
       toast.error(result.error ?? "Gagal menyimpan.")
     }
