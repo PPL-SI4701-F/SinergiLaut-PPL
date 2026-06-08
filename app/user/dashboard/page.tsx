@@ -28,11 +28,11 @@ export default async function UserDashboardPage() {
     volunteers = volunteersResult.data ?? []
   } else {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!session) redirect("/login")
+    if (authError || !user) redirect("/login")
 
-    userId = session.user.id
+    userId = user.id
 
     const { data: prof, error: profileError } = await supabase
       .from("profiles")
