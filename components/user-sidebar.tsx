@@ -37,7 +37,7 @@ export function UserSidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-3 group" onClick={() => setMobileOpen(false)}>
+        <Link href="/user/dashboard" className="flex items-center gap-3 group" onClick={() => setMobileOpen(false)}>
           <div className="w-9 h-9 bg-white rounded-xl shadow-sm flex items-center justify-center border border-slate-100 group-hover:shadow-md transition-shadow">
             <Image src="/images/SinergiLautLogo-transparent.png" alt="Logo" width={24} height={24} style={{ objectFit: "contain" }} />
           </div>

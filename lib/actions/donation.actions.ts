@@ -15,9 +15,69 @@
  *   3. completeFulfillmentDonation() → ubah status "completed" + update items_needed
  */
 
-import { createAdminClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
 import { cookies } from "next/headers"
+
+async function requireCommunityOrAdminActivityAccess(activityId: string) {
+  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false as const, error: "Sesi tidak valid. Silakan login kembali." }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role === "admin") return { authorized: true as const }
+  if (profile?.role !== "community") {
+    return { authorized: false as const, error: "Akses hanya untuk komunitas." }
+  }
+
+  const { data: activity } = await adminSupabase
+    .from("activities")
+    .select("community_id")
+    .eq("id", activityId)
+    .maybeSingle()
+
+  if (!activity?.community_id) {
+    return { authorized: false as const, error: "Kegiatan tidak ditemukan." }
+  }
+
+  const { data: community } = await adminSupabase
+    .from("communities")
+    .select("id")
+    .eq("id", activity.community_id)
+    .eq("owner_id", user.id)
+    .eq("is_verified", true)
+    .maybeSingle()
+
+  if (!community) {
+    return { authorized: false as const, error: "Anda tidak memiliki akses ke kegiatan ini." }
+  }
+
+  return { authorized: true as const }
+}
+
+async function requireCommunityOrAdminDonationAccess(donationId: string) {
+  const adminSupabase = await createAdminClient()
+  const { data: donation } = await adminSupabase
+    .from("donations")
+    .select("activity_id")
+    .eq("id", donationId)
+    .maybeSingle()
+
+  if (!donation?.activity_id) {
+    return { authorized: false as const, error: "Donasi tidak ditemukan." }
+  }
+
+  return requireCommunityOrAdminActivityAccess(donation.activity_id)
+}
+
+/** Markup biaya operasional yang dikenakan ke donatur untuk donasi barang (lihat MARKUP_PERCENT di app/activities/[id]/page.tsx) */
+const MARKUP_PERCENT = 10
 
 async function getE2EMock() {
   if (process.env.NODE_ENV !== 'development') return null
@@ -276,17 +336,6 @@ export async function completeFulfillmentDonation(
     return { success: false as const, error: "Donasi tidak ditemukan atau sudah diproses." }
   }
 
-  // Update status donation → completed
-  const { error: donationError } = await adminSupabase
-    .from("donations")
-    .update({ status: "completed" })
-    .eq("id", donationId)
-
-  if (donationError) {
-    console.error("[completeFulfillmentDonation] update donation error:", donationError)
-    return { success: false as const, error: "Gagal menyelesaikan donasi barang." }
-  }
-
   // Ambil item yang didonasikan dari DB (server-side, bukan dari client)
   const { data: donationItems, error: itemsError } = await adminSupabase
     .from("donation_items")
@@ -313,6 +362,25 @@ export async function completeFulfillmentDonation(
   const currentItems = activity.items_needed
   if (!Array.isArray(currentItems)) {
     return { success: false as const, error: "Data barang kegiatan tidak valid." }
+  }
+
+  // Hitung nilai donasi (harga + markup operasional) berdasarkan unit_price dari DB
+  const fulfillmentValue = currentItems.reduce((sum: number, item: { item_name: string; unit_price?: number }) => {
+    const fulfilled = donationItems.find((di) => di.item_name === item.item_name)
+    if (!fulfilled) return sum
+    const markedUpPrice = Math.round((item.unit_price || 0) * (100 + MARKUP_PERCENT) / 100)
+    return sum + markedUpPrice * (fulfilled.quantity || 0)
+  }, 0)
+
+  // Update status donation → completed + catat nilainya (trigger akan menambah funding_raised)
+  const { error: donationError } = await adminSupabase
+    .from("donations")
+    .update({ status: "completed", amount: fulfillmentValue })
+    .eq("id", donationId)
+
+  if (donationError) {
+    console.error("[completeFulfillmentDonation] update donation error:", donationError)
+    return { success: false as const, error: "Gagal menyelesaikan donasi barang." }
   }
 
   // Hitung increment berdasarkan data donation_items dari DB
@@ -376,6 +444,9 @@ export async function getActivityDonations(activityId: string) {
     }
   }
 
+  const auth = await requireCommunityOrAdminActivityAccess(activityId)
+  if (!auth.authorized) return { success: false, data: [], error: auth.error }
+
   const adminSupabase = await createAdminClient()
 
   const { data, error } = await adminSupabase
@@ -400,6 +471,15 @@ export async function getActivityDonations(activityId: string) {
  * Ambil riwayat donasi milik user tertentu.
  */
 export async function getMyDonations(userId: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true, data: [] }
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user || user.id !== userId) {
+    return { success: false, data: [], error: "Sesi tidak valid. Silakan login kembali." }
+  }
+
   const adminSupabase = await createAdminClient()
 
   const { data, error } = await adminSupabase
@@ -430,6 +510,9 @@ export async function getMyDonations(userId: string) {
  * Konfirmasi penerimaan donasi barang oleh komunitas → status menjadi "completed".
  */
 export async function confirmItemDonationReceived(donationId: string) {
+  const auth = await requireCommunityOrAdminDonationAccess(donationId)
+  if (!auth.authorized) return { success: false, error: auth.error }
+
   const adminSupabase = await createAdminClient()
 
   const { data, error } = await adminSupabase

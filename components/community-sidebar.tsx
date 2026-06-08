@@ -9,12 +9,13 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   LayoutDashboard, Activity, FileText, Users,
-  LogOut, Menu, X, ChevronRight, Settings,
+  LogOut, Menu, X, ChevronRight, Settings, Banknote,
 } from "lucide-react"
 
 const navItems = [
   { href: "/community/dashboard",                         label: "Dashboard",        icon: LayoutDashboard, description: "Ringkasan aktivitas"    },
   { href: "/community/dashboard/activities/create",       label: "Buat Kegiatan",    icon: Activity,        description: "Tambah kegiatan baru"  },
+  { href: "/community/dashboard/disbursements",           label: "Pencairan Dana",   icon: Banknote,        description: "Status pencairan donasi" },
   { href: "/community/dashboard/profile",                 label: "Profil Komunitas", icon: Settings,        description: "Edit profil komunitas"  },
 ]
 

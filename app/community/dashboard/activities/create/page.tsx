@@ -5,12 +5,13 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { createActivity } from "@/lib/actions/activity.actions"
+import { getCommunityProfile } from "@/lib/actions/dashboard.actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Loader2, Calendar, MapPin, Users, Banknote, Image as ImageIcon, Package, X, Plus, Trash2, Receipt } from "lucide-react"
+import { AlertCircle, ArrowLeft, Loader2, Calendar, MapPin, Users, Banknote, Image as ImageIcon, Package, X, Plus, Trash2, Receipt } from "lucide-react"
 import Link from "next/link"
 import { ACTIVITY_CATEGORIES } from "@/lib/constants"
 import { toast } from "sonner"
@@ -31,6 +32,7 @@ interface NeededItem {
 export default function CreateActivityPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [canCreate, setCanCreate] = useState<boolean | null>(null)
 
   // --- Cover Image ---
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -62,6 +64,9 @@ export default function CreateActivityPage() {
     volunteerQuota: "",
     fundingGoal: "",
     allowItemDonation: false,
+    bankName: "",
+    bankAccountNumber: "",
+    bankAccountName: "",
   })
 
   // ── Validasi Min Date ─────────────────────────────────────
@@ -72,6 +77,24 @@ export default function CreateActivityPage() {
     d.setMonth(d.getMonth() + 1)
     const offset = d.getTimezoneOffset() * 60000
     setMinStartDateTime((new Date(d.getTime() - offset)).toISOString().slice(0, 16))
+  }, [])
+
+  // Pra-isi rekening pencairan dana dari profil komunitas (jika sudah pernah diisi)
+  useEffect(() => {
+    getCommunityProfile().then(result => {
+      if (result.success && result.data) {
+        const d = result.data as any
+        setCanCreate(Boolean(d.is_verified && d.verification_status === "approved" && !d.is_suspended))
+        setForm(f => ({
+          ...f,
+          bankName: d.bank_name ?? f.bankName,
+          bankAccountNumber: d.bank_account_number ?? f.bankAccountNumber,
+          bankAccountName: d.bank_account_name ?? f.bankAccountName,
+        }))
+      } else {
+        setCanCreate(false)
+      }
+    })
   }, [])
 
   // ── Cover Image Handlers ──────────────────────────────────
@@ -185,6 +208,12 @@ export default function CreateActivityPage() {
         throw new Error("Tanggal Pelaksanaan tidak boleh sebelum masa pengumpulan dana dimulai.")
       }
 
+      const fundingGoalNum = Number(form.fundingGoal) || 0
+      if (!isDraft && fundingGoalNum > 0 &&
+        (!form.bankName.trim() || !form.bankAccountNumber.trim() || !form.bankAccountName.trim())) {
+        throw new Error("Detail rekening bank (nama bank, nama penerima, dan nomor rekening) wajib diisi karena kegiatan ini memiliki target dana.")
+      }
+
       // Build FormData
       const formData = new FormData()
       formData.append("title", form.title)
@@ -201,6 +230,9 @@ export default function CreateActivityPage() {
       formData.append("volunteerQuota", form.volunteerQuota)
       formData.append("fundingGoal", form.fundingGoal)
       formData.append("allowItemDonation", form.allowItemDonation.toString())
+      formData.append("bankName", form.bankName)
+      formData.append("bankAccountNumber", form.bankAccountNumber)
+      formData.append("bankAccountName", form.bankAccountName)
       formData.append("isDraft", isDraft.toString())
 
       if (coverImage) {
@@ -243,6 +275,47 @@ export default function CreateActivityPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (canCreate === null) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!canCreate) {
+    return (
+      <div className="flex-1 bg-slate-50">
+        <main>
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+            <Link href="/community/dashboard" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
+              <ArrowLeft className="h-4 w-4" /> Kembali ke Dashboard
+            </Link>
+            <Card>
+              <CardContent className="p-6 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                  <h1 className="text-xl font-semibold">Komunitas Belum Terverifikasi</h1>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Pembuatan kegiatan baru akan aktif setelah komunitas Anda disetujui admin.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild>
+                    <Link href="/community/dashboard/profile">Edit Profil</Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link href="/community/dashboard">Dashboard</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -348,6 +421,35 @@ export default function CreateActivityPage() {
                       <Input id="fundingGoal" name="fundingGoal" type="number" min="0" value={form.fundingGoal}
                         onChange={handleChange} placeholder="0 = tidak ada target" className="pl-10" />
                     </div>
+                  </div>
+                </div>
+
+                {/* Rekening Pencairan Dana */}
+                <div className="space-y-3 p-4 bg-secondary rounded-lg">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4" /> Rekening Pencairan Dana
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Rekening tujuan saat admin mencairkan dana donasi untuk kegiatan ini. Detail ini juga akan tersimpan sebagai rekening komunitas.
+                    </p>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bankName">Nama Bank</Label>
+                      <Input id="bankName" name="bankName" value={form.bankName}
+                        onChange={handleChange} placeholder="Contoh: BCA, Mandiri, BRI..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bankAccountNumber">Nomor Rekening</Label>
+                      <Input id="bankAccountNumber" name="bankAccountNumber" value={form.bankAccountNumber}
+                        onChange={handleChange} placeholder="1234567890" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bankAccountName">Nama Penerima (Sesuai Rekening)</Label>
+                    <Input id="bankAccountName" name="bankAccountName" value={form.bankAccountName}
+                      onChange={handleChange} placeholder="Nama pemilik rekening" />
                   </div>
                 </div>
 

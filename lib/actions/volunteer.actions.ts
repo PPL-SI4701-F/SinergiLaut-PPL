@@ -20,6 +20,63 @@ async function getE2EMock() {
   }
 }
 
+async function requireCommunityOrAdminActivityAccess(activityId: string) {
+  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false as const, error: "Sesi tidak valid. Silakan login kembali." }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role === "admin") return { authorized: true as const }
+  if (profile?.role !== "community") {
+    return { authorized: false as const, error: "Akses hanya untuk komunitas." }
+  }
+
+  const { data: activity } = await adminSupabase
+    .from("activities")
+    .select("community_id")
+    .eq("id", activityId)
+    .maybeSingle()
+
+  if (!activity?.community_id) {
+    return { authorized: false as const, error: "Kegiatan tidak ditemukan." }
+  }
+
+  const { data: community } = await adminSupabase
+    .from("communities")
+    .select("id")
+    .eq("id", activity.community_id)
+    .eq("owner_id", user.id)
+    .eq("is_verified", true)
+    .maybeSingle()
+
+  if (!community) {
+    return { authorized: false as const, error: "Anda tidak memiliki akses ke kegiatan ini." }
+  }
+
+  return { authorized: true as const }
+}
+
+async function requireCommunityOrAdminRegistrationAccess(registrationId: string) {
+  const adminSupabase = await createAdminClient()
+  const { data: registration } = await adminSupabase
+    .from("volunteer_registrations")
+    .select("activity_id")
+    .eq("id", registrationId)
+    .maybeSingle()
+
+  if (!registration?.activity_id) {
+    return { authorized: false as const, error: "Pendaftaran relawan tidak ditemukan." }
+  }
+
+  return requireCommunityOrAdminActivityAccess(registration.activity_id)
+}
+
 export interface RegisterVolunteerPayload {
   activityId: string
   userId: string
@@ -40,15 +97,43 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
   if (isE2E) return { success: true, data: { id: "mock-reg-id" } as any }
 
   const supabase = await createClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  const currentUser = authData?.user
+
+  if (authError || !currentUser) {
+    return { success: false, error: "Anda harus login terlebih dahulu." }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, role, full_name, email, phone, volunteer_status")
+    .eq("id", currentUser.id)
+    .maybeSingle()
+
+  if (profileError || !profile) {
+    return { success: false, error: "Data profile tidak ditemukan. Silakan login ulang." }
+  }
+
+  if (profile.role !== "user") {
+    return { success: false, error: "Hanya pengguna yang dapat mendaftar sebagai relawan." }
+  }
+
+  if (profile.volunteer_status !== "approved") {
+    return { success: false, error: "Data relawan Anda belum disetujui admin." }
+  }
 
   const adminSupabase = await createAdminClient()
+  const userId = currentUser.id
+  const fullName = profile.full_name || payload.fullName || currentUser.email || "Pengguna"
+  const email = profile.email || payload.email || currentUser.email || ""
+  const phone = profile.phone || payload.phone || ""
 
   // Cek apakah user sudah terdaftar sebelumnya
   const { data: existing } = await adminSupabase
     .from("volunteer_registrations")
     .select("id, status")
     .eq("activity_id", payload.activityId)
-    .eq("user_id", payload.userId)
+    .eq("user_id", userId)
     .single()
 
   if (existing) {
@@ -62,10 +147,10 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
     .from("volunteer_registrations")
     .insert({
       activity_id: payload.activityId,
-      user_id: payload.userId,
-      full_name: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
+      user_id: userId,
+      full_name: fullName,
+      email,
+      phone,
       reason: payload.reason ?? null,
       emergency_contact_name: payload.emergencyContactName ?? null,
       emergency_contact_phone: payload.emergencyContactPhone ?? null,
@@ -104,7 +189,7 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
       await createNotification(
         admin.id,
         "Pendaftar Volunteer Baru 👤",
-        `${payload.fullName} mendaftar sebagai relawan untuk kegiatan "${activityTitle}".`,
+        `${fullName} mendaftar sebagai relawan untuk kegiatan "${activityTitle}".`,
         "info",
         "/admin/users"
       )
@@ -116,7 +201,7 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
     await createNotification(
       communityOwnerId,
       "Pendaftar Volunteer Baru 👤",
-      `${payload.fullName} mendaftar sebagai relawan untuk kegiatan "${activityTitle}". Segera tinjau pendaftaran.`,
+      `${fullName} mendaftar sebagai relawan untuk kegiatan "${activityTitle}". Segera tinjau pendaftaran.`,
       "info",
       "/community/dashboard"
     )
@@ -124,7 +209,7 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
 
   // Notifikasi konfirmasi ke user yang mendaftar
   await createNotification(
-    payload.userId,
+    userId,
     "Pendaftaran Volunteer Dikirim 📋",
     `Pendaftaran Anda sebagai relawan untuk kegiatan "${activityTitle}" sedang diproses. Tunggu konfirmasi dari komunitas.`,
     "info",
@@ -162,6 +247,9 @@ export async function getActivityVolunteers(activityId: string) {
     }
   }
 
+  const auth = await requireCommunityOrAdminActivityAccess(activityId)
+  if (!auth.authorized) return { success: false, data: [], error: auth.error }
+
   const adminSupabase = await createAdminClient()
 
   const { data, error } = await adminSupabase
@@ -181,13 +269,16 @@ export async function getActivityVolunteers(activityId: string) {
   return { success: true, data: data as (VolunteerRegistration & { user: unknown })[] }
 }
 
-/** Update status relawan: approved, rejected, atau attended */
+/** Update status relawan: approved atau rejected. Untuk "attended" gunakan markVolunteerAttended (wajib unggah bukti foto). */
 export async function updateVolunteerStatus(
   registrationId: string,
-  status: Extract<VolunteerStatus, "approved" | "rejected" | "attended">
+  status: Extract<VolunteerStatus, "approved" | "rejected">
 ) {
   const isE2E = await getE2EMock()
   if (isE2E) return { success: true, data: { id: registrationId } as any }
+
+  const auth = await requireCommunityOrAdminRegistrationAccess(registrationId)
+  if (!auth.authorized) return { success: false, error: auth.error }
 
   const adminSupabase = await createAdminClient()
 
@@ -225,18 +316,74 @@ export async function updateVolunteerStatus(
         "error",
         "/user/dashboard"
       )
-    } else if (status === "attended") {
-      await createNotification(
-        userId,
-        "Kehadiran Volunteer Dikonfirmasi 🌟",
-        `Kehadiran Anda di kegiatan "${activityTitle}" telah dikonfirmasi. Terima kasih telah berkontribusi!`,
-        "success",
-        "/user/dashboard"
-      )
     }
   }
 
   return { success: true, data }
+}
+
+/** Tandai relawan hadir — wajib menyertakan bukti foto/gambar kehadiran */
+export async function markVolunteerAttended(registrationId: string, proofFile: File) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true, data: { id: registrationId } as any }
+
+  if (!proofFile || proofFile.size <= 0) {
+    return { success: false, error: "Bukti kehadiran wajib diunggah." }
+  }
+  if (proofFile.size > 5 * 1024 * 1024) {
+    return { success: false, error: "Ukuran bukti kehadiran maksimal 5MB." }
+  }
+  if (proofFile.type && !proofFile.type.startsWith("image/")) {
+    return { success: false, error: "Bukti kehadiran harus berupa file gambar." }
+  }
+
+  const auth = await requireCommunityOrAdminRegistrationAccess(registrationId)
+  if (!auth.authorized) return { success: false, error: auth.error }
+
+  const adminSupabase = await createAdminClient()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+
+  const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.replace(" ", "") || "sinergilaut-assets"
+  const ext = proofFile.name.split(".").pop()
+  const path = `volunteer-attendance/${registrationId}/${Date.now()}.${ext}`
+
+  const { error: uploadError } = await adminSupabase.storage.from(bucketName).upload(path, proofFile, { upsert: false })
+  if (uploadError) {
+    console.error("[markVolunteerAttended] upload error:", uploadError)
+    return { success: false, error: "Gagal mengunggah bukti foto kehadiran." }
+  }
+
+  const { data: urlData } = adminSupabase.storage.from(bucketName).getPublicUrl(path)
+
+  const { data, error } = await adminSupabase
+    .from("volunteer_registrations")
+    .update({ status: "attended", attendance_proof_url: urlData.publicUrl })
+    .eq("id", registrationId)
+    .select("user_id, full_name, activity_id, activity:activities(title)")
+    .single()
+
+  if (error) {
+    console.error("[markVolunteerAttended] error:", error)
+    return { success: false, error: "Gagal mengubah status kehadiran relawan." }
+  }
+
+  // volunteer_count diperbarui otomatis oleh DB trigger update_volunteer_count
+
+  const userId = data?.user_id
+  const activityTitle = (data?.activity as any)?.title ?? "kegiatan"
+  if (userId) {
+    await createNotification(
+      userId,
+      "Kehadiran Volunteer Dikonfirmasi 🌟",
+      `Kehadiran Anda di kegiatan "${activityTitle}" telah dikonfirmasi. Terima kasih telah berkontribusi!`,
+      "success",
+      "/user/dashboard"
+    )
+  }
+
+  return { success: true, data: { ...data, attendance_proof_url: urlData.publicUrl } }
 }
 
 /** Ambil riwayat pendaftaran relawan untuk user yang sedang login */
@@ -265,6 +412,12 @@ export async function getMyVolunteerRegistrations(userId: string) {
         }
       ] as any
     }
+  }
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user || user.id !== userId) {
+    return { success: false, data: [], error: "Sesi tidak valid. Silakan login kembali." }
   }
 
   const adminSupabase = await createAdminClient()

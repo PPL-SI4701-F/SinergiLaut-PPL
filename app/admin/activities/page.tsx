@@ -6,29 +6,39 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  Activity, CheckCircle2, X, Eye, Clock, FileText, Loader2, Users, Banknote
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Activity, CheckCircle2, X, Eye, Clock, FileText, Loader2, Users, Banknote, Pencil
 } from "lucide-react"
 import { formatDate, formatCurrency } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import {
   getPendingActivities, getPendingReports, getOngoingActivities,
   approveActivityAction, rejectActivityAction,
-  approveReportAction, rejectReportAction
+  approveReportAction, rejectReportAction,
+  getPendingEditRequests, approveEditRequestAction, rejectEditRequestAction,
 } from "@/lib/actions/dashboard.actions"
 
 export default function AdminActivitiesPage() {
   const [pendingActivities, setPendingActivities] = useState<any[]>([])
   const [pendingReports, setPendingReports] = useState<any[]>([])
   const [ongoingActivities, setOngoingActivities] = useState<any[]>([])
+  const [pendingEditRequests, setPendingEditRequests] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [rejectingEditRequest, setRejectingEditRequest] = useState<any | null>(null)
+  const [editRequestAdminNote, setEditRequestAdminNote] = useState("")
+  const [processingEditRequestId, setProcessingEditRequestId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       setIsLoading(true)
-      const [pa, pr, oa] = await Promise.all([getPendingActivities(), getPendingReports(), getOngoingActivities()])
+      const [pa, pr, oa, per] = await Promise.all([getPendingActivities(), getPendingReports(), getOngoingActivities(), getPendingEditRequests()])
       setPendingActivities(pa)
       setPendingReports(pr)
       setOngoingActivities(oa)
+      setPendingEditRequests(per)
       setIsLoading(false)
     }
     load()
@@ -64,6 +74,29 @@ export default function AdminActivitiesPage() {
       toast.info("Laporan ditolak.")
       setPendingReports(p => p.filter(r => r.id !== id))
     } else toast.error(result.error ?? "Gagal menolak.")
+  }
+
+  const handleApproveEditRequest = async (id: string) => {
+    setProcessingEditRequestId(id)
+    const result = await approveEditRequestAction(id)
+    if (result.success) {
+      toast.success("Pengajuan edit disetujui ✅")
+      setPendingEditRequests(p => p.filter(r => r.id !== id))
+    } else toast.error(result.error ?? "Gagal menyetujui pengajuan edit.")
+    setProcessingEditRequestId(null)
+  }
+
+  const handleRejectEditRequest = async () => {
+    if (!rejectingEditRequest) return
+    setProcessingEditRequestId(rejectingEditRequest.id)
+    const result = await rejectEditRequestAction(rejectingEditRequest.id, editRequestAdminNote)
+    if (result.success) {
+      toast.info("Pengajuan edit ditolak.")
+      setPendingEditRequests(p => p.filter(r => r.id !== rejectingEditRequest.id))
+      setRejectingEditRequest(null)
+      setEditRequestAdminNote("")
+    } else toast.error(result.error ?? "Gagal menolak pengajuan edit.")
+    setProcessingEditRequestId(null)
   }
 
   return (
@@ -131,6 +164,98 @@ export default function AdminActivitiesPage() {
                             <Button size="sm" variant="destructive" onClick={() => handleRejectActivity(a.id)}>
                               <X className="h-4 w-4 mr-1" /> Tolak
                             </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Permintaan Edit Kegiatan */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Pencil className="h-4 w-4 text-amber-500" />
+                  Permintaan Edit Kegiatan
+                  {pendingEditRequests.length > 0 && (
+                    <Badge className="bg-amber-100 text-amber-700 ml-1">{pendingEditRequests.length}</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>Komunitas mengajukan izin untuk mengedit kegiatan yang sedang aktif</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+                ) : pendingEditRequests.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Tidak ada pengajuan edit kegiatan.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingEditRequests.map(r => (
+                      <div key={r.id} className="p-4 border border-amber-200 bg-amber-50/30 dark:bg-amber-950/10 rounded-xl">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground">{r.activity?.title || "Kegiatan"}</p>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {r.community?.name || "Komunitas"} • Diajukan: {formatDate(r.created_at)}
+                            </p>
+                            <p className="text-sm text-foreground mt-2">
+                              <span className="text-muted-foreground">Alasan: </span>{r.reason}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              disabled={processingEditRequestId === r.id}
+                              onClick={() => handleApproveEditRequest(r.id)}
+                            >
+                              {processingEditRequestId === r.id ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                              )}
+                              Setujui
+                            </Button>
+                            <Dialog open={rejectingEditRequest?.id === r.id} onOpenChange={(open) => {
+                              if (!open) { setRejectingEditRequest(null); setEditRequestAdminNote("") }
+                            }}>
+                              <DialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={processingEditRequestId === r.id}
+                                  onClick={() => { setRejectingEditRequest(r); setEditRequestAdminNote("") }}
+                                >
+                                  <X className="h-4 w-4 mr-1" /> Tolak
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Tolak Pengajuan Edit</DialogTitle>
+                                  <DialogDescription>
+                                    Berikan catatan untuk komunitas terkait alasan penolakan pengajuan edit kegiatan &quot;{r.activity?.title}&quot; (opsional).
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <Textarea
+                                  placeholder="Catatan untuk komunitas..."
+                                  value={editRequestAdminNote}
+                                  onChange={(e) => setEditRequestAdminNote(e.target.value)}
+                                  rows={4}
+                                />
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => { setRejectingEditRequest(null); setEditRequestAdminNote("") }}>Batal</Button>
+                                  <Button variant="destructive" onClick={handleRejectEditRequest} disabled={processingEditRequestId === r.id}>
+                                    {processingEditRequestId === r.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <X className="h-4 w-4 mr-1" />}
+                                    Tolak Pengajuan
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
                           </div>
                         </div>
                       </div>

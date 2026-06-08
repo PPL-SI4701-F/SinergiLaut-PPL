@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { useRouter, useParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Loader2, MapPin, Image as ImageIcon, X, Save } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import {
+  getActivityEditRequestStatus,
+  getCommunityActivityForEdit,
+  updateCommunityActivityAction,
+} from "@/lib/actions/activity.actions"
 
 // Import MapPicker dynamically to avoid SSR issues
 const MapPicker = dynamic(() => import("@/components/map/map-picker"), { 
@@ -22,7 +26,6 @@ const MapPicker = dynamic(() => import("@/components/map/map-picker"), {
 export default function EditActivityPage() {
   const router = useRouter()
   const params = useParams()
-  const supabase = createClient()
   
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -35,6 +38,7 @@ export default function EditActivityPage() {
     latitude: null as number | null,
     longitude: null as number | null,
     cover_image_url: "" as string | null,
+    status: "draft",
   })
 
   // --- Cover Image State ---
@@ -47,15 +51,35 @@ export default function EditActivityPage() {
 
     async function fetchActivity() {
       setIsLoading(true)
-      const { data, error } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("id", params.id as string)
-        .single()
+      const result = await getCommunityActivityForEdit(params.id as string)
+      const data = result.data
 
-      if (error || !data) {
-        toast.error("Kegiatan tidak ditemukan.")
+      if (!result.success || !data) {
+        toast.error(result.error ?? "Kegiatan tidak ditemukan.")
         router.back()
+        return
+      }
+
+      if (data.status !== "draft") {
+        if (data.status === "published") {
+          const editRequest = await getActivityEditRequestStatus(params.id as string)
+          if (editRequest.success && editRequest.data?.status === "approved") {
+            setForm({
+              title: data.title,
+              description: data.description || "",
+              location: data.location || "",
+              latitude: data.latitude,
+              longitude: data.longitude,
+              cover_image_url: data.cover_image_url,
+              status: data.status,
+            })
+            setImagePreview(data.cover_image_url)
+            setIsLoading(false)
+            return
+          }
+        }
+        toast.error("Kegiatan yang sudah diajukan tidak dapat diedit.")
+        router.replace("/community/dashboard")
         return
       }
 
@@ -66,13 +90,14 @@ export default function EditActivityPage() {
         latitude: data.latitude,
         longitude: data.longitude,
         cover_image_url: data.cover_image_url,
+        status: data.status,
       })
       setImagePreview(data.cover_image_url)
       setIsLoading(false)
     }
 
     fetchActivity()
-  }, [params.id, router, supabase])
+  }, [params.id, router])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -91,43 +116,20 @@ export default function EditActivityPage() {
     setIsSaving(true)
 
     try {
-      let currentCoverUrl = form.cover_image_url
+      const formData = new FormData()
+      formData.append("activityId", params.id as string)
+      formData.append("description", form.description)
+      formData.append("location", form.location)
+      if (form.latitude !== null) formData.append("latitude", String(form.latitude))
+      if (form.longitude !== null) formData.append("longitude", String(form.longitude))
+      if (newCoverFile) formData.append("coverImage", newCoverFile)
 
-      // Upload new image if selected
-      if (newCoverFile) {
-        const fileExt = newCoverFile.name.split('.').pop()
-        const fileName = `${params.id}/cover-${Date.now()}.${fileExt}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('activity-images')
-          .upload(fileName, newCoverFile, { upsert: true })
+      const result = await updateCommunityActivityAction(formData)
+      if (!result.success) throw new Error(result.error)
 
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('activity-images')
-          .getPublicUrl(fileName)
-        
-        currentCoverUrl = publicUrl
-      }
-
-      // Update Database
-      const { error: updateError } = await supabase
-        .from('activities')
-        .update({
-          description: form.description,
-          location: form.location,
-          latitude: form.latitude,
-          longitude: form.longitude,
-          cover_image_url: currentCoverUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', params.id as string)
-
-      if (updateError) throw updateError
-
-      toast.success("Kegiatan berhasil diperbarui! ✅")
+      toast.success("Kegiatan berhasil diperbarui!")
       router.push(`/community/dashboard`)
+      return
     } catch (error: any) {
       console.error(error)
       toast.error(error.message || "Gagal memperbarui kegiatan.")

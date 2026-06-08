@@ -23,7 +23,22 @@ export async function login(formData: FormData) {
   revalidatePath("/", "layout");
   
   if (data?.user) {
-    const role = data.user.user_metadata?.role || "user";
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("[login] Gagal mengambil profile role:", profileError);
+      return { error: "Login berhasil, tetapi data role akun gagal dibaca. Silakan coba lagi." };
+    }
+
+    if (!profile?.role) {
+      return { error: "Login berhasil, tetapi data profile akun belum tersedia. Hubungi admin." };
+    }
+
+    const role = profile.role;
     let redirectTo = "/user/dashboard";
     if (role === "admin") {
       redirectTo = "/admin/dashboard";
@@ -87,6 +102,9 @@ export async function registerCommunity(formData: FormData) {
   const phone = formData.get("phone") as string;
   const password = formData.get("password") as string;
   const website = formData.get("website") as string;
+  const instagram = formData.get("instagram") as string;
+  const facebook = formData.get("facebook") as string;
+  const twitter = formData.get("twitter") as string;
   const region = formData.get("region") as string;
   const operationalArea = formData.get("operationalArea") as string;
   const selectedActivitiesStr = formData.get("selectedActivities") as string;
@@ -151,7 +169,12 @@ export async function registerCommunity(formData: FormData) {
       slug,
       description: shortDescription,
       logo_url: logoUrl,
-      website: website,
+      website: website || null,
+      email: email || null,
+      phone: phone || null,
+      instagram: instagram || null,
+      facebook: facebook || null,
+      twitter: twitter || null,
       location: region + (operationalArea ? ` - ${operationalArea}` : ""),
       focus_areas: selectedActivities,
       verification_status: "pending",
