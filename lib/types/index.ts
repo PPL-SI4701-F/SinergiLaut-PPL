@@ -4,7 +4,7 @@
 
 export type UserRole = "admin" | "community" | "user"
 export type VerificationStatus = "pending" | "approved" | "rejected"
-export type ActivityStatus = "draft" | "pending_review" | "published" | "cancelled" | "completed"
+export type ActivityStatus = "draft" | "pending_review" | "published" | "ongoing" | "cancelled" | "completed"
 export type DonationStatus = "pending" | "completed" | "refunded"
 export type DonationType = "money" | "item"
 export type VolunteerStatus = "pending" | "approved" | "rejected" | "attended"

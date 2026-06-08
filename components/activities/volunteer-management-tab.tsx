@@ -33,7 +33,7 @@ export function VolunteerManagementTab({ activity, volunteerPercent, setActivity
   const approvedCount = volunteers.filter(v => v.status === "approved").length;
   const pendingCount = volunteers.filter(v => v.status === "pending").length;
 
-  const handleAction = async (id: string, action: "approved" | "rejected" | "attended") => {
+  const handleAction = async (id: string, action: "approved" | "rejected") => {
     // Optimistic UI update
     setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: action } : v));
     
@@ -50,8 +50,6 @@ export function VolunteerManagementTab({ activity, volunteerPercent, setActivity
     if (action === "approved") {
       toast.success("Relawan berhasil disetujui! ✅")
       setActivity((prev: any) => prev ? { ...prev, volunteer_count: prev.volunteer_count + 1 } : prev)
-    } else if (action === "attended") {
-      toast.success("Relawan berhasil ditandai hadir! ✅ Mereka kini dapat memberikan ulasan.")
     } else {
       toast.info("Pendaftaran relawan ditolak.");
     }
@@ -137,13 +135,6 @@ export function VolunteerManagementTab({ activity, volunteerPercent, setActivity
                       </Button>
                       <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleAction(v.id, "rejected")}>
                         Tolak
-                      </Button>
-                    </div>
-                  )}
-                  {v.status === "approved" && (
-                    <div className="flex gap-2 pt-2">
-                      <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => handleAction(v.id, "attended")}>
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Tandai Hadir
                       </Button>
                     </div>
                   )}

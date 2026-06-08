@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  ArrowLeft, Building2, Globe, MapPin, Phone, Mail,
+  ArrowLeft, Building2, Globe, MapPin, Phone, Mail, Users,
   Instagram, Facebook, Twitter, Save, Loader2, Camera,
   CheckCircle2, Upload
 } from "lucide-react"
@@ -35,6 +35,13 @@ const FOCUS_AREA_OPTIONS = [
   { value: "fundraising", label: "Penggalangan Dana" },
 ]
 
+function getVerificationMessage(community: any) {
+  if (community.is_suspended) return "Komunitas Anda sedang ditangguhkan oleh admin."
+  if (community.verification_status === "approved") return "Komunitas Anda sudah terverifikasi oleh admin."
+  if (community.verification_status === "rejected") return "Verifikasi komunitas ditolak. Perbaiki data komunitas Anda."
+  return "Komunitas Anda sedang menunggu verifikasi admin."
+}
+
 export default function CommunityProfilePage() {
   const [community, setCommunity] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -49,6 +56,7 @@ export default function CommunityProfilePage() {
     website: "",
     phone: "",
     email: "",
+    admin_name: "",
     instagram: "",
     facebook: "",
     twitter: "",
@@ -72,6 +80,7 @@ export default function CommunityProfilePage() {
           website: d.website ?? "",
           phone: d.phone ?? "",
           email: d.email ?? "",
+          admin_name: d.admin_name ?? "",
           instagram: d.instagram ?? "",
           facebook: d.facebook ?? "",
           twitter: d.twitter ?? "",
@@ -136,14 +145,20 @@ export default function CommunityProfilePage() {
     if (!community) return
     if (!form.name.trim()) { toast.error("Nama komunitas tidak boleh kosong."); return }
 
+    const website = form.website.trim()
+    const normalizedWebsite = website && !/^https?:\/\//i.test(website)
+      ? `https://${website}`
+      : website
+
     setIsSaving(true)
     const result = await updateCommunityProfile(community.id, {
       name: form.name,
       description: form.description,
       location: form.location,
-      website: form.website || null,
+      website: normalizedWebsite || null,
       phone: form.phone || null,
       email: form.email || null,
+      admin_name: form.admin_name || null,
       instagram: form.instagram || null,
       facebook: form.facebook || null,
       twitter: form.twitter || null,
@@ -208,21 +223,27 @@ export default function CommunityProfilePage() {
           <div className="space-y-6">
             {/* Status Verifikasi */}
             <div className={`flex items-center gap-3 p-4 rounded-xl border ${
-              community.verification_status === "approved"
+              community.verification_status === "approved" && !community.is_suspended
                 ? "bg-green-50 border-green-200"
-                : community.verification_status === "rejected"
+                : community.verification_status === "rejected" || community.is_suspended
                 ? "bg-red-50 border-red-200"
                 : "bg-yellow-50 border-yellow-200"
             }`}>
               <CheckCircle2 className={`h-5 w-5 flex-shrink-0 ${
-                community.verification_status === "approved" ? "text-green-600" :
-                community.verification_status === "rejected" ? "text-red-500" : "text-yellow-500"
+                community.verification_status === "approved" && !community.is_suspended ? "text-green-600" :
+                community.verification_status === "rejected" || community.is_suspended ? "text-red-500" : "text-yellow-500"
               }`} />
               <p className={`text-sm font-medium ${
-                community.verification_status === "approved" ? "text-green-800" :
-                community.verification_status === "rejected" ? "text-red-700" : "text-yellow-700"
+                community.verification_status === "approved" && !community.is_suspended ? "text-green-800" :
+                community.verification_status === "rejected" || community.is_suspended ? "text-red-700" : "text-yellow-700"
               }`}>
-                {community.verification_status === "approved"
+                {getVerificationMessage(community)}
+              </p>
+              <p className={`hidden text-sm font-medium ${
+                community.verification_status === "approved" && !community.is_suspended ? "text-green-800" :
+                community.verification_status === "rejected" || community.is_suspended ? "text-red-700" : "text-yellow-700"
+              }`}>
+                {community.is_suspended
                   ? "✅ Komunitas Anda sudah terverifikasi oleh admin."
                   : community.verification_status === "rejected"
                   ? "❌ Verifikasi komunitas ditolak. Hubungi admin untuk informasi lebih lanjut."
@@ -349,6 +370,10 @@ export default function CommunityProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
+                    <Label htmlFor="admin_name" className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Nama Admin</Label>
+                    <Input id="admin_name" name="admin_name" value={form.admin_name} onChange={handleChange} placeholder="Nama lengkap administrator" />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="email" className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email Komunitas</Label>
                     <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="komunitas@example.com" />
                   </div>
@@ -358,7 +383,7 @@ export default function CommunityProfilePage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="website" className="flex items-center gap-1.5"><Globe className="h-3.5 w-3.5" /> Website</Label>
-                    <Input id="website" name="website" type="url" value={form.website} onChange={handleChange} placeholder="https://komunitas-anda.org" />
+                    <Input id="website" name="website" type="text" value={form.website} onChange={handleChange} placeholder="https://komunitas-anda.org" />
                   </div>
                 </CardContent>
               </Card>

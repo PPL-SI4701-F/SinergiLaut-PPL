@@ -20,6 +20,81 @@ async function getE2EMock() {
   }
 }
 
+async function requireAdmin() {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false as const, userId: null }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role !== "admin") return { authorized: false as const, userId: null }
+  return { authorized: true as const, userId: user.id }
+}
+
+async function requireCommunityOwner(communityId: string) {
+  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false as const, error: "Sesi tidak valid. Silakan login kembali." }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role !== "community") {
+    return { authorized: false as const, error: "Akses hanya untuk komunitas." }
+  }
+
+  const { data: community } = await adminSupabase
+    .from("communities")
+    .select("id")
+    .eq("id", communityId)
+    .eq("owner_id", user.id)
+    .maybeSingle()
+
+  if (!community) {
+    return { authorized: false as const, error: "Anda tidak memiliki akses ke data komunitas ini." }
+  }
+
+  return { authorized: true as const }
+}
+
+async function requireAdminOrOwnedActivity(activityId: string) {
+  const supabase = await createClient()
+  const adminSupabase = await createAdminClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false as const, error: "Sesi tidak valid. Silakan login kembali." }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role === "admin") return { authorized: true as const }
+  if (profile?.role !== "community") {
+    return { authorized: false as const, error: "Akses ditolak." }
+  }
+
+  const { data: activity } = await adminSupabase
+    .from("activities")
+    .select("community_id")
+    .eq("id", activityId)
+    .maybeSingle()
+
+  if (!activity?.community_id) return { authorized: false as const, error: "Kegiatan tidak ditemukan." }
+
+  const communityAuth = await requireCommunityOwner(activity.community_id)
+  if (!communityAuth.authorized) return communityAuth
+  return { authorized: true as const }
+}
+
 export interface CreateDisbursementPayload {
   activityId: string
   communityId: string
@@ -33,18 +108,22 @@ export interface CreateDisbursementPayload {
 }
 
 export async function createDisbursement(payload: Omit<CreateDisbursementPayload, "disbursedBy">) {
-  const supabase = await createClient()
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Forbidden: Admin access required" }
 
-  // Verify caller is admin
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: "Unauthorized" }
-  
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-  if (profile?.role !== "admin") return { success: false, error: "Forbidden: Admin access required" }
-
-  const adminId = user.id
+  const adminId = auth.userId
 
   const adminSupabase = await createAdminClient()
+
+  const { data: activity } = await adminSupabase
+    .from("activities")
+    .select("community_id")
+    .eq("id", payload.activityId)
+    .maybeSingle()
+
+  if (!activity || activity.community_id !== payload.communityId) {
+    return { success: false, error: "Kegiatan dan komunitas tidak cocok." }
+  }
 
   // Hitung total donasi completed untuk activity ini (validasi)
   const { data: donationSum } = await adminSupabase
@@ -143,14 +222,8 @@ export async function updateDisbursementStatus(
     }
   }
 
-  const supabase = await createClient()
-
-  // Verify caller is admin
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: "Unauthorized" }
-  
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-  if (profile?.role !== "admin") return { success: false, error: "Forbidden: Admin access required" }
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Forbidden: Admin access required" }
 
   const updateData: Record<string, unknown> = { status }
   if (referenceNumber) updateData.reference_number = referenceNumber
@@ -226,6 +299,9 @@ export async function getAllDisbursements() {
     }
   }
 
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, data: [], error: "Forbidden: Admin access required" }
+
   const supabase = await createAdminClient()
 
   const { data, error } = await supabase
@@ -248,6 +324,9 @@ export async function getAllDisbursements() {
 
 /** [Community] Ambil disbursement untuk komunitas tertentu */
 export async function getCommunityDisbursements(communityId: string) {
+  const auth = await requireCommunityOwner(communityId)
+  if (!auth.authorized) return { success: false, data: [], error: auth.error }
+
   const supabase = await createAdminClient()
 
   const { data, error } = await supabase
@@ -269,6 +348,17 @@ export async function getCommunityDisbursements(communityId: string) {
 
 /** Hitung ringkasan keuangan untuk satu activity */
 export async function getActivityFinanceSummary(activityId: string) {
+  const auth = await requireAdminOrOwnedActivity(activityId)
+  if (!auth.authorized) {
+    return {
+      totalCollected: 0,
+      pendingPayments: 0,
+      totalDisbursed: 0,
+      totalPlatformFee: 0,
+      availableBalance: 0,
+    }
+  }
+
   const supabase = await createAdminClient()
 
   const [donationsRes, disbursementsRes] = await Promise.all([
@@ -319,6 +409,9 @@ export async function getDisbursementOverview() {
   if (isE2E) {
     return { balance: 12000000, income: 17750000, expense: 5750000 }
   }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { balance: 0, income: 0, expense: 0 }
 
   const supabase = await createAdminClient()
 

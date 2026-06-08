@@ -11,7 +11,10 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    // CATATAN: Jangan aktifkan 'query' log di development — sangat boros RAM
+    // karena setiap SQL query di-buffer di memori Node.js.
+    // Gunakan Prisma Studio (pnpm db:studio) untuk debug query.
+    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

@@ -14,7 +14,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 DO $$ BEGIN CREATE TYPE user_role AS ENUM ('admin', 'community', 'user'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE verification_status AS ENUM ('pending', 'approved', 'rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE activity_status AS ENUM ('draft', 'pending_review', 'published', 'cancelled', 'completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE activity_status AS ENUM ('draft', 'pending_review', 'published', 'ongoing', 'cancelled', 'completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Tambahkan nilai 'ongoing' untuk database lama yang sudah punya tipe ini tanpa nilai tsb
+ALTER TYPE activity_status ADD VALUE IF NOT EXISTS 'ongoing' AFTER 'published';
 DO $$ BEGIN CREATE TYPE activity_category AS ENUM ('cleanup', 'restoration', 'education', 'research', 'event', 'other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE donation_status AS ENUM ('pending', 'completed', 'refunded'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE donation_type AS ENUM ('money', 'item'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -22,6 +24,7 @@ DO $$ BEGIN CREATE TYPE volunteer_status AS ENUM ('pending', 'approved', 'reject
 DO $$ BEGIN CREATE TYPE sanction_type AS ENUM ('warning', 'suspend', 'ban'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE report_status AS ENUM ('draft', 'submitted', 'validated', 'rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE disbursement_status AS ENUM ('pending', 'processing', 'completed', 'failed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE edit_request_status AS ENUM ('pending', 'approved', 'rejected', 'completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================
 -- PROFILES (extends auth.users)
@@ -64,6 +67,12 @@ CREATE TABLE IF NOT EXISTS communities (
   banner_url TEXT,
   website TEXT,
   location TEXT,
+  -- Contact & admin info shown on the community profile
+  email TEXT,
+  phone TEXT,
+  instagram TEXT,
+  facebook TEXT,
+  twitter TEXT,
   focus_areas TEXT[] DEFAULT '{}',
   member_count INTEGER NOT NULL DEFAULT 0,
   is_verified BOOLEAN NOT NULL DEFAULT false,
@@ -159,6 +168,7 @@ CREATE TABLE IF NOT EXISTS volunteer_registrations (
   emergency_contact_phone TEXT,        -- Telepon kontak darurat
   skills TEXT[] DEFAULT '{}',          -- Keahlian: medis, fotografi, logistik, dll.
   t_shirt_size TEXT,                   -- Ukuran kaos: S, M, L, XL, XXL
+  attendance_proof_url TEXT,           -- URL bukti foto/gambar kehadiran (wajib saat ditandai hadir)
   status volunteer_status NOT NULL DEFAULT 'pending',
   agreed_to_terms BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -171,6 +181,7 @@ DO $$ BEGIN ALTER TABLE volunteer_registrations ADD COLUMN emergency_contact_nam
 DO $$ BEGIN ALTER TABLE volunteer_registrations ADD COLUMN emergency_contact_phone TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE volunteer_registrations ADD COLUMN skills TEXT[] DEFAULT '{}'; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE volunteer_registrations ADD COLUMN t_shirt_size TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE volunteer_registrations ADD COLUMN attendance_proof_url TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 -- ============================================
 -- DONATIONS
@@ -278,6 +289,29 @@ CREATE TABLE IF NOT EXISTS report_files (
 );
 
 -- ============================================
+-- ACTIVITY EDIT REQUESTS
+-- Pengajuan edit kegiatan aktif (published) oleh komunitas, perlu disetujui admin
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS activity_edit_requests (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  activity_id UUID REFERENCES activities(id) ON DELETE CASCADE NOT NULL,
+  community_id UUID REFERENCES communities(id) ON DELETE CASCADE NOT NULL,
+  submitted_by UUID REFERENCES profiles(id) NOT NULL,
+  reason TEXT NOT NULL,
+  status edit_request_status NOT NULL DEFAULT 'pending',
+  admin_note TEXT,
+  reviewed_by UUID REFERENCES profiles(id),
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_edit_requests_activity_id ON activity_edit_requests(activity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_edit_requests_community_id ON activity_edit_requests(community_id);
+CREATE INDEX IF NOT EXISTS idx_activity_edit_requests_status ON activity_edit_requests(status);
+
+-- ============================================
 -- JOURNEY MILESTONES
 -- Data "Perjalanan Kami" dikelola oleh admin
 -- ============================================
@@ -378,6 +412,7 @@ DROP TRIGGER IF EXISTS update_donations_updated_at ON donations;
 DROP TRIGGER IF EXISTS update_reports_updated_at ON reports;
 DROP TRIGGER IF EXISTS update_disbursements_updated_at ON disbursements;
 DROP TRIGGER IF EXISTS update_journey_milestones_updated_at ON journey_milestones;
+DROP TRIGGER IF EXISTS update_activity_edit_requests_updated_at ON activity_edit_requests;
 
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_communities_updated_at BEFORE UPDATE ON communities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -388,6 +423,7 @@ CREATE TRIGGER update_donations_updated_at BEFORE UPDATE ON donations FOR EACH R
 CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_disbursements_updated_at BEFORE UPDATE ON disbursements FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_journey_milestones_updated_at BEFORE UPDATE ON journey_milestones FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_activity_edit_requests_updated_at BEFORE UPDATE ON activity_edit_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
 -- TRIGGER: Auto-create profile on signup
@@ -423,14 +459,15 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION update_funding_raised()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Ketika donasi uang berstatus completed, update funding_raised
-  IF NEW.type = 'money' AND NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+  -- Ketika donasi (uang ATAU barang/fulfillment) berstatus completed, tambahkan nilainya ke funding_raised
+  -- Donasi barang menyimpan nilai (harga + markup) di kolom amount saat completeFulfillmentDonation()
+  IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
     UPDATE activities
     SET funding_raised = funding_raised + COALESCE(NEW.amount, 0)
     WHERE id = NEW.activity_id;
   END IF;
   -- Jika donasi di-refund setelah completed, kurangi kembali
-  IF NEW.type = 'money' AND NEW.status = 'refunded' AND OLD.status = 'completed' THEN
+  IF NEW.status = 'refunded' AND OLD.status = 'completed' THEN
     UPDATE activities
     SET funding_raised = GREATEST(0, funding_raised - COALESCE(NEW.amount, 0))
     WHERE id = NEW.activity_id;
@@ -448,23 +485,51 @@ CREATE TRIGGER on_donation_status_change
 -- FUNCTION: Auto-update volunteer_count
 -- ============================================
 
-CREATE OR REPLACE FUNCTION update_volunteer_count()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION handle_volunteer_status_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  counted_statuses volunteer_status[] := ARRAY['approved', 'attended']::volunteer_status[];
+  old_counts BOOLEAN := false;
+  new_counts BOOLEAN := false;
 BEGIN
-  IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') AND NEW.status = 'approved' AND (OLD.status IS NULL OR OLD.status != 'approved') THEN
-    UPDATE activities SET volunteer_count = volunteer_count + 1 WHERE id = NEW.activity_id;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status = ANY(counted_statuses) THEN
+      UPDATE activities SET volunteer_count = COALESCE(volunteer_count, 0) + 1 WHERE id = NEW.activity_id;
+    END IF;
+    RETURN NEW;
   END IF;
-  IF TG_OP = 'UPDATE' AND OLD.status = 'approved' AND NEW.status != 'approved' THEN
-    UPDATE activities SET volunteer_count = GREATEST(0, volunteer_count - 1) WHERE id = NEW.activity_id;
+
+  IF TG_OP = 'UPDATE' THEN
+    old_counts := OLD.status = ANY(counted_statuses);
+    new_counts := NEW.status = ANY(counted_statuses);
+
+    IF old_counts AND NOT new_counts THEN
+      UPDATE activities SET volunteer_count = GREATEST(COALESCE(volunteer_count, 0) - 1, 0) WHERE id = OLD.activity_id;
+    ELSIF (NOT old_counts) AND new_counts THEN
+      UPDATE activities SET volunteer_count = COALESCE(volunteer_count, 0) + 1 WHERE id = NEW.activity_id;
+    END IF;
+    RETURN NEW;
   END IF;
-  RETURN NEW;
+
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.status = ANY(counted_statuses) THEN
+      UPDATE activities SET volunteer_count = GREATEST(COALESCE(volunteer_count, 0) - 1, 0) WHERE id = OLD.activity_id;
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS on_volunteer_status_change ON volunteer_registrations;
-CREATE TRIGGER on_volunteer_status_change
-  AFTER INSERT OR UPDATE OF status ON volunteer_registrations
-  FOR EACH ROW EXECUTE FUNCTION update_volunteer_count();
+DROP TRIGGER IF EXISTS update_volunteer_count ON volunteer_registrations;
+CREATE TRIGGER update_volunteer_count
+  AFTER INSERT OR UPDATE OR DELETE ON volunteer_registrations
+  FOR EACH ROW EXECUTE FUNCTION handle_volunteer_status_change();
 
 -- ============================================
 -- INDEXES for performance

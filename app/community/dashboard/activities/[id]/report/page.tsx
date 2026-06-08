@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -17,6 +16,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils/helpers"
+import { getCommunityActivitySummary } from "@/lib/actions/activity.actions"
 import {
   getActivityReport,
   createReport,
@@ -67,15 +67,17 @@ export default function ReportPage() {
 
   async function loadData() {
     setIsLoading(true)
-    const supabase = createClient()
-
-    const { data: act } = await supabase
-      .from("activities")
-      .select("title, status, community_id")
-      .eq("id", activityId)
-      .single()
-
-    setActivity(act)
+    const activityResult = await getCommunityActivitySummary(activityId)
+    if (activityResult.success && activityResult.data) {
+      setActivity({
+        title: activityResult.data.title,
+        status: activityResult.data.status,
+        community_id: activityResult.data.community_id,
+      })
+    } else {
+      toast.error(activityResult.error ?? "Gagal memuat data kegiatan.")
+      setActivity(null)
+    }
 
     const result = await getActivityReport(activityId)
     if (result.success && result.data) {

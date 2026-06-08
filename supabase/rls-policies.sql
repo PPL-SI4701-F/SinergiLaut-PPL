@@ -20,6 +20,7 @@ ALTER TABLE feedbacks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE journey_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_edit_requests ENABLE ROW LEVEL SECURITY;
 
 -- ============================================
 -- Helper Functions
@@ -309,6 +310,31 @@ DROP POLICY IF EXISTS "Community can insert report files" ON report_files;
 CREATE POLICY "Community can insert report files"
   ON report_files FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM reports r WHERE r.id = report_id AND owns_community(r.community_id)));
+
+-- ============================================
+-- ACTIVITY EDIT REQUESTS policies
+-- ============================================
+
+DROP POLICY IF EXISTS "Community can view own edit requests" ON activity_edit_requests;
+CREATE POLICY "Community can view own edit requests"
+  ON activity_edit_requests FOR SELECT USING (owns_community(community_id));
+
+DROP POLICY IF EXISTS "Admin can view all edit requests" ON activity_edit_requests;
+CREATE POLICY "Admin can view all edit requests"
+  ON activity_edit_requests FOR SELECT USING (is_admin());
+
+DROP POLICY IF EXISTS "Community can create edit requests for published activities" ON activity_edit_requests;
+CREATE POLICY "Community can create edit requests for published activities"
+  ON activity_edit_requests FOR INSERT
+  WITH CHECK (
+    owns_community(community_id)
+    AND submitted_by = auth.uid()
+    AND EXISTS (SELECT 1 FROM activities a WHERE a.id = activity_id AND a.status = 'published')
+  );
+
+DROP POLICY IF EXISTS "Admin can update edit requests" ON activity_edit_requests;
+CREATE POLICY "Admin can update edit requests"
+  ON activity_edit_requests FOR UPDATE USING (is_admin());
 
 -- ============================================
 -- SANCTIONS policies
