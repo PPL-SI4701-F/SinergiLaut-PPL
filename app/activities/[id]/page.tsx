@@ -314,7 +314,7 @@ export default function ActivityDetailPage() {
     })
 
     if (result.success) {
-      toast.success(existingFeedback ? "Ulasan berhasil diperbarui! ✅" : "Ulasan berhasil dikirim! ✅ Terima kasih atas ulasan Anda.")
+      toast.success(existingFeedback ? "Ulasan berhasil diperbarui" : "Ulasan berhasil dikirim. Terima kasih atas ulasan Anda.")
       setExistingFeedback({ id: result.data.id, rating: feedbackRating, comment: feedbackComment || null })
       // Refresh feedbacks in activity state
       setActivity(prev => {
@@ -357,7 +357,7 @@ export default function ActivityDetailPage() {
     })
 
     if (result.success) {
-      toast.success("Pendaftaran berhasil! ✅ Tunggu konfirmasi dari pengelola kegiatan.")
+      toast.success("Pendaftaran berhasil. Tunggu konfirmasi dari pengelola kegiatan.")
       setAlreadyRegistered(result.data as VolunteerRegistration)
       setActiveTab("detail")
     } else {

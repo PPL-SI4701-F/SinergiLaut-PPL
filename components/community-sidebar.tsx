@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 
 const navItems = [
-  { href: "/community/dashboard",                         label: "Dashboard",        icon: LayoutDashboard, description: "Ringkasan aktivitas"    },
+  { href: "/community/dashboard",                         label: "Dashboard Utama",  icon: LayoutDashboard, description: "Ringkasan aktivitas"    },
   { href: "/community/dashboard/activities/create",       label: "Buat Kegiatan",    icon: Activity,        description: "Tambah kegiatan baru"  },
   { href: "/community/dashboard/disbursements",           label: "Pencairan Dana",   icon: Banknote,        description: "Status pencairan donasi" },
   { href: "/community/dashboard/profile",                 label: "Profil Komunitas", icon: Settings,        description: "Edit profil komunitas"  },
@@ -41,7 +41,7 @@ export function CommunitySidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-3 group" onClick={() => setMobileOpen(false)}>
+        <Link href="/community/dashboard" className="flex items-center gap-3 group" onClick={() => setMobileOpen(false)}>
           <div className="w-9 h-9 bg-white rounded-xl shadow-sm flex items-center justify-center border border-slate-100 group-hover:shadow-md transition-shadow">
             <Image src="/images/SinergiLautLogo-transparent.png" alt="Logo" width={24} height={24} style={{ objectFit: "contain" }} />
           </div>

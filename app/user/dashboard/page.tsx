@@ -124,7 +124,7 @@ export default async function UserDashboardPage() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-                Selamat datang, {firstName}! 👋
+                Selamat datang, {firstName}!
               </h1>
               {profile?.volunteer_status === "approved" && (
                 <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full flex items-center gap-1 shrink-0">
@@ -189,7 +189,7 @@ export default async function UserDashboardPage() {
                   <p className="text-sm text-muted-foreground mb-1">{s.label}</p>
                   <p className="text-2xl font-bold text-foreground">{s.value}</p>
                   <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3 text-green-500" /> Live
+                    <TrendingUp className="h-3 w-3 text-green-500" /> Data terbaru
                   </p>
                 </div>
                 <div className={`w-10 h-10 ${s.bg} rounded-lg flex items-center justify-center`}>

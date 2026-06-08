@@ -9,9 +9,24 @@ import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { createNotification } from "@/lib/actions/notification.actions"
 import type { VerificationStatus } from "@/lib/types"
 
+async function requireAdmin() {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { authorized: false as const, userId: null }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role !== "admin") return { authorized: false as const, userId: null }
+  return { authorized: true as const, userId: user.id }
+}
+
 /** Submit/update data diri volunteer untuk diverifikasi admin */
 export async function submitVolunteerVerification(payload: {
-  userId: string
+  userId?: string
   fullName: string
   dateOfBirth: string
   nik: string
@@ -21,6 +36,22 @@ export async function submitVolunteerVerification(payload: {
   ktpUrl?: string
 }) {
   // Use admin client to bypass RLS – user cannot update volunteer_status themselves
+  const sessionSupabase = await createClient()
+  const { data: { user }, error: authError } = await sessionSupabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: "Sesi tidak valid. Silakan login kembali." }
+  }
+
+  const { data: profile } = await sessionSupabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role !== "user") {
+    return { success: false, error: "Hanya pengguna yang dapat mengajukan verifikasi relawan." }
+  }
+
   const supabase = await createAdminClient()
 
   const { data, error } = await supabase
@@ -36,7 +67,7 @@ export async function submitVolunteerVerification(payload: {
       volunteer_status: "pending",
       volunteer_reject_note: null,
     })
-    .eq("id", payload.userId)
+    .eq("id", user.id)
     .select()
     .single()
 
@@ -68,6 +99,9 @@ export async function submitVolunteerVerification(payload: {
 
 /** Ambil daftar volunteer yang menunggu verifikasi (untuk admin) */
 export async function getVolunteersPendingVerification(statusFilter?: VerificationStatus) {
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, data: [], error: "Akses ditolak." }
+
   const adminSupabase = await createAdminClient()
 
   let query = adminSupabase
@@ -94,16 +128,10 @@ export async function getVolunteersPendingVerification(statusFilter?: Verificati
 
 /** Admin: approve verifikasi volunteer */
 export async function approveVolunteerVerification(userId: string) {
-  const supabase = await createClient()
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Forbidden: Admin access required" }
 
-  // Verify caller is admin
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: "Unauthorized" }
-  
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-  if (profile?.role !== "admin") return { success: false, error: "Forbidden: Admin access required" }
-
-  const adminId = user.id
+  const adminId = auth.userId
 
   const adminSupabase = await createAdminClient()
 
@@ -127,7 +155,7 @@ export async function approveVolunteerVerification(userId: string) {
   // Kirim notifikasi ke user
   await createNotification(
     userId,
-    "Verifikasi Data Diri Disetujui ✅",
+    "Verifikasi Data Diri Disetujui",
     "Selamat! Data diri Anda (termasuk KTP) telah diverifikasi oleh admin. Anda kini dapat mendaftar sebagai relawan untuk kegiatan.",
     "success",
     "/user/dashboard"
@@ -138,16 +166,10 @@ export async function approveVolunteerVerification(userId: string) {
 
 /** Admin: reject verifikasi volunteer */
 export async function rejectVolunteerVerification(userId: string, reason: string) {
-  const supabase = await createClient()
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Forbidden: Admin access required" }
 
-  // Verify caller is admin
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: "Unauthorized" }
-  
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
-  if (profile?.role !== "admin") return { success: false, error: "Forbidden: Admin access required" }
-
-  const adminId = user.id
+  const adminId = auth.userId
 
   const adminSupabase = await createAdminClient()
 
@@ -171,7 +193,7 @@ export async function rejectVolunteerVerification(userId: string, reason: string
   // Kirim notifikasi ke user
   await createNotification(
     userId,
-    "Verifikasi Data Diri Ditolak ❌",
+    "Verifikasi Data Diri Ditolak",
     `Maaf, verifikasi data diri Anda ditolak. Alasan: ${reason}. Silakan perbaiki dan ajukan ulang.`,
     "error",
     "/user/profile"

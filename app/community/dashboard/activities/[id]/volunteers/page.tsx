@@ -44,6 +44,7 @@ const statusConfig = {
   approved: { label: "Diterima", className: "bg-green-100 text-green-700" },
   rejected: { label: "Ditolak", className: "bg-red-100 text-red-700" },
   attended: { label: "Hadir", className: "bg-blue-100 text-blue-700" },
+  absent: { label: "Tidak Hadir", className: "bg-gray-100 text-gray-700" },
 }
 
 const activityStatusConfig: Record<string, { label: string; className: string }> = {

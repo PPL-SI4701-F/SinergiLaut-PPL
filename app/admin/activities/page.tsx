@@ -47,7 +47,7 @@ export default function AdminActivitiesPage() {
   const handleApproveActivity = async (id: string) => {
     const result = await approveActivityAction(id)
     if (result.success) {
-      toast.success("Kegiatan berhasil dipublikasikan ✅")
+      toast.success("Kegiatan berhasil dipublikasikan")
       setPendingActivities(p => p.filter(a => a.id !== id))
     } else toast.error(result.error ?? "Gagal menyetujui.")
   }
@@ -63,7 +63,7 @@ export default function AdminActivitiesPage() {
   const handleApproveReport = async (id: string) => {
     const result = await approveReportAction(id)
     if (result.success) {
-      toast.success("Laporan berhasil divalidasi ✅")
+      toast.success("Laporan berhasil divalidasi")
       setPendingReports(p => p.filter(r => r.id !== id))
     } else toast.error(result.error ?? "Gagal memvalidasi.")
   }
@@ -80,7 +80,7 @@ export default function AdminActivitiesPage() {
     setProcessingEditRequestId(id)
     const result = await approveEditRequestAction(id)
     if (result.success) {
-      toast.success("Pengajuan edit disetujui ✅")
+      toast.success("Pengajuan edit disetujui")
       setPendingEditRequests(p => p.filter(r => r.id !== id))
     } else toast.error(result.error ?? "Gagal menyetujui pengajuan edit.")
     setProcessingEditRequestId(null)

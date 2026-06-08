@@ -20,7 +20,14 @@ async function requireAdmin(): Promise<{ authorized: true; userId: string } | { 
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return { authorized: false }
-  if (user.user_metadata?.role !== "admin") return { authorized: false }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.role !== "admin") return { authorized: false }
   return { authorized: true, userId: user.id }
 }
 
@@ -272,7 +279,7 @@ export async function approveCommunityAction(id: string) {
   if (community?.owner_id) {
     await createNotification(
       community.owner_id,
-      "Komunitas Disetujui ✅",
+      "Komunitas Disetujui",
       `Komunitas "${community.name}" Anda telah diverifikasi dan disetujui oleh admin. Sekarang Anda dapat mulai membuat kegiatan.`,
       "success",
       "/community/dashboard"
@@ -281,12 +288,14 @@ export async function approveCommunityAction(id: string) {
   return { success: true }
 }
 
-export async function rejectCommunityAction(id: string) {
+export async function rejectCommunityAction(id: string, adminNote?: string) {
   const isE2E = await getE2EMock()
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
   if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+  const note = adminNote?.trim()
+  if (!note) return { success: false, error: "Alasan penolakan wajib diisi." }
 
   const adminSupabase = await createAdminClient()
   const { data: community, error } = await adminSupabase
@@ -300,10 +309,10 @@ export async function rejectCommunityAction(id: string) {
   if (community?.owner_id) {
     await createNotification(
       community.owner_id,
-      "Komunitas Ditolak ❌",
-      `Maaf, komunitas "${community.name}" Anda belum dapat disetujui. Silakan hubungi admin untuk info lebih lanjut.`,
+      "Komunitas Ditolak",
+      `Maaf, komunitas "${community.name}" Anda belum dapat disetujui. Alasan: ${note}`,
       "error",
-      "/community"
+      "/community/dashboard/profile"
     )
   }
   return { success: true }
@@ -329,7 +338,7 @@ export async function approveActivityAction(id: string) {
   if (ownerId) {
     await createNotification(
       ownerId,
-      "Kegiatan Disetujui ✅",
+      "Kegiatan Disetujui",
       `Kegiatan "${activity.title}" telah disetujui oleh admin dan kini tampil ke publik.`,
       "success",
       "/community/dashboard"
@@ -358,7 +367,7 @@ export async function rejectActivityAction(id: string, adminNote?: string) {
   if (ownerId) {
     await createNotification(
       ownerId,
-      "Kegiatan Ditolak ❌",
+      "Kegiatan Ditolak",
       `Kegiatan "${activity.title}" ditolak oleh admin. Silakan periksa catatan admin dan perbaiki sebelum submit ulang.`,
       "error",
       "/community/dashboard"
@@ -421,7 +430,7 @@ export async function approveEditRequestAction(id: string) {
   if (ownerId) {
     await createNotification(
       ownerId,
-      "Pengajuan Edit Disetujui ✅",
+      "Pengajuan Edit Disetujui",
       `Pengajuan edit untuk kegiatan "${activityTitle}" telah disetujui. Anda kini dapat mengedit kegiatan tersebut.`,
       "success",
       `/community/dashboard/activities/${request.activity_id}/edit`
@@ -458,7 +467,7 @@ export async function rejectEditRequestAction(id: string, adminNote?: string) {
   if (ownerId) {
     await createNotification(
       ownerId,
-      "Pengajuan Edit Ditolak ❌",
+      "Pengajuan Edit Ditolak",
       `Pengajuan edit untuk kegiatan "${activityTitle}" ditolak oleh admin. Silakan periksa catatan admin.`,
       "error",
       "/community/dashboard"
@@ -499,7 +508,7 @@ export async function approveReportAction(id: string) {
   if (ownerId) {
     await createNotification(
       ownerId,
-      "Laporan Kegiatan Divalidasi ✅",
+      "Laporan Kegiatan Divalidasi",
       `Laporan "${report.title}" telah divalidasi oleh admin. Proses pencairan dana dapat dilanjutkan.`,
       "success",
       "/community/dashboard"
@@ -553,7 +562,7 @@ export async function unsuspendCommunityAction(id: string) {
   if (community?.owner_id) {
     await createNotification(
       community.owner_id,
-      "Komunitas Diaktifkan Kembali ✅",
+      "Komunitas Diaktifkan Kembali",
       `Komunitas "${community.name}" Anda telah diaktifkan kembali oleh admin.`,
       "success",
       "/community/dashboard"
@@ -706,13 +715,92 @@ export async function rejectReportAction(id: string, adminNote?: string) {
   if (ownerId) {
     await createNotification(
       ownerId,
-      "Laporan Kegiatan Ditolak ❌",
+      "Laporan Kegiatan Ditolak",
       `Laporan "${report.title}" ditolak oleh admin. Silakan perbaiki laporan dan submit ulang.`,
       "error",
       "/community/dashboard"
     )
   }
   return { success: true }
+}
+
+export async function getAdminReportsList() {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true, data: [] as any[] }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, data: [], error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
+    .from("reports")
+    .select(`
+      id, title, summary, status, created_at, activity_id,
+      community:communities(name),
+      profiles!reports_submitted_by_fkey(full_name)
+    `)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("[getAdminReportsList] error:", error)
+    return { success: false, data: [], error: "Gagal memuat laporan." }
+  }
+
+  return { success: true, data: data ?? [] }
+}
+
+export async function getAdminReportDetail(reportId: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true, data: null as any }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, data: null, error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
+    .from("reports")
+    .select(`
+      id, title, summary, status, completion_status, fund_usage,
+      admin_note, created_at, reviewed_at, activity_id,
+      activity:activities(title),
+      community:communities(name),
+      profiles!reports_submitted_by_fkey(full_name),
+      report_files(id, file_name, file_url, file_type, file_size)
+    `)
+    .eq("id", reportId)
+    .maybeSingle()
+
+  if (error || !data) {
+    console.error("[getAdminReportDetail] error:", error)
+    return { success: false, data: null, error: "Laporan tidak ditemukan." }
+  }
+
+  return { success: true, data }
+}
+
+export async function getAdminActivityReviewDetail(activityId: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true, data: null as any }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, data: null, error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data, error } = await adminSupabase
+    .from("activities")
+    .select(`
+      *,
+      community:communities(id, name, logo_url, is_verified, location, owner:profiles(full_name, email))
+    `)
+    .eq("id", activityId)
+    .maybeSingle()
+
+  if (error || !data) {
+    console.error("[getAdminActivityReviewDetail] error:", error)
+    return { success: false, data: null, error: "Kegiatan tidak ditemukan." }
+  }
+
+  return { success: true, data }
 }
 
 export async function getHomePageStats() {

@@ -19,8 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { formatCurrency, formatDate } from "@/lib/utils/helpers"
 import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
-import { approveActivityAction, rejectActivityAction } from "@/lib/actions/dashboard.actions"
+import { approveActivityAction, getAdminActivityReviewDetail, rejectActivityAction } from "@/lib/actions/dashboard.actions"
 
 const MapView = dynamic(() => import("@/components/map/map-view"), {
   ssr: false,
@@ -32,7 +31,6 @@ const MARKUP_PERCENT = 10
 export default function AdminActivityReviewPage() {
   const params = useParams()
   const router = useRouter()
-  const supabase = createClient()
 
   const [activity, setActivity] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -45,32 +43,24 @@ export default function AdminActivityReviewPage() {
     if (!params.id) return
     async function fetchActivity() {
       setIsLoading(true)
-      const { data, error } = await supabase
-        .from("activities")
-        .select(`
-          *,
-          community:communities(id, name, logo_url, is_verified, location, owner:profiles(full_name, email))
-        `)
-        .eq("id", params.id as string)
-        .single()
-
-      if (error || !data) {
-        toast.error("Kegiatan tidak ditemukan.")
+      const result = await getAdminActivityReviewDetail(params.id as string)
+      if (!result.success || !result.data) {
+        toast.error(result.error ?? "Kegiatan tidak ditemukan.")
         router.push("/admin/dashboard")
         return
       }
-      setActivity(data)
+      setActivity(result.data)
       setIsLoading(false)
     }
     fetchActivity()
-  }, [params.id])
+  }, [params.id, router])
 
   const handleApprove = async () => {
     if (!activity) return
     setIsSubmitting(true)
     const result = await approveActivityAction(activity.id)
     if (result.success) {
-      toast.success("Kegiatan berhasil dipublikasikan! ✅")
+      toast.success("Kegiatan berhasil dipublikasikan")
       router.push("/admin/dashboard?tab=activities")
     } else {
       toast.error(result.error ?? "Gagal menyetujui kegiatan.")

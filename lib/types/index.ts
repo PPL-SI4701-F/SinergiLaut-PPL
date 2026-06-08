@@ -198,6 +198,7 @@ export interface Report {
   // Relations
   activity?: Activity
   files?: ReportFile[]
+  report_files?: ReportFile[]
 }
 
 export interface FundUsageItem {

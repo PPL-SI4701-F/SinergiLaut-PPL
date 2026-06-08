@@ -303,7 +303,7 @@ export async function updateVolunteerStatus(
     if (status === "approved") {
       await createNotification(
         userId,
-        "Pendaftaran Volunteer Disetujui ✅",
+        "Pendaftaran Volunteer Disetujui",
         `Selamat! Pendaftaran Anda sebagai relawan untuk kegiatan "${activityTitle}" telah disetujui.`,
         "success",
         "/user/dashboard"
@@ -311,7 +311,7 @@ export async function updateVolunteerStatus(
     } else if (status === "rejected") {
       await createNotification(
         userId,
-        "Pendaftaran Volunteer Ditolak ❌",
+        "Pendaftaran Volunteer Ditolak",
         `Maaf, pendaftaran Anda sebagai relawan untuk kegiatan "${activityTitle}" tidak dapat diterima saat ini.`,
         "error",
         "/user/dashboard"

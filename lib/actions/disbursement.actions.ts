@@ -353,7 +353,7 @@ export async function updateDisbursementStatus(
 
       await createNotification(
         community.owner_id,
-        status === "completed" ? "Pencairan Dana Berhasil ✅" : "Pencairan Dana Gagal ❌",
+        status === "completed" ? "Pencairan Dana Berhasil" : "Pencairan Dana Gagal",
         status === "completed"
           ? `Dana sebesar ${formatted} untuk komunitas "${community.name}" telah berhasil dicairkan ke rekening Anda.`
           : `Pencairan dana sebesar ${formatted} untuk komunitas "${community.name}" gagal diproses. Hubungi admin untuk informasi lebih lanjut.`,

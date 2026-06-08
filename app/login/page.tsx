@@ -112,7 +112,7 @@ function LoginContent() {
 
           {/* Card */}
           <div className="sl-login-card">
-            <h2 className="sl-login-title">Selamat Datang 👋</h2>
+            <h2 className="sl-login-title">Selamat Datang</h2>
             <p className="sl-login-subtitle">
               Masuk ke akun Anda untuk melanjutkan <span>misi konservasi</span>
             </p>
