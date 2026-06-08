@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import {
   ArrowLeft, Plus, Trash2, Loader2, FileText, Upload,
-  CheckCircle2, Clock, XCircle, AlertCircle, Send, Save, Paperclip, X
+  CheckCircle2, Clock, XCircle, AlertCircle, Send, Save, Paperclip, X,
+  Users, UserCheck, UserX, Camera, Image as ImageIcon
 } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils/helpers"
@@ -26,6 +28,7 @@ import {
   deleteReportFile,
   type FundUsageItem,
 } from "@/lib/actions/report.actions"
+import { getActivityVolunteers, markVolunteerAttended, markVolunteerAbsent } from "@/lib/actions/volunteer.actions"
 
 type CompletionStatus = "partial" | "completed"
 
@@ -57,6 +60,15 @@ export default function ReportPage() {
   const [fundUsage, setFundUsage] = useState<FundUsageItem[]>([
     { category: "", amount: 0, description: "" }
   ])
+
+  // Kehadiran volunteer
+  const [volunteers, setVolunteers] = useState<any[]>([])
+  const [loadingVolunteers, setLoadingVolunteers] = useState(true)
+  const [updatingVolunteerId, setUpdatingVolunteerId] = useState<string | null>(null)
+  const [attendanceModal, setAttendanceModal] = useState<{ open: boolean; id: string; name: string }>({ open: false, id: "", name: "" })
+  const [attendanceProof, setAttendanceProof] = useState<File | null>(null)
+  const [attendanceProofPreview, setAttendanceProofPreview] = useState<string | null>(null)
+  const [submittingAttendance, setSubmittingAttendance] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -95,6 +107,81 @@ export default function ReportPage() {
     }
 
     setIsLoading(false)
+    loadVolunteers()
+  }
+
+  async function loadVolunteers() {
+    setLoadingVolunteers(true)
+    const result = await getActivityVolunteers(activityId)
+    if (result.success) {
+      setVolunteers((result.data as any[]).filter(v => v.status === "approved" || v.status === "attended" || v.status === "absent"))
+    } else {
+      toast.error(result.error ?? "Gagal memuat data relawan.")
+    }
+    setLoadingVolunteers(false)
+  }
+
+  function openAttendanceModal(id: string, name: string) {
+    setAttendanceProof(null)
+    setAttendanceProofPreview(null)
+    setAttendanceModal({ open: true, id, name })
+  }
+
+  function closeAttendanceModal() {
+    if (attendanceProofPreview) URL.revokeObjectURL(attendanceProofPreview)
+    setAttendanceProof(null)
+    setAttendanceProofPreview(null)
+    setAttendanceModal({ open: false, id: "", name: "" })
+  }
+
+  function handleAttendanceProofChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      toast.error("Bukti kehadiran harus berupa file gambar.")
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran bukti kehadiran maksimal 5MB.")
+      return
+    }
+    if (attendanceProofPreview) URL.revokeObjectURL(attendanceProofPreview)
+    setAttendanceProof(file)
+    setAttendanceProofPreview(URL.createObjectURL(file))
+  }
+
+  async function handleConfirmAttendance() {
+    if (!attendanceProof) {
+      toast.error("Mohon unggah bukti foto kehadiran terlebih dahulu.")
+      return
+    }
+    const id = attendanceModal.id
+    setSubmittingAttendance(true)
+    setUpdatingVolunteerId(id)
+    const result = await markVolunteerAttended(id, attendanceProof)
+    if (result.success) {
+      setVolunteers(prev =>
+        prev.map(v => v.id === id ? { ...v, status: "attended", attendance_proof_url: (result.data as any)?.attendance_proof_url ?? v.attendance_proof_url } : v)
+      )
+      toast.success("Kehadiran relawan berhasil dikonfirmasi.")
+      closeAttendanceModal()
+    } else {
+      toast.error(result.error ?? "Gagal mengkonfirmasi kehadiran.")
+    }
+    setSubmittingAttendance(false)
+    setUpdatingVolunteerId(null)
+  }
+
+  async function handleMarkAbsent(id: string) {
+    setUpdatingVolunteerId(id)
+    const result = await markVolunteerAbsent(id)
+    if (result.success) {
+      setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: "absent", attendance_proof_url: null } : v))
+      toast.success("Relawan ditandai tidak hadir.")
+    } else {
+      toast.error(result.error ?? "Gagal menandai ketidakhadiran relawan.")
+    }
+    setUpdatingVolunteerId(null)
   }
 
   function addFundItem() {
@@ -373,6 +460,78 @@ export default function ReportPage() {
           </CardContent>
         </Card>
 
+        {/* Kehadiran Volunteer */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" /> Kehadiran Volunteer
+            </CardTitle>
+            <CardDescription>Konfirmasi kehadiran setiap relawan beserta bukti foto kehadirannya</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingVolunteers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : volunteers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                Belum ada relawan yang disetujui untuk kegiatan ini.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {volunteers.map(v => (
+                  <div key={v.id} className="border border-border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm shrink-0">
+                        {v.full_name?.charAt(0)?.toUpperCase() ?? "?"}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm text-foreground">{v.full_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {v.status === "attended" && (
+                            <Badge className="bg-green-100 text-green-700 flex items-center gap-1"><UserCheck className="h-3 w-3" /> Hadir</Badge>
+                          )}
+                          {v.status === "absent" && (
+                            <Badge className="bg-red-100 text-red-700 flex items-center gap-1"><UserX className="h-3 w-3" /> Tidak Hadir</Badge>
+                          )}
+                          {v.status === "approved" && (
+                            <Badge className="bg-slate-100 text-slate-600 flex items-center gap-1"><Clock className="h-3 w-3" /> Belum dikonfirmasi</Badge>
+                          )}
+                          {v.status === "attended" && v.attendance_proof_url && (
+                            <a href={v.attendance_proof_url} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">
+                              <ImageIcon className="h-3.5 w-3.5" /> Lihat bukti foto
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pl-12 sm:pl-0">
+                      <Button size="sm"
+                        variant={v.status === "attended" ? "default" : "outline"}
+                        className={v.status === "attended" ? "bg-green-600 hover:bg-green-700" : "text-green-700 border-green-200 hover:bg-green-50"}
+                        disabled={updatingVolunteerId === v.id}
+                        onClick={() => openAttendanceModal(v.id, v.full_name)}>
+                        {updatingVolunteerId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserCheck className="h-3.5 w-3.5" />}
+                        <span className="ml-1">Hadir</span>
+                      </Button>
+                      <Button size="sm"
+                        variant={v.status === "absent" ? "default" : "outline"}
+                        className={v.status === "absent" ? "bg-red-600 hover:bg-red-700" : "text-red-700 border-red-200 hover:bg-red-50"}
+                        disabled={updatingVolunteerId === v.id}
+                        onClick={() => handleMarkAbsent(v.id)}>
+                        {updatingVolunteerId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserX className="h-3.5 w-3.5" />}
+                        <span className="ml-1">Tidak Hadir</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Rincian Penggunaan Dana */}
         <Card>
           <CardHeader>
@@ -539,6 +698,48 @@ export default function ReportPage() {
         )}
 
       </main>
+
+      {/* Modal Konfirmasi Kehadiran */}
+      <Dialog open={attendanceModal.open} onOpenChange={(open) => { if (!open) closeAttendanceModal() }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-green-600" /> Konfirmasi Kehadiran
+            </DialogTitle>
+            <DialogDescription>
+              Tandai <span className="font-semibold text-foreground">{attendanceModal.name}</span> sebagai hadir. Unggah bukti foto kehadiran relawan untuk melanjutkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Bukti Foto Kehadiran *</Label>
+            {attendanceProofPreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={attendanceProofPreview} alt="Pratinjau bukti kehadiran" className="w-full max-h-64 object-cover" />
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-8 cursor-pointer text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                <Camera className="h-7 w-7" />
+                <span className="text-sm font-medium">Klik untuk unggah foto</span>
+                <span className="text-xs">Format JPG/PNG, maks. 5MB</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleAttendanceProofChange} disabled={submittingAttendance} />
+              </label>
+            )}
+            {attendanceProofPreview && (
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer hover:underline">
+                <Camera className="h-3.5 w-3.5" /> Ganti foto
+                <input type="file" accept="image/*" className="hidden" onChange={handleAttendanceProofChange} disabled={submittingAttendance} />
+              </label>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAttendanceModal} disabled={submittingAttendance}>Batal</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleConfirmAttendance} disabled={submittingAttendance || !attendanceProof}>
+              {submittingAttendance ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <UserCheck className="h-4 w-4 mr-1.5" />}
+              Konfirmasi Hadir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

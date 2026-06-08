@@ -37,7 +37,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/auth-context"
 import {
-  Plus, Search, Calendar, Users, Banknote, FileText,
+  Plus, Search, Calendar, Users, Banknote, FileText, Wallet,
   Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, XCircle, Loader2, Trash2, PlayCircle, Send, Clock
 } from "lucide-react"
 import { formatCurrency, formatDate } from "@/lib/utils/helpers"
@@ -102,6 +102,7 @@ export default function CommunityDashboardPage() {
     totalDonations: 0,
     activeDonations: 0,
     verifiedReports: "0/0",
+    totalBalance: 0,
   })
   const [activities, setActivities] = useState<CommunityActivity[]>([])
   const [communityProfile, setCommunityProfile] = useState<CommunityProfile | null>(null)
@@ -254,6 +255,13 @@ export default function CommunityDashboardPage() {
       icon: Banknote,
       change: "Live",
     },
+    {
+      label: "Total Saldo Komunitas",
+      value: formatCurrency(stats.totalBalance),
+      sub: "Dana yang telah dicairkan admin ke komunitas",
+      icon: Wallet,
+      change: "Live",
+    },
     { label: "Laporan Terverifikasi", value: stats.verifiedReports, icon: FileText, change: "Live" },
   ]
 
@@ -290,9 +298,9 @@ export default function CommunityDashboardPage() {
           )}
 
           {(isLoading || isCommunityApproved) && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {isLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
+              ? Array.from({ length: 5 }).map((_, i) => (
                   <Card key={i}>
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between">

@@ -9,10 +9,11 @@ import { id as localeID } from "date-fns/locale"
 import {
   ArrowLeft, FileText, CheckCircle2, XCircle, Clock, AlertCircle,
   Building2, User, Calendar, Banknote, Paperclip, ThumbsUp, ThumbsDown,
-  Loader2, ExternalLink
+  Loader2, ExternalLink, Users, UserCheck, UserX, Image as ImageIcon
 } from "lucide-react"
 import { toast } from "sonner"
 import { approveReportAction, rejectReportAction } from "@/lib/actions/dashboard.actions"
+import { getActivityVolunteers } from "@/lib/actions/volunteer.actions"
 import { formatCurrency } from "@/lib/utils/helpers"
 
 type ReportDetail = {
@@ -25,6 +26,7 @@ type ReportDetail = {
   admin_note: string | null
   created_at: string
   reviewed_at: string | null
+  activity_id: string | null
   activity: { title: string } | null
   community: { name: string } | null
   profiles: { full_name: string } | null
@@ -39,6 +41,9 @@ export default function AdminReportDetailPage() {
   const [report, setReport] = useState<ReportDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isActioning, setIsActioning] = useState<"approve" | "reject" | null>(null)
+
+  const [volunteers, setVolunteers] = useState<any[]>([])
+  const [loadingVolunteers, setLoadingVolunteers] = useState(false)
 
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectNote, setRejectNote] = useState("")
@@ -55,7 +60,7 @@ export default function AdminReportDetailPage() {
       .from("reports")
       .select(`
         id, title, summary, status, completion_status, fund_usage,
-        admin_note, created_at, reviewed_at,
+        admin_note, created_at, reviewed_at, activity_id,
         activity:activities(title),
         community:communities(name),
         profiles!reports_submitted_by_fkey(full_name),
@@ -69,8 +74,22 @@ export default function AdminReportDetailPage() {
       router.push("/admin/reports")
       return
     }
-    setReport(data as unknown as ReportDetail)
+    const reportData = data as unknown as ReportDetail
+    setReport(reportData)
     setIsLoading(false)
+
+    if (reportData.activity_id) {
+      loadVolunteers(reportData.activity_id)
+    }
+  }
+
+  async function loadVolunteers(activityId: string) {
+    setLoadingVolunteers(true)
+    const result = await getActivityVolunteers(activityId)
+    if (result.success) {
+      setVolunteers((result.data as any[]).filter(v => v.status === "approved" || v.status === "attended" || v.status === "absent"))
+    }
+    setLoadingVolunteers(false)
   }
 
   async function handleApprove() {
@@ -228,6 +247,53 @@ export default function AdminReportDetailPage() {
                 </tr>
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Kehadiran Volunteer */}
+        <div className="bg-white rounded-xl border border-slate-100 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-slate-400" />
+            <h2 className="font-bold text-slate-800 text-sm uppercase tracking-wide">Kehadiran Volunteer</h2>
+          </div>
+          {loadingVolunteers ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
+            </div>
+          ) : volunteers.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">Belum ada relawan yang disetujui untuk kegiatan ini.</p>
+          ) : (
+            <div className="space-y-2">
+              {volunteers.map(v => (
+                <div key={v.id} className="border border-slate-100 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 font-semibold flex items-center justify-center text-sm shrink-0">
+                      {v.full_name?.charAt(0)?.toUpperCase() ?? "?"}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-slate-800">{v.full_name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {v.status === "attended" && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700"><UserCheck className="h-3 w-3" /> Hadir</span>
+                        )}
+                        {v.status === "absent" && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700"><UserX className="h-3 w-3" /> Tidak Hadir</span>
+                        )}
+                        {v.status === "approved" && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600"><Clock className="h-3 w-3" /> Belum dikonfirmasi</span>
+                        )}
+                        {v.status === "attended" && v.attendance_proof_url && (
+                          <a href={v.attendance_proof_url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">
+                            <ImageIcon className="h-3.5 w-3.5" /> Lihat bukti foto
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

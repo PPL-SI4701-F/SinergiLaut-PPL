@@ -380,7 +380,7 @@ export default function ActivitiesPage() {
               </div>
             )}
             {completedActivities.length > 0 && (
-              <div>
+              <div id="completed">
                 <div className="act-group-header">
                   <div className="act-group-title">
                     <CheckCircle className="text-muted-foreground h-6 w-6" />

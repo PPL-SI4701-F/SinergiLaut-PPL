@@ -282,7 +282,7 @@ export default function AdminDisbursementsPage() {
                           onClick={() => setStatusModal({ open: true, id: d.id, currentStatus: "pending", label: (d as any).community?.name ?? "" })}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
                         >
-                          <ArrowRight className="w-3 h-3" /> Proses
+                          <ArrowRight className="w-3 h-3" /> Tinjau
                         </button>
                       )}
                       {d.status === "processing" && (
@@ -416,8 +416,13 @@ export default function AdminDisbursementsPage() {
               <div className="flex gap-2 pt-1">
                 <button onClick={() => handleUpdateStatus("processing")} disabled={updatingStatus}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60">
-                  {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                  Mulai Proses
+                  {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Setujui &amp; Proses
+                </button>
+                <button onClick={() => handleUpdateStatus("failed")} disabled={updatingStatus}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60">
+                  {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  Tolak
                 </button>
               </div>
             )}
