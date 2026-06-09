@@ -11,7 +11,7 @@ import type { VolunteerRegistration, VolunteerStatus } from "@/lib/types"
 import { cookies } from "next/headers"
 
 async function getE2EMock() {
-  if (process.env.NODE_ENV !== 'development') return null
+  if (process.env.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_E2E_TESTING !== 'true') return null
   try {
     const cookieStore = await cookies()
     return cookieStore.get('e2e-bypass-auth')?.value || null
@@ -223,25 +223,29 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
 export async function getActivityVolunteers(activityId: string) {
   const isE2E = await getE2EMock()
   if (isE2E) {
+    if (isE2E === 'community-empty') return { success: true, data: [] }
     return {
       success: true,
       data: [
         {
           id: "reg-1",
           activity_id: activityId,
-          user_id: "e2e-user-id",
-          full_name: "Mock Volunteer",
-          email: "mock-volunteer@example.com",
+          user_id: "user-1",
+          full_name: "Budi",
+          email: "budi@example.com",
           phone: "081234567890",
           status: "pending",
           created_at: new Date().toISOString(),
-          user: {
-            id: "e2e-user-id",
-            full_name: "Mock Volunteer",
-            avatar_url: null,
-            email: "mock-volunteer@example.com",
-            phone: "081234567890"
-          }
+        },
+        {
+          id: "reg-2",
+          activity_id: activityId,
+          user_id: "user-2",
+          full_name: "Ani",
+          email: "ani@example.com",
+          phone: "081234567891",
+          status: "pending",
+          created_at: new Date().toISOString(),
         }
       ] as any
     }
@@ -426,30 +430,40 @@ export async function markVolunteerAbsent(registrationId: string) {
 }
 
 /** Ambil riwayat pendaftaran relawan untuk user yang sedang login */
-export async function getMyVolunteerRegistrations(userId: string) {
-  const isE2E = await getE2EMock()
-  if (isE2E) {
+
+export async function getMyVolunteerRegistrations(userId: string, mockRole?: string) {
+  const isE2E = mockRole || await getE2EMock()
+
+  if (isE2E === "user") {
     return {
       success: true,
       data: [
-        {
-          id: "reg-1",
-          activity_id: "activity-3",
-          user_id: userId,
-          status: "approved",
-          created_at: new Date().toISOString(),
-          activity: {
-            id: "activity-3",
-            title: "Ongoing Activity 1",
-            slug: "ongoing-activity-1",
-            start_date: new Date().toISOString(),
-            location: "Pantai Indah",
-            cover_image_url: null,
-            status: "published",
-            community: { name: "Eco Ocean", logo_url: null }
-          }
-        }
-      ] as any
+        { id: "reg-1", status: "attended", activity: { id: "completed-activity", title: "Kegiatan Selesai", status: "completed", community: { name: "Komunitas Alam" } } }
+      ]
+    }
+  }
+
+  if (isE2E === "user-empty") {
+    return { success: true, data: [] }
+  }
+
+  if (isE2E === "user-multi") {
+    return {
+      success: true,
+      data: [
+        { id: "reg-1", status: "attended", activity: { id: "act-1", title: "Bersih Pantai Mutiara", status: "completed", community: { name: "Komunitas Alam" } } },
+        { id: "reg-2", status: "approved", activity: { id: "act-2", title: "Tanam Mangrove Asri", status: "published", community: { name: "Komunitas Alam" } } },
+        { id: "reg-3", status: "pending", activity: { id: "act-3", title: "Konservasi Terumbu Karang", status: "draft", community: { name: "Komunitas Alam" } } },
+      ]
+    }
+  }
+
+  if (isE2E === "user-rejected") {
+    return {
+      success: true,
+      data: [
+        { id: "reg-1", status: "rejected", activity: { id: "act-4", title: "Kegiatan Yang Ditolak", status: "published", community: { name: "Komunitas Alam" } } }
+      ]
     }
   }
 

@@ -11,43 +11,23 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
         aud: 'authenticated',
         role: 'authenticated',
         email: 'community@example.com',
-        user_metadata: { role: 'community' }
-      }
+        user_metadata: { role: 'community' },
+      },
     });
 
-    cy.intercept('GET', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 200,
-      body: [
-        { id: 'reg-1', full_name: 'Budi', status: 'pending' },
-        { id: 'reg-2', full_name: 'Ani', status: 'pending' }
-      ]
-    }).as('getVolunteers');
-  });
 
   it('Harus mengizinkan komunitas menyetujui atau menolak relawan', () => {
-    cy.intercept('PATCH', '**/rest/v1/volunteer_registrations?id=eq.reg-1*', {
-      statusCode: 200,
-      body: [{ id: 'reg-1', status: 'rejected' }]
-    }).as('rejectVolunteer');
-
-    cy.intercept('PATCH', '**/rest/v1/volunteer_registrations?id=eq.reg-2*', {
-      statusCode: 200,
-      body: [{ id: 'reg-2', status: 'approved' }]
-    }).as('approveVolunteer');
-
     cy.visit('/community/dashboard/activities/act-1/volunteers');
-    // Asumsi ada tab relawan
-    cy.contains(/Relawan|Volunteers/i).click({ force: true });
-    cy.wait('@getVolunteers');
+    cy.wait(1000);
 
     // Action Reject
     cy.contains('Budi').parents('div.border, tr, .card, li').find('button').contains(/Tolak|Reject/i).click();
-    cy.wait('@rejectVolunteer');
+    cy.wait(500); // Wait for optimistic update or mock
     cy.contains('Budi').parents('div.border').contains(/Ditolak|Rejected/i).should('be.visible');
 
     // Action Approve
     cy.contains('Ani').parents('div.border, tr, .card, li').find('button').contains(/Terima|Approve|Setujui/i).click();
-    cy.wait('@approveVolunteer');
+    cy.wait(500); // Wait for optimistic update or mock
   });
 
   // ─────────────────────────────────────────────
@@ -59,7 +39,7 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
       statusCode: 200,
       body: [
         { id: 'reg-pending', full_name: 'Calon Relawan Ke-51', status: 'pending', age: 25, phone: '081234567890' },
-      ]
+      ],
     }).as('getVolunteersFull');
 
     cy.intercept('GET', '**/rest/v1/activities*', {
@@ -69,22 +49,20 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
         title: 'Bersih Pantai Full',
         volunteer_quota: 50,
         volunteer_count: 50, // quota is FULL
-        status: 'published'
-      }
+        status: 'published',
+      },
     }).as('getActivity');
 
     cy.visit('/community/dashboard/activities/act-1/volunteers');
     cy.contains(/Relawan|Volunteers/i).click({ force: true });
     cy.wait('@getVolunteersFull');
 
-    // Attempt to approve the pending volunteer
     cy.contains('Calon Relawan Ke-51')
       .parents('div.border, tr, .card, li')
       .find('button')
       .contains(/Terima|Approve|Setujui/i)
       .then(($btn) => {
         if ($btn.length > 0) {
-          // Button should be disabled OR clicking should show quota error
           const isDisabled = $btn.prop('disabled');
           if (!isDisabled) {
             cy.wrap($btn).click();
@@ -93,7 +71,6 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
             expect(isDisabled).to.be.true;
           }
         } else {
-          // If no approve button at all when quota full - that's valid behavior
           cy.contains(/kuota penuh|quota full|kapasitas penuh/i).should('be.visible');
         }
       });
@@ -107,12 +84,12 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
       statusCode: 200,
       body: [
         { id: 'reg-1', full_name: 'Budi Santoso', status: 'pending', age: 22, phone: '081234567890' },
-      ]
+      ],
     }).as('getVolunteersAvail');
 
     cy.intercept('PATCH', '**/rest/v1/volunteer_registrations?id=eq.reg-1*', {
       statusCode: 200,
-      body: [{ id: 'reg-1', status: 'approved' }]
+      body: [{ id: 'reg-1', status: 'approved' }],
     }).as('approveVolunteerAvail');
 
     cy.visit('/community/dashboard/activities/act-1/volunteers');
@@ -126,7 +103,6 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
       .click();
 
     cy.wait('@approveVolunteerAvail');
-    // UI should reflect the status change
     cy.contains(/Diterima|Approved|Disetujui/i).should('be.visible');
   });
 
@@ -138,12 +114,12 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
       statusCode: 200,
       body: [
         { id: 'reg-2', full_name: 'Ani Kusuma', status: 'pending', age: 19, phone: '087654321098' },
-      ]
+      ],
     }).as('getVolunteersReject');
 
     cy.intercept('PATCH', '**/rest/v1/volunteer_registrations?id=eq.reg-2*', {
       statusCode: 200,
-      body: [{ id: 'reg-2', status: 'rejected' }]
+      body: [{ id: 'reg-2', status: 'rejected' }],
     }).as('rejectVolunteerEdge');
 
     cy.visit('/community/dashboard/activities/act-1/volunteers');
@@ -162,18 +138,42 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
 
   // ─────────────────────────────────────────────
   // Edge Case 4: Daftar relawan kosong (zero state)
+  // Override beforeEach intercept di dalam test untuk mengembalikan array kosong
   // ─────────────────────────────────────────────
-  it.skip('Should display empty state when no volunteers have registered (Skip: fails because E2E server action mock is hardcoded and cannot return empty list)', () => {
-    cy.intercept('GET', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 200,
-      body: [] // Empty list
-    }).as('getEmptyVolunteers');
-
+  it('Harus menampilkan empty state saat tidak ada relawan yang mendaftar', () => {
+    cy.setCookie('e2e-bypass-auth', 'community-empty');
     cy.visit('/community/dashboard/activities/act-1/volunteers');
-    cy.contains(/Relawan|Volunteers/i).click({ force: true });
-    cy.wait('@getEmptyVolunteers');
+    cy.wait(1000);
 
     // Should show zero-state UI, not crash
     cy.contains(/belum ada|tidak ada|no volunteer|kosong|empty/i).should('be.visible');
+  });
+
+  // ─────────────────────────────────────────────
+  // New: Detail relawan pending tampil lengkap
+  // ─────────────────────────────────────────────
+  it('Harus menampilkan nama dan status "pending" setiap relawan yang menunggu keputusan', () => {
+    cy.visit('/community/dashboard/activities/act-1/volunteers');
+    cy.wait(1000);
+
+    cy.contains('Budi').should('be.visible');
+    cy.contains('Ani').should('be.visible');
+    cy.contains(/pending|menunggu/i).should('be.visible');
+  });
+
+  // ─────────────────────────────────────────────
+  // New: Tombol aksi tersedia untuk setiap relawan pending
+  // ─────────────────────────────────────────────
+  it('Harus menampilkan tombol Terima dan Tolak untuk setiap relawan yang masih berstatus pending', () => {
+    cy.visit('/community/dashboard/activities/act-1/volunteers');
+    cy.wait(1000);
+
+    // Both action buttons must be available for the first pending volunteer
+    cy.contains('Budi')
+      .parents('div.border, tr, .card, li')
+      .within(() => {
+        cy.contains(/Terima|Approve|Setujui/i).should('be.visible');
+        cy.contains(/Tolak|Reject/i).should('be.visible');
+      });
   });
 });

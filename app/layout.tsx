@@ -38,7 +38,7 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <head>
         {/* Google Analytics placeholder */}
-        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+        {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <>
             <script async src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`} />
             <script

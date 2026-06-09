@@ -5,7 +5,7 @@ import { createNotification } from "@/lib/actions/notification.actions"
 import { cookies } from "next/headers"
 
 async function getE2EMock() {
-  if (process.env.NODE_ENV === 'production') return null
+  if (process.env.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_E2E_TESTING !== 'true') return null
   try {
     const cookieStore = await cookies()
     return cookieStore.get('e2e-bypass-auth')?.value || null
@@ -15,6 +15,11 @@ async function getE2EMock() {
 }
 
 async function getCurrentVerifiedCommunity() {
+  const isE2E = await getE2EMock()
+  if (isE2E === 'community') {
+    return { authorized: true as const, communityId: 'community-id-123' }
+  }
+
   const supabase = await createClient()
   const adminSupabase = await createAdminClient()
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -672,7 +677,7 @@ export async function getCommunityActivitySummary(activityId: string) {
         funding_goal: 0,
         volunteer_count: 0,
         volunteer_quota: 0,
-        status: "published",
+        status: "completed",
         location: "Mock Location",
         start_date: new Date().toISOString(),
         end_date: null,

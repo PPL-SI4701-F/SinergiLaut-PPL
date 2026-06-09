@@ -18,7 +18,7 @@ describe('FR-08: Pendaftaran relawan', () => {
     });
 
     // Mock Activity Details
-    cy.intercept('GET', '**/rest/v1/activities?*', {
+    cy.intercept('GET', '**/rest/v1/activities*', {
       statusCode: 200,
       body: {
         id: activityId,
@@ -38,16 +38,13 @@ describe('FR-08: Pendaftaran relawan', () => {
 
   // ── Happy Path ─────────────────────────────────
   it('Harus mengizinkan pengguna mendaftar sebagai relawan', () => {
-    cy.intercept('POST', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 201,
-      body: [{ id: 'reg-happy', status: 'pending' }]
-    }).as('submitRegistration');
+    // Server Action registerVolunteer directly returns mock data
 
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
 
     // Click on the "Daftar Relawan" tab button
-    cy.contains('button', 'Daftar Relawan').click();
+    cy.contains('button', 'Daftar Relawan').click({ force: true });
 
     // Fill form
     cy.get('input[placeholder="Nama lengkap"]').clear().type('Mock User');
@@ -173,10 +170,7 @@ describe('FR-08: Pendaftaran relawan', () => {
 
   // ── Edge Case 5: Nama sangat panjang / karakter khusus ──
   it('Harus menangani nama yang sangat panjang tanpa membuat aplikasi crash', () => {
-    cy.intercept('POST', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 201,
-      body: [{ id: 'reg-extreme', status: 'pending' }]
-    }).as('submitRegistration');
+    // Server Action registerVolunteer directly returns mock data
 
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');

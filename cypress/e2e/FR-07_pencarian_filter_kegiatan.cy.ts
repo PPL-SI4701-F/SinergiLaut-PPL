@@ -4,12 +4,12 @@ describe('FR-07: Pencarian dan Filter Kegiatan', () => {
     cy.clearLocalStorage();
     cy.setCookie('e2e-bypass-auth', 'user');
 
-    cy.intercept('GET', '**/rest/v1/activities?select=*&status=eq.published*', {
+    cy.intercept('GET', '**/rest/v1/activities*', {
       statusCode: 200,
       body: [
-        { id: 'act-1', title: 'Bersih Pantai Mutiara', location: 'Jakarta', category: 'cleanup', start_date: new Date().toISOString() },
-        { id: 'act-2', title: 'Tanam Mangrove Asri', location: 'Bali', category: 'restoration', start_date: new Date().toISOString() },
-        { id: 'act-3', title: 'Konservasi Terumbu Karang', location: 'Bali', category: 'restoration', start_date: new Date().toISOString() }
+        { id: 'act-1', title: 'Bersih Pantai Mutiara', location: 'Jakarta', category: 'cleanup', status: 'published', start_date: new Date().toISOString() },
+        { id: 'act-2', title: 'Tanam Mangrove Asri', location: 'Bali', category: 'restoration', status: 'published', start_date: new Date().toISOString() },
+        { id: 'act-3', title: 'Konservasi Terumbu Karang', location: 'Bali', category: 'coral & ecosystem restoration', status: 'published', start_date: new Date().toISOString() }
       ]
     }).as('getAllActivities');
   });
@@ -44,10 +44,10 @@ describe('FR-07: Pencarian dan Filter Kegiatan', () => {
     cy.wait('@getAllActivities');
 
     cy.contains('.act-dropdown-btn', /Type/i).click();
-    cy.contains('.act-dropdown-item', 'Coral & Ecosystem Restoration').click();
+    cy.contains('.act-dropdown-item', /Coral & ecosystem restoration/i).click();
 
     cy.contains('Bersih Pantai Mutiara').should('not.exist');
-    cy.contains('Tanam Mangrove Asri').should('be.visible');
+    cy.contains('Tanam Mangrove Asri').should('not.exist');
     cy.contains('Konservasi Terumbu Karang').should('be.visible');
   });
 
@@ -89,7 +89,7 @@ describe('FR-07: Pencarian dan Filter Kegiatan', () => {
     cy.contains('.act-dropdown-item', 'Jakarta').click();
 
     cy.contains('.act-dropdown-btn', /Type/i).click();
-    cy.contains('.act-dropdown-item', 'Coral & Ecosystem Restoration').click();
+    cy.contains('.act-dropdown-item', /Coral & ecosystem restoration/i).click();
 
     cy.contains('Bersih Pantai Mutiara').should('not.exist');
     cy.contains('Tanam Mangrove Asri').should('not.exist');

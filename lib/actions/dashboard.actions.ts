@@ -5,7 +5,7 @@ import { createNotification } from "@/lib/actions/notification.actions"
 import { cookies } from "next/headers"
 
 async function getE2EMock() {
-  if (process.env.NODE_ENV !== 'development') return null
+  if (process.env.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_E2E_TESTING !== 'true') return null
   try {
     const cookieStore = await cookies()
     return cookieStore.get('e2e-bypass-auth')?.value || null
@@ -104,6 +104,7 @@ export async function getAdminDashboardStats() {
 export async function getPendingCommunities() {
   const isE2E = await getE2EMock()
   if (isE2E) {
+    if (isE2E === 'admin-empty') return []
     return [
       {
         id: "community-1",
@@ -132,6 +133,7 @@ export async function getPendingCommunities() {
 export async function getPendingActivities() {
   const isE2E = await getE2EMock()
   if (isE2E) {
+    if (isE2E === 'admin-empty') return []
     return [
       {
         id: "activity-1",
@@ -206,14 +208,14 @@ export async function getOngoingActivities() {
 export async function getPendingReports() {
   const isE2E = await getE2EMock()
   if (isE2E) {
+    if (isE2E === 'admin-empty') return []
     return [
       {
         id: "report-1",
-        activity_id: "activity-3",
+        title: "Laporan Pembersihan Pantai",
         status: "submitted",
         created_at: new Date().toISOString(),
-        community: { name: "Eco Ocean" },
-        activity: { title: "Ongoing Activity 1" }
+        activity: { title: "Pembersihan Pantai", community: { name: "Sea Guardians" } }
       }
     ] as any
   }
@@ -236,9 +238,9 @@ export async function getAllCommunities() {
   const isE2E = await getE2EMock()
   if (isE2E) {
     return [
-      { id: 'community-1', name: 'Komunitas Laut Lestari', location: 'Jakarta', logo_url: null, verification_status: 'approved' },
-      { id: 'community-2', name: 'Komunitas Mangrove Asri', location: 'Surabaya', logo_url: null, verification_status: 'suspended' },
-      { id: 'community-3', name: 'Komunitas Pesisir Hijau', location: 'Bali', logo_url: null, verification_status: 'pending' },
+      { id: 'community-1', name: 'Komunitas Laut Lestari', location: 'Jakarta', logo_url: null, is_verified: true, is_suspended: false },
+      { id: 'community-2', name: 'Komunitas Mangrove Asri', location: 'Surabaya', logo_url: null, is_verified: false, is_suspended: true },
+      { id: 'community-3', name: 'Komunitas Pesisir Hijau', location: 'Bali', logo_url: null, is_verified: false, is_suspended: false },
     ]
   }
 
@@ -780,7 +782,46 @@ export async function getAdminReportDetail(reportId: string) {
 
 export async function getAdminActivityReviewDetail(activityId: string) {
   const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: null as any }
+  if (isE2E) {
+    if (activityId === 'activity-1') {
+      return {
+        success: true,
+        data: {
+          id: "activity-1",
+          title: "Pending Activity 1",
+          description: "Deskripsi kegiatan pending",
+          location: "Pantai Indah",
+          start_date: new Date().toISOString(),
+          end_date: new Date().toISOString(),
+          status: "pending_review",
+          cover_image_url: null,
+          category: "Penanaman Mangrove",
+          volunteer_quota: 10,
+          volunteer_count: 0,
+          funding_goal: 5000000,
+          funding_raised: 0,
+          published_at: null,
+          community_id: "community-1",
+          community: {
+            id: "community-1",
+            name: "Eco Ocean",
+            logo_url: null,
+            is_verified: true,
+            location: "Jakarta",
+            owner: {
+              full_name: "Owner Name",
+              email: "owner@eco.org"
+            }
+          },
+          reports: [],
+          feedbacks: [],
+          items_needed: [],
+          volunteer_registrations: []
+        }
+      }
+    }
+    return { success: true, data: null as any }
+  }
 
   const auth = await requireAdmin()
   if (!auth.authorized) return { success: false, data: null, error: "Akses ditolak." }
@@ -1147,6 +1188,22 @@ export async function getUserDashboardStats(userId: string) {
 // --- COMMUNITY PROFILE ---
 
 export async function getCommunityProfile() {
+  const isE2E = await getE2EMock()
+  if (isE2E === 'community') {
+    return {
+      success: true,
+      data: {
+        id: "community-id-123",
+        name: "E2E Community",
+        is_verified: true,
+        verification_status: "approved",
+        is_suspended: false,
+        owner_id: "community-user-id"
+      },
+      error: null
+    }
+  }
+
   const adminSupabase = await createAdminClient()
 
   const supabase = await createClient()

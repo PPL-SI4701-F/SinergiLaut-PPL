@@ -4,16 +4,9 @@ import { UserSidebar } from "@/components/user-sidebar"
 import { createClient } from "@/lib/supabase/server"
 
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const e2eRole = process.env.NODE_ENV === "development"
-    ? cookieStore.get("e2e-bypass-auth")?.value
-    : null
+  const isE2EMode = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_E2E_TESTING === "true"
 
-  if (e2eRole && e2eRole !== "user") {
-    redirect("/unauthorized")
-  }
-
-  if (!e2eRole) {
+  if (!isE2EMode) {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 

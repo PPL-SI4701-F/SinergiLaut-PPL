@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
-
   // Keep the project root explicit to avoid multi-lockfile warnings in dev.
   turbopack: {
     root: __dirname,

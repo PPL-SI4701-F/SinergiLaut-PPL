@@ -10,7 +10,7 @@ describe('FR-12: Monitoring & audit oleh admin', () => {
     cy.visit('/admin/monitoring');
     cy.wait(1000); // Hydration wait
 
-    cy.contains('Monitoring & Audit').should('be.visible');
+    cy.contains('Riwayat Aktivitas Admin').should('be.visible');
     cy.contains('Riwayat Aksi Admin').should('be.visible');
 
     // Entri dari tabel reports
@@ -38,7 +38,8 @@ describe('FR-12: Monitoring & audit oleh admin', () => {
     cy.visit('/admin/monitoring');
     cy.wait(1000);
 
-    cy.contains('button', 'Kelola Komunitas').click();
-    cy.contains('Komunitas Laut Lestari').should('be.visible');
+    // Sidebar uses Link with label "Komunitas"
+    cy.contains('Komunitas').click({ force: true });
+    cy.contains('Kelola Komunitas').should('be.visible'); // page title in /admin/communities
   });
 });

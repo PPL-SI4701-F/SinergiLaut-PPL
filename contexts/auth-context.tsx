@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const e2eBypassRole = getCookie('e2e-bypass-auth');
-    if (process.env.NODE_ENV === 'development' && e2eBypassRole) {
+    if ((process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_E2E_TESTING === 'true') && e2eBypassRole) {
       const mockUser = {
         id: 'mock-user-id',
         aud: 'authenticated',
@@ -120,6 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!user?.id) {
       setProfile(null)
+      setIsProfileLoading(false)
+      return
+    }
+
+    if (user.id === 'mock-user-id') {
       setIsProfileLoading(false)
       return
     }

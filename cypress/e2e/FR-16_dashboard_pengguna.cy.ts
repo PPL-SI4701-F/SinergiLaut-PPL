@@ -21,13 +21,13 @@ describe('FR-16: Dashboard Pengguna', () => {
 
     cy.contains('Kegiatan Diikuti').should('be.visible');
     cy.contains('Total Donasi').should('be.visible');
-    cy.contains('Status Aktif').should('be.visible');
+    cy.contains('Kegiatan Aktif').should('be.visible');
 
     // Mock stats: totalActivities=1, activeActivities=1, totalDonations=0
     cy.contains('Kegiatan Diikuti').parents('.rounded-2xl').within(() => {
       cy.contains('1').should('be.visible');
     });
-    cy.contains('Status Aktif').parents('.rounded-2xl').within(() => {
+    cy.contains('Kegiatan Aktif').parents('.rounded-2xl').within(() => {
       cy.contains('1').should('be.visible');
     });
   });

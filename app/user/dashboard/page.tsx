@@ -10,10 +10,14 @@ import { DashboardClient } from "./dashboard-client"
 
 import { cookies } from "next/headers"
 
-export default async function UserDashboardPage() {
-  const cookieStore = await cookies()
-  const isE2E = process.env.NODE_ENV === 'development' && cookieStore.get('e2e-bypass-auth')?.value
+export const dynamic = 'force-dynamic';
 
+export default async function UserDashboardPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const searchParams = await props.searchParams;
+  const cookieStore = await cookies()
+  
+  const e2eBypassRole = cookieStore.get('e2e-bypass-auth')?.value || (searchParams?.e2e_user as string) || null;
+  const isE2E = (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_E2E_TESTING === 'true') && e2eBypassRole;
   let userId = ""
   let profile: any = null
   let stats = { totalActivities: 0, activeActivities: 0, totalDonations: 0 }
@@ -24,7 +28,7 @@ export default async function UserDashboardPage() {
     userId = "e2e-user-id"
     profile = { full_name: "Mock User", role: "user", volunteer_status: "approved", nik: "1234567890123456", volunteer_reject_note: null }
     stats = { totalActivities: 1, activeActivities: 1, totalDonations: 0 }
-    const volunteersResult = await getMyVolunteerRegistrations(userId)
+    const volunteersResult = await getMyVolunteerRegistrations(userId, e2eBypassRole as string)
     volunteers = volunteersResult.data ?? []
   } else {
     const supabase = await createClient()
@@ -122,6 +126,7 @@ export default async function UserDashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
           <div>
+            <p id="debug-cookie" className="sr-only">Cookie: {String(isE2E)}</p>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 Selamat datang, {firstName}!

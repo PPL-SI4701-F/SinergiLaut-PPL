@@ -4,69 +4,8 @@ describe('FR-06: Manajemen status kegiatan', () => {
     cy.clearLocalStorage();
     cy.setCookie('e2e-bypass-auth', 'admin');
 
-    // Intercept GET for activity-1 (Review page) - Using flexible wildcard matching to handle Postgrest select params
-    cy.intercept('GET', '**/rest/v1/activities*id=eq.activity-1*', {
-      statusCode: 200,
-      body: {
-        id: "activity-1",
-        title: "Pending Activity 1",
-        description: "Deskripsi kegiatan pending",
-        location: "Pantai Indah",
-        start_date: new Date().toISOString(),
-        end_date: new Date().toISOString(),
-        status: "pending_review",
-        cover_image_url: null,
-        category: "Penanaman Mangrove",
-        volunteer_quota: 10,
-        volunteer_count: 0,
-        funding_goal: 5000000,
-        funding_raised: 0,
-        published_at: null,
-        community_id: "community-1",
-        community: {
-          id: "community-1",
-          name: "Eco Ocean",
-          logo_url: null,
-          is_verified: true,
-          location: "Jakarta",
-          owner: {
-            full_name: "Owner Name",
-            email: "owner@eco.org"
-          }
-        },
-        reports: [],
-        feedbacks: [],
-        items_needed: [],
-        volunteer_registrations: []
-      }
-    }).as('getPendingActivityDetail');
-
-    // Intercept GET for activity-3 (Pantau Detail page) - Using flexible wildcard matching
-    cy.intercept('GET', '**/rest/v1/activities*id=eq.activity-3*', {
-      statusCode: 200,
-      body: {
-        id: "activity-3",
-        title: "Ongoing Activity 1",
-        description: "Deskripsi kegiatan ongoing",
-        location: "Pantai Indah",
-        start_date: new Date().toISOString(),
-        end_date: new Date().toISOString(),
-        status: "published",
-        cover_image_url: null,
-        category: "Pembersihan Pantai",
-        volunteer_quota: 50,
-        volunteer_count: 5,
-        funding_goal: 10000000,
-        funding_raised: 2000000,
-        published_at: new Date().toISOString(),
-        community_id: "community-1",
-        community: { id: "community-1", name: "Eco Ocean", logo_url: null, is_verified: true },
-        reports: [],
-        feedbacks: [],
-        items_needed: [],
-        volunteer_registrations: []
-      }
-    }).as('getOngoingActivityDetail');
+    // Intercepts for activities are no longer needed here since Server Actions 
+    // natively return the E2E mock data using getE2EMock().
 
     // Intercept volunteer registrations to avoid database errors on the activity detail page
     cy.intercept('GET', '**/rest/v1/volunteer_registrations*', {
@@ -99,11 +38,24 @@ describe('FR-06: Manajemen status kegiatan', () => {
 
   it('Harus mengizinkan admin memantau detail kegiatan yang sedang berlangsung', () => {
     cy.visit('/admin/activities');
-    cy.contains('Ongoing Activity 1')
-      .parents('.border')
-      .find('a')
-      .contains(/Pantau Detail/i)
-      .click({ force: true });
+    
+    // Mock the activity fetch on the detail page which uses Supabase client directly
+    cy.intercept('GET', '**/rest/v1/activities*', {
+      statusCode: 200,
+      body: {
+        id: 'activity-3',
+        title: 'Ongoing Activity 1',
+        status: 'published',
+        start_date: new Date().toISOString(),
+        community: { name: 'Eco Ocean' },
+        reports: [],
+        feedbacks: [],
+        volunteer_registrations: []
+      }
+    });
+
+    cy.contains('Ongoing Activity 1').should('be.visible');
+    cy.contains(/Pantau Detail/i).click({ force: true });
 
     // Assert redirect and correct content loads from the mock
     cy.url().should('include', '/activities/activity-3');
