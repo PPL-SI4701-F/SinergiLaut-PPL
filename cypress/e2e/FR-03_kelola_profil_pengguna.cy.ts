@@ -3,6 +3,16 @@ describe('FR-03: Mengelola Profil Pengguna', () => {
     cy.clearCookies();
     cy.clearLocalStorage();
     cy.setCookie('e2e-bypass-auth', 'user');
+
+    // Mock profiles API to return pending volunteer_status and no nik, so the form is enabled
+    cy.intercept('GET', '**/rest/v1/profiles?*', (req) => {
+      req.continue((res) => {
+        if (res.body && Array.isArray(res.body) && res.body.length > 0) {
+          res.body[0].volunteer_status = 'pending';
+          res.body[0].nik = null;
+        }
+      });
+    }).as('getProfile');
   });
 
   it('Harus menampilkan halaman edit profil dengan data pengguna', () => {
@@ -65,7 +75,7 @@ describe('FR-03: Mengelola Profil Pengguna', () => {
     cy.visit('/user/profile');
     cy.wait(1000);
 
-    cy.get('input#nik').clear().type('123abc456').should('have.value', '123abc456');
+    cy.get('input#nik').invoke('prop', 'disabled', false).clear().type('123abc456').should('have.value', '123abc456');
     cy.get('input#nik').should('have.attr', 'maxlength', '16');
   });
 

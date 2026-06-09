@@ -49,9 +49,10 @@ describe('FR-21: Membuat Kegiatan Baru oleh Komunitas', () => {
     cy.get('input#volunteerQuota').type('30');
     cy.get('input#fundingGoal').type('5000000');
 
-    cy.get('input#startDate').invoke('val', todayLocal).trigger('input').trigger('change');
-    cy.get('input#executionDate').invoke('val', tomorrowLocal).trigger('input').trigger('change');
+    cy.get('input#startDate').type(todayLocal);
+    cy.get('input#executionDate').type(tomorrowLocal);
 
+    cy.get('form').invoke('attr', 'novalidate', 'novalidate');
     cy.contains('button', 'Ajukan untuk Review').click();
     cy.contains('Tanggal Pelaksanaan Kegiatan harus minimal 1 bulan dari sekarang.').should('be.visible');
   });

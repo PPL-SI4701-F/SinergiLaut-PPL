@@ -69,7 +69,7 @@ describe('FR-19: Dashboard Komunitas', () => {
 
     cy.contains('Bersih Pantai Mutiara').parents('.border-border').within(() => {
       cy.contains('a', 'Kelola').should('have.attr', 'href').and('include', '/volunteers');
-      cy.contains('a', 'Edit').should('have.attr', 'href').and('include', '/edit');
+      cy.contains('button', /Ajukan Edit/i).should('be.visible');
     });
   });
 });

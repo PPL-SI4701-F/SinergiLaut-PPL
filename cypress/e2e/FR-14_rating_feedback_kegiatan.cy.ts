@@ -37,10 +37,10 @@ describe('FR-14: Rating & feedback kegiatan', () => {
   });
 
   it('Harus mengizinkan pengguna mengirim ulasan dan menampilkannya di halaman publik', () => {
-    cy.visit('/user/dashboard?e2e_user=user');
-    cy.contains(/Beri Ulasan|Feedback|Review/i).click({ force: true });
+    cy.visit('/activities/completed-activity?tab=feedback');
+    cy.wait(1000);
 
-    cy.get('input[name="rating"], .rating-stars, select[name="rating"]').click({ force: true, multiple: true });
+    cy.get('input[name="rating"], .rating-stars, select[name="rating"]').last().click({ force: true });
     cy.get('textarea').type('Bagus!');
     
     // Server action will handle the post automatically returning e2e mock data
