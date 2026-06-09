@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
-  const e2eRole = process.env.NODE_ENV === "development"
+  const e2eRole = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_E2E_TESTING === "true"
     ? cookieStore.get("e2e-bypass-auth")?.value
     : null
 

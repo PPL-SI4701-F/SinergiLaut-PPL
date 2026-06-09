@@ -79,6 +79,15 @@ export default function ActivityDetailPage() {
   const [alreadyRegistered, setAlreadyRegistered] = useState<VolunteerRegistration | null>(null)
   const [myDonations, setMyDonations] = useState<Donation[]>([])
 
+  // Set initial tab from URL after mount to avoid hydration mismatch and Suspense requirements
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const tab = urlParams.get("tab") as TabType
+      if (tab) setActiveTab(tab)
+    }
+  }, [])
+
   // Feedback state
   const [feedbackRating, setFeedbackRating] = useState(0)
   const [feedbackHover, setFeedbackHover] = useState(0)
@@ -669,7 +678,7 @@ export default function ActivityDetailPage() {
                               </div>
                               <div className="space-y-2">
                                 <Label>No. Telepon *</Label>
-                                <Input type="tel" value={volunteerForm.phone} onChange={e => setVolunteerForm({ ...volunteerForm, phone: e.target.value })} required placeholder="+62 8xx xxxx xxxx" />
+                                <Input type="tel" minLength={10} pattern="[0-9+]+" value={volunteerForm.phone} onChange={e => setVolunteerForm({ ...volunteerForm, phone: e.target.value })} required placeholder="+62 8xx xxxx xxxx" />
                               </div>
                             </div>
                           </div>
@@ -933,11 +942,11 @@ export default function ActivityDetailPage() {
               {/* ── Tab: Reports ─────────────────────────────── */}
               {activeTab === "reports" && (
                 <div className="space-y-6">
-                  {activity.reports?.length === 0 ? (
+                  {(!activity.reports || activity.reports.filter(r => r.status === "validated").length === 0) ? (
                     <Card><CardContent className="p-12 text-center text-muted-foreground">
                       <FileText className="h-8 w-8 mx-auto mb-3 opacity-40" />Belum ada laporan untuk kegiatan ini.
                     </CardContent></Card>
-                  ) : activity.reports?.map(r => (
+                  ) : activity.reports?.filter(r => r.status === "validated").map(r => (
                     <Card key={r.id} className="overflow-hidden border-primary/10">
                       <CardHeader className="bg-primary/5">
                         <div className="flex items-center justify-between">
@@ -1045,7 +1054,7 @@ export default function ActivityDetailPage() {
                                   onClick={() => setFeedbackRating(star)}
                                   onMouseEnter={() => setFeedbackHover(star)}
                                   onMouseLeave={() => setFeedbackHover(0)}
-                                  className="p-0.5 transition-transform hover:scale-110"
+                                  className="rating-stars p-0.5 transition-transform hover:scale-110"
                                 >
                                   <Star
                                     className={`h-8 w-8 transition-colors ${
@@ -1155,10 +1164,13 @@ export default function ActivityDetailPage() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2 mb-1">
                                   <span className="font-medium text-sm text-foreground truncate">{f.user?.full_name ?? "Pengguna"}</span>
-                                  <div className="flex gap-0.5 flex-shrink-0">
-                                    {[1,2,3,4,5].map(s => (
-                                      <Star key={s} className={`h-3.5 w-3.5 ${s <= f.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/20"}`} />
-                                    ))}
+                                  <div className="flex gap-0.5 flex-shrink-0 items-center" aria-label={`${f.rating} bintang`}>
+                                    <div className="rating-stars flex">
+                                      {[1,2,3,4,5].map(s => (
+                                        <Star key={s} className={`h-3.5 w-3.5 ${s <= f.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/20"}`} />
+                                      ))}
+                                    </div>
+                                    <span className="ml-1 text-xs text-muted-foreground">{f.rating}/5</span>
                                   </div>
                                 </div>
                                 {f.comment && <p className="text-sm text-muted-foreground leading-relaxed">{f.comment}</p>}
@@ -1222,7 +1234,7 @@ export default function ActivityDetailPage() {
                     </div>
                     {activity.funding_goal > 0 ? (
                       <>
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden" role="progressbar" aria-valuenow={fundingPercent} aria-valuemin={0} aria-valuemax={100}>
                           <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${fundingPercent}%` }} />
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -1245,7 +1257,7 @@ export default function ActivityDetailPage() {
                     </div>
                     {activity.volunteer_quota > 0 ? (
                       <>
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden" role="progressbar" aria-valuenow={volunteerPercent} aria-valuemin={0} aria-valuemax={100}>
                           <div className="h-full bg-accent rounded-full" style={{ width: `${volunteerPercent}%` }} />
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -1293,8 +1305,14 @@ export default function ActivityDetailPage() {
                         {alreadyRegistered ? `Terdaftar (${alreadyRegistered.status})` : "Daftar Relawan"}
                       </Button>
                     )}
-                    <Button variant="outline" className="w-full" onClick={() => setActiveTab("donate")}>
-                      <Heart className="mr-2 h-4 w-4" /> Donasi Sekarang
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => setActiveTab("donate")}
+                      disabled={daysLeft <= 0}
+                    >
+                      <Heart className="mr-2 h-4 w-4" /> 
+                      {daysLeft > 0 ? "Donasi Sekarang" : "Batas Waktu Habis"}
                     </Button>
                   </div>
                   )}

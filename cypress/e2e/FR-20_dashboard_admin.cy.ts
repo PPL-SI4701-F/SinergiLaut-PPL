@@ -85,7 +85,7 @@ describe('FR-20: Dashboard Admin', () => {
   });
 
   it('Harus menampilkan kondisi kosong saat tidak ada item pending', () => {
-    cy.intercept('POST', '**/rest/v1/rpc/**', { statusCode: 200, body: [] });
+    cy.setCookie('e2e-bypass-auth', 'admin-empty');
     cy.visit('/admin/dashboard');
     cy.wait(1000);
 

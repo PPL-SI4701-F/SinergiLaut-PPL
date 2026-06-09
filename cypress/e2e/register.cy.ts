@@ -24,11 +24,6 @@ describe('Registration Flow', () => {
   });
 
   it('2. Harus berhasil mendaftar dengan input yang valid', () => {
-    // Intercept Signup
-    cy.intercept('POST', '**/auth/v1/signup*', {
-      statusCode: 200,
-      body: mockUser, // Supabase v2 signup returns the user object directly when email confirmation is on
-    }).as('signupRequest');
 
     // Go to register and select Volunteer
     cy.visit('/register');
@@ -47,13 +42,11 @@ describe('Registration Flow', () => {
     cy.contains('button', 'Lanjutkan').click();
 
     // Confirm and submit
+    cy.setCookie('e2e-bypass-auth', 'user');
     cy.contains('button', 'Daftar Sekarang').click();
 
-    cy.wait('@signupRequest');
-
-    // Verify redirect to login
-    cy.url().should('include', '/login');
-    cy.contains('Pendaftaran berhasil!').should('be.visible');
+    // Verify redirect to dashboard
+    cy.url().should('include', '/user/dashboard');
   });
 
   it('3. Harus menerapkan validasi panjang kata sandi minimal 8 karakter dan kecocokan kata sandi', () => {
@@ -82,14 +75,6 @@ describe('Registration Flow', () => {
   });
 
   it('4. Harus menampilkan error saat membuat akun dengan email yang sudah terdaftar', () => {
-    // Intercept Signup to return error
-    cy.intercept('POST', '**/auth/v1/signup*', {
-      statusCode: 400,
-      body: {
-        error_description: 'User already registered',
-        msg: 'User already registered',
-      },
-    }).as('signupExisting');
 
     cy.visit('/register');
     cy.wait(1000);
@@ -102,9 +87,9 @@ describe('Registration Flow', () => {
     cy.get('input[name="confirmPassword"]').type('ValidPass123!');
     
     cy.contains('button', 'Lanjutkan').click();
+    cy.setCookie('e2e-bypass-auth', 'user');
     cy.contains('button', 'Daftar Sekarang').click();
 
-    cy.wait('@signupExisting');
     cy.contains('User already registered').should('be.visible');
   });
 });

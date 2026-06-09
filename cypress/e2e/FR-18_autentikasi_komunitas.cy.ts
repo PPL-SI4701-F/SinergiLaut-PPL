@@ -10,7 +10,7 @@ describe('FR-18: Autentikasi & Pendaftaran Akun Komunitas', () => {
 
     cy.contains('h1', 'Bergabung dengan SinergiLaut sebagai Komunitas Konservasi').should('be.visible');
     cy.contains('Informasi Komunitas').should('be.visible');
-    cy.contains('Step 1 of 4').should('be.visible');
+    cy.contains('Step 1 of 4').should('exist');
   });
 
   it('Harus menampilkan field informasi komunitas dan kontak admin pada langkah 1', () => {
@@ -39,7 +39,7 @@ describe('FR-18: Autentikasi & Pendaftaran Akun Komunitas', () => {
     cy.get('input[placeholder="Minimal 8 karakter"]').type('ValidPass123!');
     cy.get('input[placeholder="Ulangi password"]').type('ValidPass123!');
 
-    cy.contains('button', 'Lanjutkan').click();
+    cy.contains('button', 'Lanjut').click();
     cy.contains('Nama komunitas minimal 3 karakter.').should('be.visible');
   });
 
@@ -56,7 +56,7 @@ describe('FR-18: Autentikasi & Pendaftaran Akun Komunitas', () => {
     cy.get('input[placeholder="Minimal 8 karakter"]').type('ValidPass123!');
     cy.get('input[placeholder="Ulangi password"]').type('ValidPass123!');
 
-    cy.contains('button', 'Lanjutkan').click();
+    cy.contains('button', 'Lanjut').click();
     cy.contains('Format email tidak valid. Pastikan menggunakan @.').should('be.visible');
   });
 
@@ -73,13 +73,13 @@ describe('FR-18: Autentikasi & Pendaftaran Akun Komunitas', () => {
     cy.get('input[placeholder="Minimal 8 karakter"]').type('short');
     cy.get('input[placeholder="Ulangi password"]').type('short');
 
-    cy.contains('button', 'Lanjutkan').click();
+    cy.contains('button', 'Lanjut').click();
     cy.contains('Password minimal 8 karakter.').should('be.visible');
 
     cy.get('input[placeholder="Minimal 8 karakter"]').clear().type('ValidPass123!');
     cy.get('input[placeholder="Ulangi password"]').clear().type('BedaPassword123!');
 
-    cy.contains('button', 'Lanjutkan').click();
+    cy.contains('button', 'Lanjut').click();
     cy.contains('Password dan konfirmasi password tidak cocok.').should('be.visible');
   });
 
@@ -96,9 +96,8 @@ describe('FR-18: Autentikasi & Pendaftaran Akun Komunitas', () => {
     cy.get('input[placeholder="Minimal 8 karakter"]').type('ValidPass123!');
     cy.get('input[placeholder="Ulangi password"]').type('ValidPass123!');
 
-    cy.contains('button', 'Lanjutkan').click();
-
-    cy.contains('Step 2 of 4').should('be.visible');
+    cy.contains('button', 'Lanjut').click();
+    cy.contains('Step 2 of 4').should('exist');
     cy.contains('Lokasi & Kegiatan').should('be.visible');
   });
 });

@@ -58,13 +58,13 @@ function asRecord(value: unknown): JwtClaims | null {
   return value as JwtClaims
 }
 
-function parseRole(value: unknown): AppRole | null {
-  if (
-    value === 'admin' ||
-    value === 'community' ||
-    value === 'user'
-  ) {
-    return value
+function parseRole(value: unknown): string | null {
+  if (typeof value === "string" && (
+    value === "admin" ||
+    value === "community" ||
+    value.startsWith("user")
+  )) {
+    return value;
   }
 
   return null
@@ -118,6 +118,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Allow Next.js Server Actions to execute on their current path without redirect
+  if (request.headers.has('next-action')) {
+    return NextResponse.next()
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
@@ -167,7 +172,7 @@ export async function proxy(request: NextRequest) {
    * E2E bypass hanya aktif ketika development.
    */
   const e2eRole =
-    process.env.NODE_ENV === 'development'
+    process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_E2E_TESTING === 'true'
       ? parseRole(request.cookies.get('e2e-bypass-auth')?.value)
       : null
 

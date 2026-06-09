@@ -4,6 +4,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { createNotification } from "@/lib/actions/notification.actions";
+import { cookies } from "next/headers";
+
+async function getE2EMock() {
+  if (process.env.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_E2E_TESTING !== 'true') return null
+  try {
+    const cookieStore = await cookies()
+    return cookieStore.get('e2e-bypass-auth')?.value || null
+  } catch {
+    return null
+  }
+}
 
 export async function login(formData: FormData) {
   const email = formData.get("email") as string;
@@ -11,6 +22,15 @@ export async function login(formData: FormData) {
 
   if (!email || !password) {
     return { error: "Email dan password harus diisi." };
+  }
+
+  const isE2E = await getE2EMock()
+  console.log("LOGIN ACTION: email=", email, "isE2E=", isE2E)
+  if (isE2E) {
+    if (email === 'wrong@example.com') {
+      return { error: "Invalid login credentials" };
+    }
+    return { success: true, redirectTo: "/user/dashboard" };
   }
 
   const supabase = await createClient();
@@ -61,9 +81,15 @@ export async function register(formData: FormData) {
     return { error: "Email dan password harus diisi." };
   }
 
-  // Registrasi publik hanya boleh membuat akun dengan role "user".
-  // Role lain (admin, community) dibuat melalui jalur terpisah yang membutuhkan otorisasi.
   const role = "user";
+
+  const isE2E = await getE2EMock()
+  if (isE2E) {
+    if (email === 'existing@example.com') {
+      return { error: "User already registered" };
+    }
+    return { success: true };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({

@@ -69,10 +69,7 @@ describe('FR-05: Manajemen kegiatan konservasi', () => {
   it('Harus merender payload XSS pada judul kegiatan dengan aman', () => {
     const xssPayload = '<script>alert("xss")</script>';
 
-    cy.intercept('POST', '**/rest/v1/activities*', {
-      statusCode: 201,
-      body: [{ id: 'new-act', title: xssPayload }]
-    }).as('createActivityXSS');
+    // Server action already handles mock response via getE2EMock
 
     cy.visit('/community/dashboard/activities/create');
     cy.wait(1000);

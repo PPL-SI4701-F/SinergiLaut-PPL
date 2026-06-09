@@ -19,7 +19,7 @@ describe('FR-04: Verifikasi Akun Komunitas oleh Admin', () => {
     cy.visit('/admin/communities');
     cy.wait(1000);
 
-    cy.contains('Eco Ocean').parents('.rounded-xl').within(() => {
+    cy.contains('Eco Ocean').closest('.rounded-xl').within(() => {
       cy.contains('button', 'Verifikasi').should('be.visible');
       cy.contains('button', 'Tolak').should('be.visible');
     });
@@ -29,7 +29,7 @@ describe('FR-04: Verifikasi Akun Komunitas oleh Admin', () => {
     cy.visit('/admin/communities');
     cy.wait(1000);
 
-    cy.contains('Eco Ocean').parents('.rounded-xl').within(() => {
+    cy.contains('Eco Ocean').closest('.rounded-xl').within(() => {
       cy.contains('button', 'Verifikasi').click();
     });
 
@@ -41,11 +41,14 @@ describe('FR-04: Verifikasi Akun Komunitas oleh Admin', () => {
     cy.visit('/admin/communities');
     cy.wait(1000);
 
-    cy.contains('Eco Ocean').parents('.rounded-xl').within(() => {
+    cy.contains('Eco Ocean').closest('.rounded-xl').within(() => {
       cy.contains('button', 'Tolak').click();
     });
 
-    cy.contains('Komunitas ditolak').should('be.visible');
+    cy.get('textarea[placeholder*="Contoh: dokumen"]').type('Data tidak lengkap');
+    cy.get('dialog, [role="dialog"]').contains('button', 'Tolak Komunitas').click();
+
+    cy.contains('Komunitas ditolak.').should('be.visible');
   });
 
   it('Harus menampilkan tabel semua komunitas beserta status verifikasinya', () => {

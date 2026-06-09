@@ -8,11 +8,11 @@ describe('FR-21: Mencari dan Mendaftar Aktivitas Relawan', () => {
     cy.clearLocalStorage();
     cy.setCookie('e2e-bypass-auth', 'user');
 
-    cy.intercept('GET', '**/rest/v1/activities?select=*&status=eq.published*', {
+    cy.intercept('GET', '**/rest/v1/activities?*', {
       statusCode: 200,
       body: [
-        { id: 'act-1', title: 'Bersih Pantai Mutiara', location: 'Jakarta', category: 'cleanup', start_date: new Date().toISOString() },
-        { id: 'act-2', title: 'Tanam Mangrove', location: 'Bali', category: 'restoration', start_date: new Date().toISOString() }
+        { id: 'act-1', title: 'Bersih Pantai Mutiara', location: 'Jakarta', category: 'cleanup', type: 'Pembersihan Pantai', start_date: new Date().toISOString(), status: 'published' },
+        { id: 'act-2', title: 'Tanam Mangrove', location: 'Bali', category: 'restoration', type: 'Coral & Ecosystem Restoration', start_date: new Date().toISOString(), status: 'published' }
       ]
     }).as('getAllActivities');
   });

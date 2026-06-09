@@ -80,7 +80,7 @@ async function requireCommunityOrAdminDonationAccess(donationId: string) {
 const MARKUP_PERCENT = 10
 
 async function getE2EMock() {
-  if (process.env.NODE_ENV !== 'development') return null
+  if (process.env.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_E2E_TESTING !== 'true') return null
   try {
     const cookieStore = await cookies()
     return cookieStore.get('e2e-bypass-auth')?.value || null
