@@ -9,7 +9,7 @@ export default async function CommunityDashboardLayout({ children }: { children:
     ? cookieStore.get("e2e-bypass-auth")?.value
     : null
 
-  if (e2eRole && e2eRole !== "community") {
+  if (e2eRole && !e2eRole.startsWith("community")) {
     redirect("/unauthorized")
   }
 

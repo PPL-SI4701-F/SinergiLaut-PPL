@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ? cookieStore.get("e2e-bypass-auth")?.value
     : null
 
-  if (e2eRole && e2eRole !== "admin") {
+  if (e2eRole && !e2eRole.startsWith("admin")) {
     redirect("/unauthorized")
   }
 

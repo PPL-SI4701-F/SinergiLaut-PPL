@@ -14,7 +14,7 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
         user_metadata: { role: 'community' },
       },
     });
-
+  });
 
   it('Harus mengizinkan komunitas menyetujui atau menolak relawan', () => {
     cy.visit('/community/dashboard/activities/act-1/volunteers');
@@ -146,7 +146,7 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
     cy.wait(1000);
 
     // Should show zero-state UI, not crash
-    cy.contains(/belum ada|tidak ada|no volunteer|kosong|empty/i).should('be.visible');
+    cy.get('main').contains(/belum ada|tidak ada|no volunteer|kosong|empty/i).should('be.visible');
   });
 
   // ─────────────────────────────────────────────
@@ -171,6 +171,7 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
     // Both action buttons must be available for the first pending volunteer
     cy.contains('Budi')
       .parents('div.border, tr, .card, li')
+      .first()
       .within(() => {
         cy.contains(/Terima|Approve|Setujui/i).should('be.visible');
         cy.contains(/Tolak|Reject/i).should('be.visible');

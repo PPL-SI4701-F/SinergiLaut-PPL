@@ -38,9 +38,11 @@ describe('FR-20: Dashboard Admin', () => {
     cy.contains('Menunggu verifikasi').should('be.visible');
     cy.contains('Menunggu persetujuan').should('be.visible');
     cy.contains('Menunggu validasi').should('be.visible');
-    cy.contains('komunitas').should('be.visible');
-    cy.contains('kegiatan').should('be.visible');
-    cy.contains('laporan').should('be.visible');
+    cy.get('main').within(() => {
+      cy.contains('komunitas').should('be.visible');
+      cy.contains('kegiatan').should('be.visible');
+      cy.contains('laporan').should('be.visible');
+    });
   });
 
   it('Harus menampilkan daftar komunitas pending dengan tombol Setujui dan tolak', () => {

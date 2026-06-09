@@ -59,15 +59,12 @@ function asRecord(value: unknown): JwtClaims | null {
 }
 
 function parseRole(value: unknown): string | null {
-  if (typeof value === "string" && (
-    value === "admin" ||
-    value === "community" ||
-    value.startsWith("user")
-  )) {
-    return value;
+  if (typeof value === "string") {
+    if (value.startsWith("admin")) return "admin";
+    if (value.startsWith("community")) return "community";
+    if (value.startsWith("user")) return "user";
   }
-
-  return null
+  return null;
 }
 
 function copyResponseCookies(

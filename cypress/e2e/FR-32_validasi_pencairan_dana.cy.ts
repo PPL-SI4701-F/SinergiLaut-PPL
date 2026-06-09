@@ -108,13 +108,15 @@ describe('FR-32: Validasi Laporan dan Pencairan Dana', () => {
   it('Harus menampilkan kolom tabel pencairan yang mencakup komunitas, jumlah, dan status', () => {
     // beforeEach already visits the page and confirms the base data
     // Verify additional table structure elements
-    cy.contains(/komunitas|community/i).should('be.visible');
-    cy.contains(/jumlah|amount|nominal/i).should('be.visible');
-    cy.contains(/status/i).should('be.visible');
+    cy.get('main').within(() => {
+      cy.contains(/komunitas|community/i).should('be.visible');
+      cy.contains(/jumlah|amount|nominal/i).should('be.visible');
+      cy.contains(/status/i).should('be.visible');
 
-    // Data row integrity
-    cy.contains('Komunitas Peduli Laut').should('be.visible');
-    cy.contains(/Rp\s*5[\.,]000[\.,]000/).should('be.visible');
-    cy.contains(/Menunggu|pending/i).should('be.visible');
+      // Data row integrity
+      cy.contains('Komunitas Peduli Laut').should('be.visible');
+      cy.contains(/Rp\s*5[\.,]000[\.,]000/).should('be.visible');
+      cy.contains(/Menunggu|pending/i).should('be.visible');
+    });
   });
 });

@@ -373,6 +373,8 @@ export default function ActivityDetailPage() {
     if (alreadyRegistered) { toast.info(`Anda sudah terdaftar. Status: ${alreadyRegistered.status}`); return }
 
     if (!volunteerForm.age || parseInt(volunteerForm.age) < 15) { toast.error("Usia minimal 15 tahun."); return }
+    if (!/^[0-9+\-\s]+$/.test(volunteerForm.phone)) { toast.error("Format nomor telepon tidak valid."); return }
+    if (!volunteerForm.phone || volunteerForm.phone.replace(/[^0-9+]/g, '').length < 10) { toast.error("Nomor telepon terlalu pendek (minimal 10 digit)."); return }
 
     setIsSubmitting(true)
     const result = await registerVolunteer({
