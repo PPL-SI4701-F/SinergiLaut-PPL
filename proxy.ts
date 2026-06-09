@@ -221,7 +221,7 @@ export async function proxy(request: NextRequest) {
       return redirectWithCookies(
         request,
         supabaseResponse,
-        ROLE_DASHBOARDS[e2eRole]
+        ROLE_DASHBOARDS[e2eRole as AppRole]
       )
     }
 
@@ -244,7 +244,7 @@ export async function proxy(request: NextRequest) {
             return redirectWithCookies(
               request,
               supabaseResponse,
-              ROLE_DASHBOARDS[role]
+              ROLE_DASHBOARDS[role as AppRole]
             )
           }
         }
