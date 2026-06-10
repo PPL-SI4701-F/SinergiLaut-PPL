@@ -728,7 +728,23 @@ export async function rejectReportAction(id: string, adminNote?: string) {
 
 export async function getAdminReportsList() {
   const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: [] as any[] }
+  if (isE2E) {
+    return {
+      success: true,
+      data: [
+        {
+          id: "report-1",
+          title: "Laporan Bersih Pantai Mutiara",
+          summary: "Kegiatan berjalan lancar.",
+          status: "submitted",
+          created_at: new Date().toISOString(),
+          activity_id: "activity-1",
+          community: { name: "Eco Ocean" },
+          profiles: { full_name: "Budi Santoso" }
+        }
+      ] as any[]
+    }
+  }
 
   const auth = await requireAdmin()
   if (!auth.authorized) return { success: false, data: [], error: "Akses ditolak." }
