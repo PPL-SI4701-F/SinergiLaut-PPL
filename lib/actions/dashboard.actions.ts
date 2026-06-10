@@ -959,6 +959,7 @@ export async function getCommunityDashboardStats(userId: string) {
     .select("id")
     .eq("owner_id", userId)
     .eq("is_verified", true)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 
@@ -1099,6 +1100,7 @@ export async function getCommunityActivities(userId: string) {
     .select("id")
     .eq("owner_id", userId)
     .eq("is_verified", true)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 
@@ -1216,7 +1218,7 @@ export async function getCommunityProfile() {
     .from("communities")
     .select("*")
     .eq("owner_id", user.id)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 
