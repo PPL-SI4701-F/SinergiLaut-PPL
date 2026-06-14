@@ -319,11 +319,16 @@ export default function ActivityDetailPage() {
   const totalItemDonated = activity.items_needed?.reduce((acc: number, cur: any) => acc + (cur.donated || 0), 0) || 0;
   const itemPercent = totalItemNeeded > 0 ? calcPercentage(totalItemDonated, totalItemNeeded) : 0;
 
-  // Donation timeframe: 6 months from published/created date
+  // Donation timeframe: based on end_date, or fallback to 6 months from published_at
   const publishedDateStr = activity.published_at || activity.created_at || new Date().toISOString();
   const publishedDate = new Date(publishedDateStr);
-  const deadlineDate = new Date(publishedDate);
-  deadlineDate.setMonth(deadlineDate.getMonth() + 6);
+  
+  let deadlineDate = new Date(publishedDate);
+  if (activity.end_date) {
+    deadlineDate = new Date(activity.end_date);
+  } else {
+    deadlineDate.setMonth(deadlineDate.getMonth() + 6);
+  }
   
   const now = new Date();
   const timeDiff = deadlineDate.getTime() - now.getTime();
