@@ -69,4 +69,44 @@ describe('FR-31: Pelaporan Penggunaan Dana dan Dokumentasi', () => {
     // Error message about required fields
     cy.contains(/wajib diisi/i).should('be.visible');
   });
+
+  // ─────────────────────────────────────────────
+  // TC Tambahan: Simpan Draft
+  // ─────────────────────────────────────────────
+  it('Harus bisa menyimpan laporan sebagai draft tanpa men-submit ke admin', () => {
+    cy.setCookie('e2e-bypass-auth', 'community-empty');
+    cy.visit('/community/dashboard/activities/act-1/report');
+    cy.wait(1000);
+    cy.get('input[id="title"]').type('Draft Laporan');
+    cy.get('textarea[id="summary"]').type('Ini baru draft');
+    cy.contains('button', /Simpan Draft/i).click();
+    
+    // Asumsi UI menampilkan toast atau mengubah badge status menjadi draft
+    cy.contains(/Draft disimpan|Berhasil/i).should('be.visible');
+  });
+
+  // ─────────────────────────────────────────────
+  // TC Tambahan: Upload Bukti Dokumentasi dan Submit
+  // ─────────────────────────────────────────────
+  it('Harus bisa mengunggah file bukti dokumentasi dan laporan berubah status jadi submitted', () => {
+    cy.setCookie('e2e-bypass-auth', 'community-empty');
+    cy.visit('/community/dashboard/activities/act-1/report');
+    cy.wait(1000);
+    cy.get('input[id="title"]').type('Laporan Lengkap');
+    cy.get('textarea[id="summary"]').type('Dengan bukti nota.');
+    
+    // Simulasi upload file (menggunakan stub/mock file yang valid)
+    cy.get('input[type="file"]').selectFile({
+      contents: Cypress.Buffer.from('file contents'),
+      fileName: 'bukti.jpg',
+      mimeType: 'image/jpeg'
+    }, { force: true });
+    
+    cy.contains('button', /Kirim|Submit|Ajukan/i).click();
+    cy.wait(500);
+    cy.contains(/Berhasil/i).should('be.visible');
+    
+    // Verifikasi bahwa status laporan adalah 'submitted'
+    cy.contains(/Submitted|Diajukan/i).should('be.visible');
+  });
 });

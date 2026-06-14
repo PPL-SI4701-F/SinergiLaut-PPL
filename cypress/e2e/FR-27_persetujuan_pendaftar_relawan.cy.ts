@@ -33,107 +33,55 @@ describe('FR-27: Persetujuan Pendaftar Relawan', () => {
   // ─────────────────────────────────────────────
   // Edge Case 1: Kuota penuh - Setujui relawan ke-51
   // ─────────────────────────────────────────────
-  it.skip('Should block approval when volunteer quota is already full (Skip: website has no quota check UI/action, and server action mocks are hardcoded)', () => {
-    // Mock: quota=50, already 50 approved volunteers, 1 pending
-    cy.intercept('GET', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 200,
-      body: [
-        { id: 'reg-pending', full_name: 'Calon Relawan Ke-51', status: 'pending', age: 25, phone: '081234567890' },
-      ],
-    }).as('getVolunteersFull');
+  it('Should block approval when volunteer quota is already full', () => {
+    cy.visit('/community/dashboard/activities/act-full/volunteers');
+    
+    // Wait for the mock activity data to load on the page.
+    // If this times out, it means the server mock did not return 50/50 for act-full!
+    cy.contains('50/50', { timeout: 15000 }).should('be.visible');
 
-    cy.intercept('GET', '**/rest/v1/activities*', {
-      statusCode: 200,
-      body: {
-        id: 'act-full',
-        title: 'Bersih Pantai Full',
-        volunteer_quota: 50,
-        volunteer_count: 50, // quota is FULL
-        status: 'published',
-      },
-    }).as('getActivity');
+    // Wait for the volunteer data to load
+    cy.contains('Budi', { timeout: 15000 }).should('be.visible');
 
-    cy.visit('/community/dashboard/activities/act-1/volunteers');
-    cy.contains(/Relawan|Volunteers/i).click({ force: true });
-    cy.wait('@getVolunteersFull');
-
-    cy.contains('Calon Relawan Ke-51')
+    // The button must now be disabled because isQuotaFull is true
+    cy.contains('Budi')
       .parents('div.border, tr, .card, li')
-      .find('button')
-      .contains(/Terima|Approve|Setujui/i)
-      .then(($btn) => {
-        if ($btn.length > 0) {
-          const isDisabled = $btn.prop('disabled');
-          if (!isDisabled) {
-            cy.wrap($btn).click();
-            cy.contains(/kuota|penuh|full|kapasitas|maksimum/i).should('be.visible');
-          } else {
-            expect(isDisabled).to.be.true;
-          }
-        } else {
-          cy.contains(/kuota penuh|quota full|kapasitas penuh/i).should('be.visible');
-        }
-      });
+      .contains('button', /Terima|Approve|Setujui/i)
+      .should('be.disabled');
   });
 
   // ─────────────────────────────────────────────
   // Edge Case 2: Kuota tersedia - Persetujuan normal berhasil
   // ─────────────────────────────────────────────
-  it.skip('Should allow approval when volunteer quota has space available (Skip: duplicate of normal approval and fails due to hardcoded E2E server action mock always returning "Budi")', () => {
-    cy.intercept('GET', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 200,
-      body: [
-        { id: 'reg-1', full_name: 'Budi Santoso', status: 'pending', age: 22, phone: '081234567890' },
-      ],
-    }).as('getVolunteersAvail');
-
-    cy.intercept('PATCH', '**/rest/v1/volunteer_registrations?id=eq.reg-1*', {
-      statusCode: 200,
-      body: [{ id: 'reg-1', status: 'approved' }],
-    }).as('approveVolunteerAvail');
-
+  it('Should allow approval when volunteer quota has space available', () => {
     cy.visit('/community/dashboard/activities/act-1/volunteers');
-    cy.contains(/Relawan|Volunteers/i).click({ force: true });
-    cy.wait('@getVolunteersAvail');
+    cy.wait(1000);
 
-    cy.contains('Budi Santoso')
+    cy.contains('Budi')
       .parents('div.border, tr, .card, li')
       .find('button')
       .contains(/Terima|Approve|Setujui/i)
       .click();
 
-    cy.wait('@approveVolunteerAvail');
-    cy.contains(/Diterima|Approved|Disetujui/i).should('be.visible');
+    cy.wait(500);
+    cy.contains('Budi').parents('div.border, tr, .card, li').contains(/Diterima|Approved|Disetujui/i).should('be.visible');
   });
 
   // ─────────────────────────────────────────────
   // Edge Case 3: Penolakan relawan (negative path)
   // ─────────────────────────────────────────────
-  it.skip('Should allow rejection of a pending volunteer (Skip: duplicate of normal rejection and fails due to hardcoded E2E server action mock always returning "Ani")', () => {
-    cy.intercept('GET', '**/rest/v1/volunteer_registrations*', {
-      statusCode: 200,
-      body: [
-        { id: 'reg-2', full_name: 'Ani Kusuma', status: 'pending', age: 19, phone: '087654321098' },
-      ],
-    }).as('getVolunteersReject');
-
-    cy.intercept('PATCH', '**/rest/v1/volunteer_registrations?id=eq.reg-2*', {
-      statusCode: 200,
-      body: [{ id: 'reg-2', status: 'rejected' }],
-    }).as('rejectVolunteerEdge');
-
+  it('Should allow rejection of a pending volunteer', () => {
     cy.visit('/community/dashboard/activities/act-1/volunteers');
-    cy.contains(/Relawan|Volunteers/i).click({ force: true });
-    cy.wait('@getVolunteersReject');
+    cy.wait(1000);
 
-    cy.contains('Ani Kusuma')
+    cy.contains('Ani')
       .parents('div.border, tr, .card, li')
       .find('button')
       .contains(/Tolak|Reject/i)
       .click();
 
-    cy.wait('@rejectVolunteerEdge');
-    cy.contains(/Ditolak|Rejected/i).should('be.visible');
+    cy.wait(500);
+    cy.contains('Ani').parents('div.border, tr, .card, li').contains(/Ditolak|Rejected/i).should('be.visible');
   });
 
   // ─────────────────────────────────────────────

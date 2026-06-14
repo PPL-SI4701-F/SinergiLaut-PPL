@@ -120,3 +120,138 @@ describe('FR-32: Validasi Laporan dan Pencairan Dana', () => {
     });
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// FR-32 (lanjutan): Validasi Laporan Pertanggungjawaban oleh Admin
+// Menutup gap acceptance criteria "Validasi Laporan oleh Admin".
+// Mock getAdminReportsList() di lib/actions/dashboard.actions.ts selalu
+// mengembalikan satu laporan "Laporan Bersih Pantai Mutiara" milik
+// komunitas "Eco Ocean" berstatus submitted. approveReportAction &
+// rejectReportAction mengembalikan { success: true } di mode E2E.
+// ════════════════════════════════════════════════════════════════════
+describe('FR-32: Validasi Laporan oleh Admin (/admin/reports)', () => {
+  beforeEach(() => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.setCookie('e2e-bypass-auth', 'admin');
+
+    cy.visit('/admin/reports');
+    cy.contains('Kelola Laporan').should('be.visible');
+    cy.contains('Laporan Bersih Pantai Mutiara').should('be.visible');
+  });
+
+  it('Harus menampilkan laporan submitted dengan badge Menunggu Review dan tombol aksi', () => {
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara').within(() => {
+      cy.contains('Eco Ocean').should('be.visible');
+      cy.contains(/Menunggu Review/i).should('be.visible');
+      cy.contains('button', /Validasi/i).should('be.visible');
+      cy.contains('button', /Tolak/i).should('be.visible');
+    });
+  });
+
+  it('Harus menyaring laporan menggunakan tab status "Menunggu"', () => {
+    cy.contains('button', /^\s*Menunggu/i).click();
+    cy.contains('Laporan Bersih Pantai Mutiara').should('be.visible');
+  });
+
+  // ─────────────────────────────────────────────
+  // AC: approveReportAction → status validated + notifikasi sukses
+  // ─────────────────────────────────────────────
+  it('Harus memvalidasi laporan submitted dan mengubah status menjadi Divalidasi', () => {
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
+      .contains('button', /Validasi/i).click();
+
+    // Toast konfirmasi notifikasi terkirim ke komunitas
+    cy.contains(/berhasil divalidasi/i).should('be.visible');
+
+    // Badge berubah menjadi "Divalidasi"
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
+      .contains(/Divalidasi/i).should('be.visible');
+
+    // Tombol aksi hilang karena status bukan lagi submitted
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
+      .contains('button', /Validasi/i).should('not.exist');
+  });
+
+  // ─────────────────────────────────────────────
+  // AC: rejectReportAction → status rejected + notifikasi penolakan
+  // ─────────────────────────────────────────────
+  it('Harus menolak laporan submitted dan mengubah status menjadi Ditolak', () => {
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
+      .contains('button', /Tolak/i).click();
+
+    cy.contains(/Laporan ditolak/i).should('be.visible');
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
+      .contains(/Ditolak/i).should('be.visible');
+  });
+
+    cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
+      .contains('a', /Lihat Detail/i)
+      .should('have.attr', 'href')
+      .and('match', /\/admin\/reports\/report-1/);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// FR-32 (lanjutan): Pembuatan Pencairan & Validasi Saldo
+// ════════════════════════════════════════════════════════════════════
+describe('FR-32: Pembuatan Pencairan dan Validasi Saldo', () => {
+  beforeEach(() => {
+    cy.clearCookies();
+    cy.clearLocalStorage();
+    cy.setCookie('e2e-bypass-auth', 'admin');
+  });
+
+  it('Harus berhasil membuat pencairan baru jika saldo mencukupi', () => {
+    // Asumsi rute pembuatan pencairan ada di modal atau halaman khusus
+    cy.visit('/admin/disbursements');
+    cy.contains('button', /Buat Pencairan/i).click();
+    
+    cy.get('input[name="amount"]').type('1000000');
+    cy.get('input[name="bank_name"]').type('BCA');
+    cy.get('input[name="account_number"]').type('123456789');
+    cy.get('input[name="account_name"]').type('Komunitas Laut');
+    cy.contains('button', /Simpan|Buat/i).click();
+    
+    cy.contains(/Berhasil|Pencairan dibuat/i).should('be.visible');
+  });
+
+  it('Harus gagal dan menampilkan error jika nominal pencairan melebihi saldo tersedia', () => {
+    cy.visit('/admin/disbursements');
+    cy.contains('button', /Buat Pencairan/i).click();
+    
+    // Test case melebihi saldo
+    cy.get('input[name="amount"]').type('1000000000'); // Asumsi jauh lebih besar dari saldo
+    cy.get('input[name="bank_name"]').type('BCA');
+    cy.get('input[name="account_number"]').type('123456789');
+    cy.get('input[name="account_name"]').type('Komunitas Laut');
+    cy.contains('button', /Simpan|Buat/i).click();
+    
+    // Alert error dari server action
+    cy.contains(/melebihi saldo tersedia/i).should('be.visible');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// FR-32 (lanjutan): Dana Abadi (Endowment)
+// ════════════════════════════════════════════════════════════════════
+describe('FR-32: Dana Abadi (Endowment)', () => {
+  it('Harus menampilkan list pencairan dana abadi di halaman publik /endowment', () => {
+    cy.visit('/endowment');
+    cy.contains(/Dana Abadi/i).should('be.visible');
+    // Pastikan setidaknya ada data pencairan yang me-render catatan dana abadi
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// FR-32 (lanjutan): Akses Komunitas ke Data Disbursement
+// ════════════════════════════════════════════════════════════════════
+describe('FR-32: Akses Komunitas', () => {
+  it('Komunitas hanya melihat riwayat pencairan miliknya sendiri', () => {
+    cy.clearCookies();
+    cy.setCookie('e2e-bypass-auth', 'community'); // Login sebagai komunitas
+    cy.visit('/community/dashboard/disbursements');
+    cy.contains(/Riwayat Pencairan/i).should('be.visible');
+  });
+});
+

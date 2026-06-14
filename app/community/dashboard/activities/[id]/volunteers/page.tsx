@@ -124,10 +124,16 @@ export default function VolunteersManagementPage() {
     loadData()
   }, [params.id])
 
+  const isQuotaFull = activity ? activity.volunteer_count >= activity.volunteer_quota : false;
+
   async function handleStatusUpdate(
     id: string,
     status: "approved" | "rejected"
   ) {
+    if (status === "approved" && isQuotaFull) {
+      toast.error("Kuota penuh. Kapasitas maksimum relawan telah tercapai.");
+      return;
+    }
     setUpdatingId(id)
     const result = await updateVolunteerStatus(id, status)
     if (result.success) {
@@ -403,8 +409,8 @@ export default function VolunteersManagementPage() {
                                 {updatingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                                 <span className="ml-1">Tolak</span>
                               </Button>
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700"
-                                disabled={updatingId === v.id}
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                                disabled={isQuotaFull || updatingId === v.id}
                                 onClick={() => handleStatusUpdate(v.id, "approved")}>
                                 {updatingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
                                 <span className="ml-1">Terima</span>
