@@ -18,7 +18,7 @@
         "db:push": "prisma db push",
         "db:seed": "prisma db seed",
         "db:studio": "prisma studio",
-        "db:reset": "prisma db push --force-reset && prisma db seed",
+        "db:reset": "prisma db push --force-reset && prisma db seed && node scripts/fix-supabase-grants.js",
         "cypress:open": "cypress open",
         "cypress:run": "cypress run",
         "cypress:open:e2e": "node scripts/run-with-env.mjs .env.test.local cypress open",
