@@ -114,17 +114,17 @@ async function main() {
   console.log('👤 Membuat profil pengguna...')
 
   // Admins
-  const admin1 = await createAuthUser('admin1@sinergilaut.id', 'Admin Utama', 'admin')
-  const admin2 = await createAuthUser('admin2@sinergilaut.id', 'Admin Reviewer', 'admin')
+  const admin1 = await createAuthUser('budi.admin@sinergilaut.id', 'Admin Utama', 'admin')
+  const admin2 = await createAuthUser('admin.reviewer@sinergilaut.id', 'Admin Reviewer', 'admin')
 
   // Community Owners (3 owners for diversity)
-  const owner1 = await createAuthUser('owner1@example.com', 'Budi Bahari', 'community')
-  const owner2 = await createAuthUser('owner2@example.com', 'Siti Pesisir', 'community')
-  const owner3 = await createAuthUser('owner3@example.com', 'Agus Samudra', 'community')
+  const owner1 = await createAuthUser('budi.bahari@lautbersih.org', 'Budi Bahari', 'community')
+  const owner2 = await createAuthUser('siti.pesisir@karanghidup.id', 'Siti Pesisir', 'community')
+  const owner3 = await createAuthUser('agus.samudra@konservasi.com', 'Agus Samudra', 'community')
 
   // Pending volunteers — belum lengkap KTP-nya
-  const userPending1 = await createAuthUser('pending1@user.com', 'Andi Pratama', 'user')
-  const userPending2 = await createAuthUser('pending2@user.com', 'Rina Kusuma', 'user')
+  const userPending1 = await createAuthUser('andi.pratama@gmail.com', 'Andi Pratama', 'user')
+  const userPending2 = await createAuthUser('rina.kusuma@yahoo.com', 'Rina Kusuma', 'user')
   await prisma.profiles.updateMany({
     where: { id: { in: [userPending1.id, userPending2.id] } },
     data: {
@@ -138,10 +138,10 @@ async function main() {
   })
 
   // Approved volunteers — data lengkap, siap daftar kegiatan
-  const userApproved1 = await createAuthUser('approved1@user.com', 'Dian Rahmawati', 'user')
-  const userApproved2 = await createAuthUser('approved2@user.com', 'Fajar Nugroho', 'user')
-  const userApproved3 = await createAuthUser('approved3@user.com', 'Maya Sari', 'user')
-  const userApproved4 = await createAuthUser('approved4@user.com', 'Rizky Aditya', 'user')
+  const userApproved1 = await createAuthUser('dian.rahmawati@gmail.com', 'Dian Rahmawati', 'user')
+  const userApproved2 = await createAuthUser('fajar.nugroho@outlook.com', 'Fajar Nugroho', 'user')
+  const userApproved3 = await createAuthUser('maya.sari@gmail.com', 'Maya Sari', 'user')
+  const userApproved4 = await createAuthUser('rizky.aditya@yahoo.com', 'Rizky Aditya', 'user')
   await prisma.profiles.updateMany({
     where: { id: { in: [userApproved1.id, userApproved2.id, userApproved3.id, userApproved4.id] } },
     data: {
@@ -156,8 +156,8 @@ async function main() {
   })
 
   // Rejected volunteers
-  const userRejected1 = await createAuthUser('rejected1@user.com', 'Hendra Santoso', 'user')
-  const userRejected2 = await createAuthUser('rejected2@user.com', 'Lina Wijaya', 'user')
+  const userRejected1 = await createAuthUser('hendra.santoso@gmail.com', 'Hendra Santoso', 'user')
+  const userRejected2 = await createAuthUser('lina.wijaya@outlook.com', 'Lina Wijaya', 'user')
   await prisma.profiles.updateMany({
     where: { id: { in: [userRejected1.id, userRejected2.id] } },
     data: {

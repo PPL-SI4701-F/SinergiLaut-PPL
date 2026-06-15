@@ -267,16 +267,16 @@ Semua akun testing menggunakan password: `Password@2026`
 
 | Role | Email | Password | Deskripsi |
 |------|-------|----------|-----------|
-| **Admin** | `admin1@sinergilaut.id` | `Password@2026` | Admin Utama |
-| **Admin** | `admin2@sinergilaut.id` | `Password@2026` | Admin Reviewer |
-| **Community** | `owner1@example.com` | `Password@2026` | Budi Bahari |
-| **Community** | `owner2@example.com` | `Password@2026` | Siti Pesisir |
-| **User** | `approved1@user.com` | `Password@2026` | Relawan Aktif 1 |
-| **User** | `approved2@user.com` | `Password@2026` | Relawan Aktif 2 |
-| **User** | `pending1@user.com` | `Password@2026` | Relawan Baru 1 (Pending) |
-| **User** | `pending2@user.com` | `Password@2026` | Relawan Baru 2 (Pending) |
-| **User** | `rejected1@user.com` | `Password@2026` | Relawan Gagal 1 (Rejected) |
-| **User** | `rejected2@user.com` | `Password@2026` | Relawan Gagal 2 (Rejected) |
+| **Admin** | `budi.admin@sinergilaut.id` | `Password@2026` | Admin Utama |
+| **Admin** | `admin.reviewer@sinergilaut.id` | `Password@2026` | Admin Reviewer |
+| **Community** | `budi.bahari@lautbersih.org` | `Password@2026` | Budi Bahari |
+| **Community** | `siti.pesisir@karanghidup.id` | `Password@2026` | Siti Pesisir |
+| **User** | `dian.rahmawati@gmail.com` | `Password@2026` | Relawan Aktif 1 |
+| **User** | `fajar.nugroho@outlook.com` | `Password@2026` | Relawan Aktif 2 |
+| **User** | `andi.pratama@gmail.com` | `Password@2026` | Relawan Baru 1 (Pending) |
+| **User** | `rina.kusuma@yahoo.com` | `Password@2026` | Relawan Baru 2 (Pending) |
+| **User** | `hendra.santoso@gmail.com` | `Password@2026` | Relawan Gagal 1 (Rejected) |
+| **User** | `lina.wijaya@outlook.com` | `Password@2026` | Relawan Gagal 2 (Rejected) |
 
 > **Catatan:** Untuk mereset database dan seed ulang, disarankan menggunakan command bawaan project:
 > ```bash
@@ -323,21 +323,6 @@ docker-compose up -d
 1. Connect repository ke Vercel
 2. Set environment variables di Vercel dashboard
 3. Deploy otomatis pada setiap push ke branch `main`
-
----
-
-## Tim Pengembang
-
-| Nama | Peran | NIM |
-|------|-------|-----|
-| Adilio Adaha | Dashboard Komunitas | - |
-| Habibi Budiman | Homepage & Autentikasi Login | - |
-| Keysha Aulia | Autentikasi & Login Komunitas | - |
-| Malvin | Manajemen Hak Akses (RBAC) | - |
-
-**Mata Kuliah:** Pengembangan Perangkat Lunak (PPL) — SI4701  
-**Universitas:** Telkom University  
-**Semester:** 6 (Genap 2025/2026)
 
 ---
 
