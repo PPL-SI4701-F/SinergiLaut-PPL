@@ -229,6 +229,19 @@ export default defineConfig({
 
           return loginSeedUser;
         },
+        async getActivityIdByTitle(title: string) {
+          const supabase = createSupabaseAdminClient();
+          const { data, error } = await supabase
+            .from("activities")
+            .select("id")
+            .eq("title", title)
+            .maybeSingle();
+
+          if (error) {
+            throw new Error(error.message);
+          }
+          return data?.id || null;
+        },
       });
 
       return config;
