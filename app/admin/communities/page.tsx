@@ -21,7 +21,7 @@ import { formatDate } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import {
   getPendingCommunities, getAllCommunities,
-  approveCommunityAction, rejectCommunityAction
+  approveCommunityAction, rejectCommunityAction, sanctionCommunityAction
 } from "@/lib/actions/dashboard.actions"
 
 interface SanctionModal { open: boolean; communityId: string | null; communityName: string }
@@ -71,6 +71,23 @@ export default function AdminCommunitiesPage() {
       setRejectModal({ open: false, communityId: null, communityName: "" })
       setRejectReason("")
     } else toast.error(result.error ?? "Gagal menolak.")
+  }
+
+  const handleSanction = async () => {
+    if (!sanctionModal.communityId) return
+    if (!sanctionForm.reason.trim()) {
+      toast.error("Alasan sanksi wajib diisi.")
+      return
+    }
+    const result = await sanctionCommunityAction(sanctionModal.communityId, sanctionForm.type as any, sanctionForm.reason)
+    if (result.success) {
+      toast.success(`Sanksi diberikan pada ${sanctionModal.communityName}`)
+      setAllCommunities(prev => prev.map(c => c.id === sanctionModal.communityId && (sanctionForm.type === "suspend" || sanctionForm.type === "ban") ? { ...c, is_suspended: true } : c))
+      setSanctionModal({ open: false, communityId: null, communityName: "" })
+      setSanctionForm({ type: "warning", reason: "" })
+    } else {
+      toast.error(result.error ?? "Gagal memberikan sanksi.")
+    }
   }
 
   const filteredAll = allCommunities.filter(c =>
@@ -288,7 +305,7 @@ export default function AdminCommunitiesPage() {
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={() => setSanctionModal({ open: false, communityId: null, communityName: "" })}>Batal</Button>
             <Button variant="destructive" className="flex-1" disabled={!sanctionForm.reason}
-              onClick={() => { toast.warning(`Sanksi diberikan pada ${sanctionModal.communityName}`); setSanctionModal({ open: false, communityId: null, communityName: "" }) }}>
+              onClick={handleSanction}>
               <AlertTriangle className="h-4 w-4 mr-2" /> Berikan Sanksi
             </Button>
           </div>

@@ -320,6 +320,55 @@ export async function rejectCommunityAction(id: string, adminNote?: string) {
   return { success: true }
 }
 
+export async function sanctionCommunityAction(id: string, type: "warning" | "suspend" | "ban", reason: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+  const sanctionReason = reason?.trim()
+  if (!sanctionReason) return { success: false, error: "Alasan sanksi wajib diisi." }
+
+  const adminSupabase = await createAdminClient()
+  const { data: community, error: fetchErr } = await adminSupabase
+    .from("communities")
+    .select("name, owner_id")
+    .eq("id", id)
+    .single()
+  if (fetchErr || !community) return { success: false, error: "Komunitas tidak ditemukan." }
+
+  const { error: sanctionErr } = await adminSupabase
+    .from("sanctions")
+    .insert({
+      community_id: id,
+      issued_by: auth.userId,
+      type: type,
+      reason: sanctionReason,
+      is_active: true
+    })
+  if (sanctionErr) return { success: false, error: sanctionErr.message }
+
+  if (type === "suspend" || type === "ban") {
+    await adminSupabase
+      .from("communities")
+      .update({ is_suspended: true })
+      .eq("id", id)
+  }
+
+  if (community.owner_id) {
+    const title = type === "warning" ? "Peringatan Komunitas" : type === "suspend" ? "Komunitas Disuspend" : "Komunitas Dibanned"
+    const message = `Komunitas "${community.name}" Anda mendapat sanksi (${type}). Alasan: ${sanctionReason}`
+    await createNotification(
+      community.owner_id,
+      title,
+      message,
+      "error",
+      "/community/dashboard"
+    )
+  }
+  return { success: true }
+}
+
 export async function approveActivityAction(id: string) {
   const isE2E = await getE2EMock()
   if (isE2E) return { success: true }

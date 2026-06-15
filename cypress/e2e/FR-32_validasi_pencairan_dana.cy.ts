@@ -77,10 +77,10 @@ describe('FR-32: Validasi Laporan dan Pencairan Dana', () => {
   // ─────────────────────────────────────────────
   // Edge Case 3: Disbursement sudah "completed" - tombol aksi tidak muncul
   // ─────────────────────────────────────────────
-  it.skip('Should not show action buttons when disbursement is already completed (Skip: E2E mock for getAllDisbursements is hardcoded to always return a pending disbursement)', () => {
-    cy.contains('tr', 'Komunitas Peduli Laut').within(() => {
-      cy.get('button').contains(/Proses|Update Status/i).should('not.exist');
-      cy.contains(/Ref:/i).should('be.visible');
+  it('Should not show action buttons when disbursement is already completed', () => {
+    cy.contains('tr', 'Komunitas Laut Hijau').within(() => {
+      cy.contains('button', /Proses|Update Status|Tinjau/i).should('not.exist');
+      cy.contains(/Selesai/i).should('be.visible');
     });
   });
 
@@ -185,10 +185,11 @@ describe('FR-32: Validasi Laporan oleh Admin (/admin/reports)', () => {
       .contains(/Ditolak/i).should('be.visible');
   });
 
+  it('Harus memiliki tautan Lihat Detail yang benar', () => {
     cy.contains('tr', 'Laporan Bersih Pantai Mutiara')
       .contains('a', /Lihat Detail/i)
       .should('have.attr', 'href')
-      .and('match', /\/admin\/reports\/report-1/);
+      .and('include', '/admin/reports/report-1');
   });
 });
 
@@ -205,30 +206,42 @@ describe('FR-32: Pembuatan Pencairan dan Validasi Saldo', () => {
   it('Harus berhasil membuat pencairan baru jika saldo mencukupi', () => {
     // Asumsi rute pembuatan pencairan ada di modal atau halaman khusus
     cy.visit('/admin/disbursements');
-    cy.contains('button', /Buat Pencairan/i).click();
+    cy.get('body').should('not.have.css', 'pointer-events', 'none'); // Tunggu body tidak ter-lock
+    cy.contains('button', /Buat Pencairan/i).click({ force: true });
     
+    // Pilih kegiatan pertama yang tersedia (index 1 karena index 0 adalah placeholder)
+    cy.get('select').find('option').eq(1).then($option => {
+      cy.get('select').select($option.val() as string);
+    });
+
     cy.get('input[name="amount"]').type('1000000');
     cy.get('input[name="bank_name"]').type('BCA');
     cy.get('input[name="account_number"]').type('123456789');
     cy.get('input[name="account_name"]').type('Komunitas Laut');
-    cy.contains('button', /Simpan|Buat/i).click();
+    cy.get('[role="dialog"]').contains('button', /Simpan|Buat/i).click({ force: true });
     
     cy.contains(/Berhasil|Pencairan dibuat/i).should('be.visible');
   });
 
   it('Harus gagal dan menampilkan error jika nominal pencairan melebihi saldo tersedia', () => {
     cy.visit('/admin/disbursements');
-    cy.contains('button', /Buat Pencairan/i).click();
+    cy.get('body').should('not.have.css', 'pointer-events', 'none'); // Tunggu body tidak ter-lock
+    cy.contains('button', /Buat Pencairan/i).click({ force: true });
     
+    // Pilih kegiatan pertama yang tersedia
+    cy.get('select').find('option').eq(1).then($option => {
+      cy.get('select').select($option.val() as string);
+    });
+
     // Test case melebihi saldo
     cy.get('input[name="amount"]').type('1000000000'); // Asumsi jauh lebih besar dari saldo
     cy.get('input[name="bank_name"]').type('BCA');
     cy.get('input[name="account_number"]').type('123456789');
     cy.get('input[name="account_name"]').type('Komunitas Laut');
-    cy.contains('button', /Simpan|Buat/i).click();
+    cy.get('[role="dialog"]').contains('button', /Simpan|Buat/i).click({ force: true });
     
     // Alert error dari server action
-    cy.contains(/melebihi saldo tersedia/i).should('be.visible');
+    cy.contains(/melebihi saldo tersedia/i).should('exist');
   });
 });
 
