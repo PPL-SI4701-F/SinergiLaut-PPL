@@ -1194,13 +1194,71 @@ export async function getCommunityActivities(userId: string) {
         title: "Bersih Pantai Mutiara",
         status: "published",
         start_date: new Date().toISOString(),
+        execution_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         volunteer_quota: 50,
         volunteer_count: 10,
         funding_goal: 10000000,
         funding_raised: 2000000,
         category: "cleanup",
-        reports: []
-      }
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-draft",
+        title: "Konservasi Mangrove Cilincing",
+        status: "draft",
+        start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 30,
+        volunteer_count: 0,
+        funding_goal: 5000000,
+        funding_raised: 0,
+        category: "mangrove",
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-pending",
+        title: "Pemantauan Koral Kepulauan Seribu",
+        status: "pending_review",
+        start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 20,
+        volunteer_count: 0,
+        funding_goal: 3000000,
+        funding_raised: 0,
+        category: "coral",
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-completed",
+        title: "Restorasi Ekosistem Pantai Kramat",
+        status: "completed",
+        start_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 40,
+        volunteer_count: 35,
+        funding_goal: 8000000,
+        funding_raised: 7500000,
+        category: "restoration",
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-cancelled",
+        title: "Tanam Mangrove Pulau Tidung",
+        status: "cancelled",
+        start_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 25,
+        volunteer_count: 0,
+        funding_goal: 4000000,
+        funding_raised: 0,
+        category: "mangrove",
+        reports: [],
+        community_id: "community-id-123"
+      },
     ] as any
   }
 

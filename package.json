@@ -8,6 +8,9 @@
         "dev:lowmem": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next dev",
         "build": "next build",
         "build:test": "cross-env NEXT_PUBLIC_E2E_TESTING=true next build",
+        "dev:e2e": "node scripts/run-with-env.mjs .env.test.local next dev",
+        "build:e2e": "node scripts/run-with-env.mjs .env.test.local next build",
+        "start:e2e": "node scripts/run-with-env.mjs .env.test.local next start",
         "start": "next start",
         "start:test": "cross-env NEXT_PUBLIC_E2E_TESTING=true next start",
         "lint": "next lint",
@@ -17,7 +20,9 @@
         "db:studio": "prisma studio",
         "db:reset": "prisma db push --force-reset && prisma db seed",
         "cypress:open": "cypress open",
-        "cypress:run": "cypress run"
+        "cypress:run": "cypress run",
+        "cypress:open:e2e": "node scripts/run-with-env.mjs .env.test.local cypress open",
+        "cypress:run:e2e": "node scripts/run-with-env.mjs .env.test.local cypress run"
     },
     "prisma": {
         "seed": "npx tsx prisma/seed.ts"

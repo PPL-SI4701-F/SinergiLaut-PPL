@@ -17,7 +17,6 @@ describe('FR-08: Pendaftaran relawan', () => {
       }
     });
 
-    // Mock Activity Details
     cy.intercept('GET', '**/rest/v1/activities*', {
       statusCode: 200,
       body: {
@@ -36,32 +35,22 @@ describe('FR-08: Pendaftaran relawan', () => {
     }).as('getActivity');
   });
 
-  // ── Happy Path ─────────────────────────────────
   it('Harus mengizinkan pengguna mendaftar sebagai relawan', () => {
-    // Server Action registerVolunteer directly returns mock data
-
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
 
-    // Click on the "Daftar Relawan" tab button
     cy.contains('button', 'Daftar Relawan').click({ force: true });
 
-    // Fill form
     cy.get('input[placeholder="Nama lengkap"]').clear().type('Mock User');
     cy.get('input[placeholder="Umur (tahun)"]').type('20');
     cy.get('input[placeholder="+62 8xx xxxx xxxx"]').type('081234567890');
-
-    // Accept terms
     cy.get('#agreed').check({ force: true });
 
-    // Submit registration
     cy.contains('button', 'Daftar Sebagai Relawan').click();
 
-    // Check success state
     cy.contains(/Pendaftaran berhasil|Terdaftar \(pending\)/i).should('be.visible');
   });
 
-  // ── Edge Case 1: Umur di bawah batas minimum (< 12) ──
   it('Harus menolak umur di bawah batas minimum (contoh: 5 tahun)', () => {
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
@@ -76,7 +65,6 @@ describe('FR-08: Pendaftaran relawan', () => {
 
     cy.contains('button', 'Daftar Sebagai Relawan').click({ force: true });
 
-    // Either HTML5 rejects it OR UI shows an error message
     cy.get('input[placeholder="Umur (tahun)"]').then(($input) => {
       const el = $input[0] as HTMLInputElement;
       const isInvalid = el.validity.rangeUnderflow ||
@@ -90,7 +78,6 @@ describe('FR-08: Pendaftaran relawan', () => {
     });
   });
 
-  // ── Edge Case 2: Umur di atas batas logis (> 100) ──
   it('Harus menolak umur yang tidak masuk akal (contoh: 999)', () => {
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
@@ -118,7 +105,6 @@ describe('FR-08: Pendaftaran relawan', () => {
     });
   });
 
-  // ── Edge Case 3: Format nomor telepon berisi huruf ──
   it('Harus menolak nomor telepon yang mengandung huruf', () => {
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
@@ -143,7 +129,6 @@ describe('FR-08: Pendaftaran relawan', () => {
     });
   });
 
-  // ── Edge Case 4: Nomor telepon terlalu pendek ──
   it('Harus menolak nomor telepon yang terlalu pendek (kurang dari 10 digit)', () => {
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
@@ -153,7 +138,7 @@ describe('FR-08: Pendaftaran relawan', () => {
 
     cy.get('input[placeholder="Nama lengkap"]').clear().type('Budi');
     cy.get('input[placeholder="Umur (tahun)"]').clear().type('22');
-    cy.get('input[placeholder="+62 8xx xxxx xxxx"]').clear().type('08123'); // too short
+    cy.get('input[placeholder="+62 8xx xxxx xxxx"]').clear().type('08123');
     cy.get('#agreed').check({ force: true });
 
     cy.contains('button', 'Daftar Sebagai Relawan').click({ force: true });
@@ -168,17 +153,13 @@ describe('FR-08: Pendaftaran relawan', () => {
     });
   });
 
-  // ── Edge Case 5: Nama sangat panjang / karakter khusus ──
   it('Harus menangani nama yang sangat panjang tanpa membuat aplikasi crash', () => {
-    // Server Action registerVolunteer directly returns mock data
-
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
     cy.wait(500);
 
     cy.contains('button', 'Daftar Relawan').click({ force: true });
 
-    // Very long name (100 chars)
     const longName = 'A'.repeat(100);
     cy.get('input[placeholder="Nama lengkap"]').clear().type(longName, { delay: 0 });
     cy.get('input[placeholder="Umur (tahun)"]').clear().type('25');
@@ -187,13 +168,10 @@ describe('FR-08: Pendaftaran relawan', () => {
 
     cy.contains('button', 'Daftar Sebagai Relawan').click({ force: true });
 
-    // App must not show a Next.js unhandled error page
     cy.get('body').should('be.visible');
-    // Either validation or success - page should still be functional
     cy.get('html').should('not.have.attr', 'data-nextjs-error');
   });
 
-  // ── Edge Case 6: Submit tanpa centang syarat & ketentuan ──
   it('Harus menonaktifkan tombol submit saat kotak centang syarat belum dicentang', () => {
     cy.visit(`/activities/${activityId}`);
     cy.wait('@getActivity');
@@ -204,16 +182,11 @@ describe('FR-08: Pendaftaran relawan', () => {
     cy.get('input[placeholder="Nama lengkap"]').clear().type('Siti Aminah');
     cy.get('input[placeholder="Umur (tahun)"]').clear().type('23');
     cy.get('input[placeholder="+62 8xx xxxx xxxx"]').type('081234567890');
-    // Intentionally NOT checking #agreed
 
-    // The submit button should be DISABLED when checkbox is unchecked
-    // (or clicking should show a validation error)
     cy.contains('button', 'Daftar Sebagai Relawan').then(($btn) => {
       if ($btn.prop('disabled')) {
-        // UI correctly disables button - this is the expected behavior
         expect($btn.prop('disabled')).to.be.true;
       } else {
-        // If not disabled, clicking should show error
         cy.wrap($btn).click({ force: true });
         cy.get('#agreed').then(($checkbox) => {
           const isRequired = $checkbox[0].hasAttribute('required');

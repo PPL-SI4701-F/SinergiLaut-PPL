@@ -1,8 +1,51 @@
 import { defineConfig } from "cypress";
+import { createClient } from "@supabase/supabase-js";
+
+type FindProfileByEmailArgs = {
+  email: string;
+  retries?: number;
+  delayMs?: number;
+};
+
+type CountProfilesByEmailArgs = {
+  email: string;
+};
+
+type CreateVolunteerUserArgs = {
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string;
+};
+
+const loginSeedUser = {
+  email: "login.user@test.local",
+  password: "ValidPass123!",
+  fullName: "Budi Santoso",
+  phone: "081234567890",
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function createSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for Cypress Supabase tasks.");
+  }
+
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
 
 export default defineConfig({
   e2e: {
-    baseUrl: "http://localhost:3000",
+    baseUrl: process.env.CYPRESS_BASE_URL ?? "http://localhost:3000",
     // Pages take 25-35s to compile with Turbopack on first load
     defaultCommandTimeout: 30000,   // 30s for element assertions (cy.contains, cy.get, etc.)
     pageLoadTimeout: 120000,        // 120s for page navigation (cy.visit)
@@ -12,7 +55,183 @@ export default defineConfig({
     viewportHeight: 720,
     chromeWebSecurity: false,       // Allow cross-origin requests in tests
     setupNodeEvents(on, config) {
-      // implement node event listeners here
+      on("task", {
+        async findProfileByEmail({ email, retries = 10, delayMs = 500 }: FindProfileByEmailArgs) {
+          const supabase = createSupabaseAdminClient();
+
+          for (let attempt = 0; attempt < retries; attempt += 1) {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id,email,full_name,phone,role")
+              .eq("email", email)
+              .maybeSingle();
+
+            if (error) {
+              throw new Error(error.message);
+            }
+
+            if (data) {
+              return data;
+            }
+
+            await sleep(delayMs);
+          }
+
+          return null;
+        },
+        async countProfilesByEmail({ email }: CountProfilesByEmailArgs) {
+          const supabase = createSupabaseAdminClient();
+
+          const { count, error } = await supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("email", email);
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          return count ?? 0;
+        },
+        async createVolunteerUser({ email, password, fullName, phone }: CreateVolunteerUserArgs) {
+          const supabase = createSupabaseAdminClient();
+
+          const { data: existingProfile, error: profileLookupError } = await supabase
+            .from("profiles")
+            .select("id,email,full_name,phone,role")
+            .eq("email", email)
+            .maybeSingle();
+
+          if (profileLookupError) {
+            throw new Error(profileLookupError.message);
+          }
+
+          if (existingProfile) {
+            return existingProfile;
+          }
+
+          const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              full_name: fullName,
+              role: "user",
+              phone,
+            },
+          });
+
+          if (createUserError) {
+            throw new Error(createUserError.message);
+          }
+
+          const userId = createdUser.user?.id;
+          if (!userId) {
+            throw new Error("Supabase did not return a user id.");
+          }
+
+          await sleep(500);
+
+          const { data: profileFromTrigger, error: triggerLookupError } = await supabase
+            .from("profiles")
+            .select("id,email,full_name,phone,role")
+            .eq("id", userId)
+            .maybeSingle();
+
+          if (triggerLookupError) {
+            throw new Error(triggerLookupError.message);
+          }
+
+          if (profileFromTrigger) {
+            return profileFromTrigger;
+          }
+
+          const { data: insertedProfile, error: insertProfileError } = await supabase
+            .from("profiles")
+            .insert({
+              id: userId,
+              email,
+              full_name: fullName,
+              phone,
+              role: "user",
+            })
+            .select("id,email,full_name,phone,role")
+            .single();
+
+          if (insertProfileError) {
+            throw new Error(insertProfileError.message);
+          }
+
+          return insertedProfile;
+        },
+        async seedLoginUser() {
+          const supabase = createSupabaseAdminClient();
+
+          const { data: existingProfile, error: profileLookupError } = await supabase
+            .from("profiles")
+            .select("id,email,full_name,phone,role")
+            .eq("email", loginSeedUser.email)
+            .maybeSingle();
+
+          if (profileLookupError) {
+            throw new Error(profileLookupError.message);
+          }
+
+          if (existingProfile) {
+            return loginSeedUser;
+          }
+
+          const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+            email: loginSeedUser.email,
+            password: loginSeedUser.password,
+            email_confirm: true,
+            user_metadata: {
+              full_name: loginSeedUser.fullName,
+              role: "user",
+              phone: loginSeedUser.phone,
+            },
+          });
+
+          if (createUserError) {
+            throw new Error(createUserError.message);
+          }
+
+          const userId = createdUser.user?.id;
+          if (!userId) {
+            throw new Error("Supabase did not return a user id.");
+          }
+
+          await sleep(500);
+
+          const { data: profileFromTrigger, error: triggerLookupError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", userId)
+            .maybeSingle();
+
+          if (triggerLookupError) {
+            throw new Error(triggerLookupError.message);
+          }
+
+          if (!profileFromTrigger) {
+            const { error: insertProfileError } = await supabase.from("profiles").insert({
+              id: userId,
+              email: loginSeedUser.email,
+              full_name: loginSeedUser.fullName,
+              phone: loginSeedUser.phone,
+              role: "user",
+            });
+
+            if (insertProfileError) {
+              throw new Error(insertProfileError.message);
+            }
+          }
+
+          return loginSeedUser;
+        },
+      });
+
+      return config;
     },
     supportFile: "cypress/support/e2e.ts",
   },
