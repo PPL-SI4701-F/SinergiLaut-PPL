@@ -68,7 +68,7 @@ export default function ActivityDetailPage() {
   const supabase = createClient()
 
   const [activity, setActivity] = useState<Activity & {
-    community: { id: string; name: string; logo_url: string | null; is_verified: boolean }
+    community: { id: string; name: string; logo_url: string | null; is_verified: boolean; is_banned: boolean }
     reports: { id: string; title: string; summary: string | null; status: string; created_at: string; fund_usage: any; report_files: { file_url: string; file_name: string; file_type: string }[] }[]
     feedbacks: { id: string; rating: number; comment: string | null; created_at: string; user: { full_name: string | null } }[]
     items_needed: { item_name: string; target: number; donated: number; unit_price?: number }[]
@@ -178,7 +178,7 @@ export default function ActivityDetailPage() {
         .from("activities")
         .select(`
           *,
-          community:communities(id, name, logo_url, is_verified),
+          community:communities(id, name, logo_url, is_verified, is_banned),
           reports(id, title, summary, status, created_at, fund_usage, report_files(*)),
           feedbacks(id, rating, comment, created_at, user:profiles(full_name)),
           volunteer_registrations(*)
@@ -545,6 +545,18 @@ export default function ActivityDetailPage() {
             Kembali ke Kegiatan
           </Link>
         </div>
+
+        {activity.community?.is_banned && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-4 items-start">
+              <ShieldAlert className="h-6 w-6 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-red-900">Komunitas Di-Ban Permanen</h3>
+                <p className="text-red-700 text-sm mt-1">Komunitas ini sudah tidak ada/di ban. Semua aktivitas dari komunitas ini otomatis berstatus "Selesai".</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="grid lg:grid-cols-3 gap-8">

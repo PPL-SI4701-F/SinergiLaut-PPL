@@ -19,7 +19,7 @@ const navItems = [
   { href: "/community/dashboard/profile",                 label: "Profil Komunitas", icon: Settings,        description: "Edit profil komunitas"  },
 ]
 
-export function CommunitySidebar() {
+export function CommunitySidebar({ isBanned }: { isBanned?: boolean }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { profile, signOut } = useAuth()
@@ -54,9 +54,18 @@ export function CommunitySidebar() {
 
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu</p>
-        {navItems.map((item) => {
-          const active = isActive(item.href)
+        {isBanned ? (
+          <div className="flex flex-col items-center justify-center h-full px-4 text-center mt-10">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-3">
+              <LogOut className="h-6 w-6 text-red-600" />
+            </div>
+            <p className="text-sm font-bold text-slate-800">Komunitas sudah di banned</p>
+          </div>
+        ) : (
+          <>
+            <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Menu</p>
+            {navItems.map((item) => {
+              const active = isActive(item.href)
           return (
             <Link
               key={item.href}
@@ -83,6 +92,8 @@ export function CommunitySidebar() {
             </Link>
           )
         })}
+        </>
+        )}
 
 
       </nav>

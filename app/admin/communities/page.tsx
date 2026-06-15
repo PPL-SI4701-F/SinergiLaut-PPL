@@ -21,7 +21,7 @@ import { formatDate } from "@/lib/utils/helpers"
 import { toast } from "sonner"
 import {
   getPendingCommunities, getAllCommunities,
-  approveCommunityAction, rejectCommunityAction, sanctionCommunityAction
+  approveCommunityAction, rejectCommunityAction, sanctionCommunityAction, revokeSuspendAction
 } from "@/lib/actions/dashboard.actions"
 
 interface SanctionModal { open: boolean; communityId: string | null; communityName: string }
@@ -87,6 +87,16 @@ export default function AdminCommunitiesPage() {
       setSanctionForm({ type: "warning", reason: "" })
     } else {
       toast.error(result.error ?? "Gagal memberikan sanksi.")
+    }
+  }
+
+  const handleRevokeSuspend = async (id: string, name: string) => {
+    const result = await revokeSuspendAction(id)
+    if (result.success) {
+      toast.success(`Suspend dicabut dari ${name}`)
+      setAllCommunities(prev => prev.map(c => c.id === id ? { ...c, is_suspended: false } : c))
+    } else {
+      toast.error(result.error ?? "Gagal mencabut suspend.")
     }
   }
 
@@ -199,7 +209,9 @@ export default function AdminCommunitiesPage() {
                             <td className="py-3 px-3 text-sm text-muted-foreground">{c.location || "—"}</td>
                             <td className="py-3 px-3 text-sm text-muted-foreground">{c.member_count || 0}</td>
                             <td className="py-3 px-3">
-                              {c.is_suspended
+                              {c.is_banned
+                                ? <Badge variant="destructive" className="bg-red-900 text-white border-red-900">Di-Ban</Badge>
+                                : c.is_suspended
                                 ? <Badge className="bg-red-100 text-red-700">Disuspend</Badge>
                                 : c.is_verified
                                 ? <Badge className="bg-green-100 text-green-700">Terverifikasi</Badge>
@@ -223,9 +235,11 @@ export default function AdminCommunitiesPage() {
                                   >
                                     <AlertTriangle className="h-4 w-4 mr-2" /> Beri Sanksi
                                   </DropdownMenuItem>
-                                  {c.is_suspended
-                                    ? <DropdownMenuItem><CheckCircle2 className="h-4 w-4 mr-2" /> Cabut Suspend</DropdownMenuItem>
-                                    : <DropdownMenuItem className="text-destructive"><AlertCircle className="h-4 w-4 mr-2" /> Suspend</DropdownMenuItem>
+                                  {c.is_banned ? (
+                                    <DropdownMenuItem disabled className="text-muted-foreground"><AlertTriangle className="h-4 w-4 mr-2" /> Di-Ban Permanen</DropdownMenuItem>
+                                  ) : c.is_suspended
+                                    ? <DropdownMenuItem onClick={() => handleRevokeSuspend(c.id, c.name)}><CheckCircle2 className="h-4 w-4 mr-2 text-emerald-500" /> Cabut Suspend</DropdownMenuItem>
+                                    : <DropdownMenuItem className="text-destructive" onClick={() => { setSanctionModal({ open: true, communityId: c.id, communityName: c.name }); setSanctionForm({ type: "suspend", reason: "" }) }}><AlertCircle className="h-4 w-4 mr-2" /> Suspend</DropdownMenuItem>
                                   }
                                 </DropdownMenuContent>
                               </DropdownMenu>

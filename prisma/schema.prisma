@@ -65,6 +65,7 @@ model communities {
   is_verified         Boolean             @default(false)
   verification_status verification_status @default(pending)
   is_suspended        Boolean             @default(false)
+  is_banned           Boolean             @default(false)
   bank_name           String?
   bank_account_number String?
   bank_account_name   String?

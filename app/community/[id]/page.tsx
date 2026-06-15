@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Share2,
+  ShieldAlert,
 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
@@ -96,6 +97,18 @@ export default async function CommunityProfilePage({
             {isUser ? "Kembali ke Daftar Komunitas" : "Kembali ke Komunitas"}
           </Link>
         </div>
+
+        {community.is_banned && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4 relative z-[60]">
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-4 items-start">
+              <ShieldAlert className="h-6 w-6 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-red-900">Komunitas Di-Ban Permanen</h3>
+                <p className="text-red-700 text-sm mt-1">Komunitas ini sudah tidak ada/di ban. Semua aktivitas dari komunitas ini otomatis berstatus "Selesai".</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Cover Image */}
         <section className="relative h-64 md:h-80 bg-secondary">

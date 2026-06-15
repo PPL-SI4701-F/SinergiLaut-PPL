@@ -351,8 +351,15 @@ export async function sanctionCommunityAction(id: string, type: "warning" | "sus
   if (type === "suspend" || type === "ban") {
     await adminSupabase
       .from("communities")
-      .update({ is_suspended: true })
+      .update({ is_suspended: true, is_banned: type === "ban" })
       .eq("id", id)
+      
+    if (type === "ban") {
+      await adminSupabase
+        .from("activities")
+        .update({ status: "completed" })
+        .eq("community_id", id)
+    }
   }
 
   if (community.owner_id) {
@@ -363,6 +370,48 @@ export async function sanctionCommunityAction(id: string, type: "warning" | "sus
       title,
       message,
       "error",
+      "/community/dashboard"
+    )
+  }
+  return { success: true }
+}
+
+export async function revokeSuspendAction(id: string) {
+  const isE2E = await getE2EMock()
+  if (isE2E) return { success: true }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data: community, error: fetchErr } = await adminSupabase
+    .from("communities")
+    .select("name, owner_id, is_banned")
+    .eq("id", id)
+    .single()
+  if (fetchErr || !community) return { success: false, error: "Komunitas tidak ditemukan." }
+  
+  if (community.is_banned) return { success: false, error: "Tidak dapat mencabut suspend karena komunitas ini telah di-ban permanen." }
+
+  const { error } = await adminSupabase
+    .from("communities")
+    .update({ is_suspended: false })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await adminSupabase
+    .from("sanctions")
+    .update({ is_active: false })
+    .eq("community_id", id)
+    .in("type", ["suspend", "ban"])
+    .eq("is_active", true)
+
+  if (community.owner_id) {
+    await createNotification(
+      community.owner_id,
+      "Suspend Dicabut",
+      `Suspend untuk komunitas "${community.name}" Anda telah dicabut. Anda dapat menggunakan fitur komunitas kembali.`,
+      "success",
       "/community/dashboard"
     )
   }

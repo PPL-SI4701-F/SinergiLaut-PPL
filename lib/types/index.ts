@@ -55,6 +55,7 @@ export interface Community {
   is_verified: boolean
   verification_status: VerificationStatus
   is_suspended: boolean
+  is_banned: boolean
   created_at: string
   updated_at: string
   // Relations
