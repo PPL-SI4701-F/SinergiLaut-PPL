@@ -3,9 +3,15 @@ describe('FR-03: Mengelola Profil Pengguna', () => {
         cy.clearCookies();
         cy.clearLocalStorage();
         
-        // [INSTRUKSI] Melakukan login menggunakan akun riil dari database (db:reset) dengan status relawan 'pending'.
-        // Data ini diambil langsung dari database menggunakan UI login, menggantikan mock cy.intercept dan cookie e2e-bypass-auth.
-        cy.login('pending1@user.com', 'Password@2026');
+        const testEmail = `fr03_${Math.random().toString(36).substring(2, 10)}@user.com`;
+        cy.task('createVolunteerUser', {
+            email: testEmail,
+            password: 'Password@2026',
+            fullName: 'Seeded User',
+            phone: '081234567890'
+        }).then(() => {
+            cy.login(testEmail, 'Password@2026');
+        });
     });
     it('Harus menampilkan form verifikasi data diri relawan dengan field wajib', () => {
         cy.visit('/user/profile');

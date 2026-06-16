@@ -26,8 +26,20 @@ Cypress.Commands.add('login', (email = 'approved1@user.com', password = 'Passwor
   cy.get('input#email').clear().type(email)
   cy.get('input#password').clear().type(password)
   cy.get('button[type="submit"]').click()
+  
+  // Check if an error appears and fail immediately if it does
+  cy.get('body').then($body => {
+    // Wait a brief moment for any server action to return
+    cy.wait(500).then(() => {
+      const $error = cy.$$('.sl-login-error');
+      if ($error.length > 0) {
+        throw new Error(`Login failed with UI error: ${$error.text()}`);
+      }
+    });
+  });
+
   // Wait for redirect to complete
-  cy.url().should('not.include', '/login')
+  cy.url({ timeout: 15000 }).should('not.include', '/login')
 })
 
 export {}

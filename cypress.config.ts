@@ -1,5 +1,10 @@
 import { defineConfig } from "cypress";
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
+
+config({ path: ".env.test.local" });
+config({ path: ".env.local" });
+config({ path: ".env" });
 
 type FindProfileByEmailArgs = {
   email: string;
@@ -44,6 +49,7 @@ function createSupabaseAdminClient() {
 }
 
 export default defineConfig({
+  allowCypressEnv: false,
   e2e: {
     baseUrl: process.env.CYPRESS_BASE_URL ?? "http://localhost:3000",
     // Pages take 25-35s to compile with Turbopack on first load
@@ -96,11 +102,30 @@ export default defineConfig({
         async createVolunteerUser({ email, password, fullName, phone }: CreateVolunteerUserArgs) {
           const supabase = createSupabaseAdminClient();
 
-          const { data: existingProfile, error: profileLookupError } = await supabase
-            .from("profiles")
-            .select("id,email,full_name,phone,role")
-            .eq("email", email)
-            .maybeSingle();
+          let existingProfile = null;
+          let profileLookupError = null;
+
+          // Retry up to 10 times with 1 second delay to handle PostgREST schema cache reloads
+          for (let attempt = 0; attempt < 10; attempt += 1) {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("id,email,full_name,phone,role")
+              .eq("email", email)
+              .maybeSingle();
+
+            if (!error) {
+              existingProfile = data;
+              profileLookupError = null;
+              break;
+            }
+
+            profileLookupError = error;
+            if (!error.message.includes("permission denied")) {
+              break; // If it's a different error, stop retrying
+            }
+            
+            await sleep(1000);
+          }
 
           if (profileLookupError) {
             throw new Error(profileLookupError.message);

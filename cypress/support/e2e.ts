@@ -11,8 +11,13 @@ Cypress.on('uncaught:exception', (err, runnable) => {
   return false;
 });
 
-// Global hook: run a clean database reset before every single test
-beforeEach(() => {
-  // Run the db:reset script. We set a large timeout as wiping and seeding the DB takes time.
-  cy.exec('npm run db:reset', { timeout: 120000 });
+// Global hook: run a clean database reset once before each test file
+before(() => {
+  // Only reset and seed the database if we are running the first test case of an FR
+  if (Cypress.spec.name.includes('TC_01')) {
+    // Run the db:reset script. We set a large timeout as wiping and seeding the DB takes time.
+    cy.exec('npm run db:reset', { timeout: 300000, failOnNonZeroExit: false });
+    // Wait 5 seconds to ensure Supabase PostgREST cache has fully reloaded
+    cy.wait(5000);
+  }
 });
