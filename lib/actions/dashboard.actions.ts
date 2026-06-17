@@ -1067,17 +1067,14 @@ export async function getCommunityDashboardStats(userId: string) {
 
   const adminSupabase = await createAdminClient()
 
-  // First fetch the community owned by the user
-  const { data: community } = await adminSupabase
+  // First fetch the communities owned by the user
+  const { data: communities } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
     .eq("is_verified", true)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle()
 
-  if (!community) {
+  if (!communities || communities.length === 0) {
     return {
       totalActivities: 0,
       activeActivities: 0,
@@ -1092,13 +1089,13 @@ export async function getCommunityDashboardStats(userId: string) {
     }
   }
 
-  const communityId = community.id
+  const communityIds = communities.map((c: any) => c.id)
 
   // Stats
   const { data: acts } = await adminSupabase
     .from("activities")
     .select("id, status")
-    .eq("community_id", communityId)
+    .in("community_id", communityIds)
 
   const activityIds = acts?.map(a => a.id).filter(Boolean) || []
   const activeActivityIds = acts
@@ -1152,19 +1149,19 @@ export async function getCommunityDashboardStats(userId: string) {
   const { count: totalReports } = await adminSupabase
     .from("reports")
     .select("*", { count: "exact", head: true })
-    .eq("community_id", communityId)
+    .in("community_id", communityIds)
 
   const { count: verifiedReports } = await adminSupabase
     .from("reports")
     .select("*", { count: "exact", head: true })
-    .eq("community_id", communityId)
+    .in("community_id", communityIds)
     .eq("status", "validated")
 
   // Saldo komunitas: total dana yang sudah dicairkan admin (status completed) dikurangi platform fee
   const { data: completedDisbursements } = await adminSupabase
     .from("disbursements")
     .select("amount, platform_fee")
-    .eq("community_id", communityId)
+    .in("community_id", communityIds)
     .eq("status", "completed")
 
   const totalBalance = (completedDisbursements ?? []).reduce(
@@ -1267,22 +1264,21 @@ export async function getCommunityActivities(userId: string) {
 
   const adminSupabase = await createAdminClient()
 
-  const { data: community } = await adminSupabase
+  const { data: communities } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", userId)
     .eq("is_verified", true)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle()
 
-  if (!community) return []
+  if (!communities || communities.length === 0) return []
+
+  const communityIds = communities.map((c: any) => c.id)
 
   // Left join to find if activity has a report
   const { data, error } = await adminSupabase
     .from("activities")
     .select("*, reports(status)")
-    .eq("community_id", community.id)
+    .in("community_id", communityIds)
     .order("created_at", { ascending: false })
 
   if (error) console.error("Error fetching community activities:", error)

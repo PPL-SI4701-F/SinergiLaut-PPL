@@ -1,41 +1,53 @@
-describe('FR-27: Persetujuan Pendaftar Relawan', () => {
-    beforeEach(() => {
-        cy.clearCookies();
-        cy.clearLocalStorage();
-        cy.login('owner1@example.com', 'Password@2026'); // comm1
-    });
+describe('FR-27: Persetujuan Pendaftar Relawan - TC-01', () => {
+  beforeEach(() => {
+    cy.task('resetVolunteerStatus', { activityTitle: 'Rehabilitasi Terumbu Karang Menjangan', status: 'pending' });
+  });
 
-    it('Harus mengizinkan komunitas menyetujui atau menolak relawan', () => {
-        cy.task('getActivityIdByTitle', 'Rehabilitasi Terumbu Karang Menjangan').then((id) => cy.visit(`/community/dashboard/activities/${id}/volunteers`));
-        cy.wait(1000);
+  it('Komunitas dapat menyetujui atau menolak relawan', () => {
+    // 1. Login sebagai komunitas
+    cy.visit('/login');
+    cy.get('input#email').clear().type('owner1@example.com');
+    cy.get('input#password').clear().type('Password@2026');
+    cy.get('button[type="submit"]').click();
 
-        // Action Reject
-        cy.contains('Dian Rahmawati').parents('div.border, tr, .card, li').find('button').contains(/Tolak|Reject/i).click();
-        cy.wait(500); // Wait for optimistic update or mock
-        cy.contains('Dian Rahmawati').parents('div.border').contains(/Ditolak|Rejected/i).should('be.visible');
+    cy.url().should('include', '/community/dashboard');
 
-        // Action Approve
-        cy.contains('Fajar Nugroho').parents('div.border, tr, .card, li').find('button').contains(/Terima|Approve|Setujui/i).click();
-        cy.wait(500); // Wait for optimistic update or mock
-    });
+    // 2 & 3. Masuk ke halaman daftar relawan untuk kegiatan "Rehabilitasi Terumbu Karang Menjangan"
+    // Find the activity card and click "Kelola Relawan"
+    cy.contains('h3', 'Rehabilitasi Terumbu Karang Menjangan')
+      .parents('div.rounded-xl') // Go to card container
+      .find('a')
+      .contains('Kelola Relawan')
+      .click({ force: true }); // Use force to bypass any overlay issues
 
-    // ─────────────────────────────────────────────
-    // Edge Case 1: Kuota penuh - Setujui relawan ke-51
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 2: Kuota tersedia - Persetujuan normal berhasil
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 3: Penolakan relawan (negative path)
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 4: Daftar relawan kosong (zero state)
-    // Override beforeEach intercept di dalam test untuk mengembalikan array kosong
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // New: Detail relawan pending tampil lengkap
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // New: Tombol aksi tersedia untuk setiap relawan pending
-    // ─────────────────────────────────────────────
+    // 4. Tolak salah satu relawan
+    // Cari baris dengan nama Dian Rahmawati
+    cy.contains('td', 'Dian Rahmawati')
+      .parent('tr')
+      .within(() => {
+        cy.contains('button', 'Tolak').click();
+      });
+
+    // 5. Verifikasi status relawan berubah menjadi ditolak
+    cy.contains('td', 'Dian Rahmawati')
+      .parent('tr')
+      .within(() => {
+        cy.contains('span', 'Ditolak').should('be.visible');
+      });
+
+    // 6. Setujui relawan lain
+    // Cari baris dengan nama Fajar Nugroho
+    cy.contains('td', 'Fajar Nugroho')
+      .parent('tr')
+      .within(() => {
+        cy.contains('button', 'Terima').click();
+      });
+
+    // Verifikasi status berubah menjadi diterima
+    cy.contains('td', 'Fajar Nugroho')
+      .parent('tr')
+      .within(() => {
+        cy.contains('span', 'Disetujui').should('be.visible');
+      });
+  });
 });

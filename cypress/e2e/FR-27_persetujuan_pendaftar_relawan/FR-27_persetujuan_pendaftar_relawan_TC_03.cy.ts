@@ -1,40 +1,36 @@
-describe('FR-27: Persetujuan Pendaftar Relawan', () => {
-    beforeEach(() => {
-        cy.clearCookies();
-        cy.clearLocalStorage();
-        cy.login('owner1@example.com', 'Password@2026'); // comm1
-    });
-    // ─────────────────────────────────────────────
-    // Edge Case 1: Kuota penuh - Setujui relawan ke-51
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 2: Kuota tersedia - Persetujuan normal berhasil
-    // ─────────────────────────────────────────────
-    it('Should allow approval when volunteer quota has space available', () => {
-        cy.task('getActivityIdByTitle', 'Rehabilitasi Terumbu Karang Menjangan').then((id) => cy.visit(`/community/dashboard/activities/${id}/volunteers`));
-        cy.wait(1000);
+describe('FR-27: Persetujuan Pendaftar Relawan - TC-03', () => {
+  beforeEach(() => {
+    cy.task('resetVolunteerStatus', { activityTitle: 'Rehabilitasi Terumbu Karang Menjangan', status: 'pending' });
+  });
 
-        cy.contains('Dian Rahmawati')
-            .parents('div.border, tr, .card, li')
-            .find('button')
-            .contains(/Terima|Approve|Setujui/i)
-            .click();
+  it('Komunitas dapat menyetujui relawan saat kuota masih tersedia', () => {
+    // 1. Login sebagai komunitas
+    cy.visit('/login');
+    cy.get('input#email').clear().type('owner1@example.com');
+    cy.get('input#password').clear().type('Password@2026');
+    cy.get('button[type="submit"]').click();
 
-        cy.wait(500);
-        cy.contains('Dian Rahmawati').parents('div.border, tr, .card, li').contains(/Diterima|Approved|Disetujui/i).should('be.visible');
-    });
+    cy.url().should('include', '/community/dashboard');
 
-    // ─────────────────────────────────────────────
-    // Edge Case 3: Penolakan relawan (negative path)
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 4: Daftar relawan kosong (zero state)
-    // Override beforeEach intercept di dalam test untuk mengembalikan array kosong
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // New: Detail relawan pending tampil lengkap
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // New: Tombol aksi tersedia untuk setiap relawan pending
-    // ─────────────────────────────────────────────
+    // 2 & 3. Masuk ke halaman daftar relawan
+    cy.contains('h3', 'Rehabilitasi Terumbu Karang Menjangan')
+      .parents('div.rounded-xl')
+      .find('a')
+      .contains('Kelola Relawan')
+      .click({ force: true });
+
+    // 4. Klik tombol Terima/Setujui pada relawan pending
+    cy.contains('td', 'Dian Rahmawati')
+      .parent('tr')
+      .within(() => {
+        cy.contains('button', 'Terima').click();
+      });
+
+    // 5. Verifikasi status berubah menjadi diterima
+    cy.contains('td', 'Dian Rahmawati')
+      .parent('tr')
+      .within(() => {
+        cy.contains('span', 'Disetujui').should('be.visible');
+      });
+  });
 });

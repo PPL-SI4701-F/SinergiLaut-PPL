@@ -79,21 +79,27 @@ async function main() {
   // 1. CLEANUP DATABASE
   // ============================================
   console.log('🧹 Membersihkan database...')
-  await prisma.audit_logs.deleteMany({})
-  await prisma.notifications.deleteMany({})
-  await prisma.feedbacks.deleteMany({})
-  await prisma.sanctions.deleteMany({})
-  await prisma.report_files.deleteMany({})
-  await prisma.reports.deleteMany({})
-  await prisma.disbursements.deleteMany({})
-  await prisma.donation_items.deleteMany({})
-  await prisma.donations.deleteMany({})
-  await prisma.volunteer_registrations.deleteMany({})
-  await prisma.community_verifications.deleteMany({})
-  await prisma.activities.deleteMany({})
-  await prisma.communities.deleteMany({})
-  await prisma.journey_milestones.deleteMany({})
-  await prisma.profiles.deleteMany({})
+  const safeDelete = async (modelName: any) => {
+    try {
+      if (prisma[modelName] && typeof prisma[modelName].deleteMany === 'function') {
+        await prisma[modelName].deleteMany({})
+      }
+    } catch (err: any) {
+      if (err.code !== 'P2021') { // P2021 = Table does not exist
+        console.warn(`Gagal menghapus ${modelName}:`, err.message)
+      }
+    }
+  }
+
+  const modelsToClean = [
+    'audit_logs', 'notifications', 'feedbacks', 'sanctions', 'report_files',
+    'reports', 'disbursements', 'donation_items', 'donations', 'volunteer_registrations',
+    'community_verifications', 'activities', 'communities', 'journey_milestones', 'profiles'
+  ];
+
+  for (const model of modelsToClean) {
+    await safeDelete(model);
+  }
   console.log('   ✅ Tabel database dibersihkan.')
 
   // Hapus semua auth users

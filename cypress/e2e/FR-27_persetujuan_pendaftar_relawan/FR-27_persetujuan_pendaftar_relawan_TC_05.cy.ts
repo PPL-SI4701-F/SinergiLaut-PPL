@@ -1,34 +1,26 @@
-describe('FR-27: Persetujuan Pendaftar Relawan', () => {
-    beforeEach(() => {
-        cy.clearCookies();
-        cy.clearLocalStorage();
-        cy.login('owner3@example.com', 'Password@2026'); // comm3
-    });
-    // ─────────────────────────────────────────────
-    // Edge Case 1: Kuota penuh - Setujui relawan ke-51
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 2: Kuota tersedia - Persetujuan normal berhasil
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 3: Penolakan relawan (negative path)
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 4: Daftar relawan kosong (zero state)
-    // Override beforeEach intercept di dalam test untuk mengembalikan array kosong
-    // ─────────────────────────────────────────────
-    it('Harus menampilkan empty state saat tidak ada relawan yang mendaftar', () => {
-                cy.task('getActivityIdByTitle', 'Edukasi Pesisir untuk Anak Lombok').then((id) => cy.visit(`/community/dashboard/activities/${id}/volunteers`));
-        cy.wait(1000);
+describe('FR-27: Persetujuan Pendaftar Relawan - TC-05', () => {
+  
 
-        // Should show zero-state UI, not crash
-        cy.get('main').contains(/belum ada|tidak ada|no volunteer|kosong|empty/i).should('be.visible');
-    });
+  it('Menampilkan empty state saat tidak ada relawan yang mendaftar', () => {
+    // 1. Login sebagai komunitas (menggunakan owner2 karena kegiatan ini milik owner2)
+    cy.visit('/login');
+    cy.get('input#email').clear().type('owner2@example.com');
+    cy.get('input#password').clear().type('Password@2026');
+    cy.get('button[type="submit"]').click();
 
-    // ─────────────────────────────────────────────
-    // New: Detail relawan pending tampil lengkap
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // New: Tombol aksi tersedia untuk setiap relawan pending
-    // ─────────────────────────────────────────────
+    cy.url().should('include', '/community/dashboard');
+
+    // 2 & 3. Masuk ke halaman daftar relawan
+    cy.contains('h3', 'Edukasi Pesisir untuk Anak Lombok')
+      .parents('div.rounded-xl')
+      .find('a')
+      .contains('Kelola Relawan')
+      .click({ force: true });
+
+    // 4. Verifikasi halaman tidak crash (sudah tercover dari bisa load halaman)
+    cy.url().should('include', '/volunteers');
+
+    // 5. Verifikasi pesan empty state tampil
+    cy.contains(/Belum ada relawan yang terdaftar|Tidak ada data/i).should('be.visible');
+  });
 });

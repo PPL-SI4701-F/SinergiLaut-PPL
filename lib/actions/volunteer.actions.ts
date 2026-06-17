@@ -94,7 +94,7 @@ export interface RegisterVolunteerPayload {
 /** Mendaftarkan user sebagai relawan untuk suatu kegiatan */
 export async function registerVolunteer(payload: RegisterVolunteerPayload) {
   const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: { id: "mock-reg-id" } as any }
+  // Mock dihapus
 
   const supabase = await createClient()
   const { data: authData, error: authError } = await supabase.auth.getUser()
@@ -124,7 +124,7 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
 
   const adminSupabase = await createAdminClient()
   const userId = currentUser.id
-  const fullName = profile.full_name || payload.fullName || currentUser.email || "Pengguna"
+  const fullName = payload.fullName || profile.full_name || currentUser.email || "Pengguna"
   const email = profile.email || payload.email || currentUser.email || ""
   const phone = profile.phone || payload.phone || ""
 
@@ -222,34 +222,8 @@ export async function registerVolunteer(payload: RegisterVolunteerPayload) {
 /** Ambil semua pendaftar relawan untuk activity tertentu (untuk pengelola komunitas) */
 export async function getActivityVolunteers(activityId: string) {
   const isE2E = await getE2EMock()
-  if (isE2E) {
-    if (isE2E === 'community-empty') return { success: true, data: [] }
-    return {
-      success: true,
-      data: [
-        {
-          id: "reg-1",
-          activity_id: activityId,
-          user_id: "user-1",
-          full_name: "Budi",
-          email: "budi@example.com",
-          phone: "081234567890",
-          status: "pending",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "reg-2",
-          activity_id: activityId,
-          user_id: "user-2",
-          full_name: "Ani",
-          email: "ani@example.com",
-          phone: "081234567891",
-          status: "pending",
-          created_at: new Date().toISOString(),
-        }
-      ] as any
-    }
-  }
+  // Mock dihapus agar E2E test membaca data dari database asli
+
 
   const auth = await requireCommunityOrAdminActivityAccess(activityId)
   if (!auth.authorized) return { success: false, data: [], error: auth.error }
@@ -279,7 +253,7 @@ export async function updateVolunteerStatus(
   status: Extract<VolunteerStatus, "approved" | "rejected">
 ) {
   const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: { id: registrationId } as any }
+  // Mock dihapus agar DB benar-benar diupdate saat E2E test
 
   const auth = await requireCommunityOrAdminRegistrationAccess(registrationId)
   if (!auth.authorized) return { success: false, error: auth.error }
@@ -318,7 +292,21 @@ export async function updateVolunteerStatus(
     return { success: false, error: "Gagal mengubah status relawan." }
   }
 
-  // volunteer_count diperbarui otomatis oleh DB trigger update_volunteer_count
+  // Fallback: update volunteer_count secara manual karena DB trigger hilang setelah reset
+  if (data?.activity_id) {
+    const { count } = await adminSupabase
+      .from("volunteer_registrations")
+      .select("*", { count: "exact", head: true })
+      .eq("activity_id", data.activity_id)
+      .in("status", ["approved", "attended"])
+    
+    if (count !== null) {
+      await adminSupabase
+        .from("activities")
+        .update({ volunteer_count: count })
+        .eq("id", data.activity_id)
+    }
+  }
 
   // Kirim notifikasi ke user berdasarkan status baru
   const userId = data?.user_id
@@ -349,7 +337,7 @@ export async function updateVolunteerStatus(
 /** Tandai relawan hadir — wajib menyertakan bukti foto/gambar kehadiran */
 export async function markVolunteerAttended(registrationId: string, proofFile: File) {
   const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: { id: registrationId } as any }
+  // Mock dihapus
 
   if (!proofFile || proofFile.size <= 0) {
     return { success: false, error: "Bukti kehadiran wajib diunggah." }
@@ -411,9 +399,50 @@ export async function markVolunteerAttended(registrationId: string, proofFile: F
 }
 
 /** Tandai relawan tidak hadir */
+export async function deleteVolunteerRegistration(registrationId: string) {
+  const isE2E = await getE2EMock()
+  // Mock dihapus agar DB diupdate
+
+  const auth = await requireCommunityOrAdminRegistrationAccess(registrationId)
+  if (!auth.authorized) return { success: false, error: auth.error }
+
+  const adminSupabase = await createAdminClient()
+
+  const { data, error } = await adminSupabase
+    .from("volunteer_registrations")
+    .delete()
+    .eq("id", registrationId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[deleteVolunteerRegistration] error:", error)
+    return { success: false, error: "Gagal menghapus pendaftaran relawan." }
+  }
+
+  // Fallback: update volunteer_count secara manual karena DB trigger hilang setelah reset
+  if (data?.activity_id) {
+    const { count } = await adminSupabase
+      .from("volunteer_registrations")
+      .select("*", { count: "exact", head: true })
+      .eq("activity_id", data.activity_id)
+      .in("status", ["approved", "attended"])
+    
+    if (count !== null) {
+      await adminSupabase
+        .from("activities")
+        .update({ volunteer_count: count })
+        .eq("id", data.activity_id)
+    }
+  }
+
+  return { success: true, data }
+}
+
+/** Tandai relawan tidak hadir */
 export async function markVolunteerAbsent(registrationId: string) {
   const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: { id: registrationId } as any }
+  // Mock dihapus
 
   const auth = await requireCommunityOrAdminRegistrationAccess(registrationId)
   if (!auth.authorized) return { success: false, error: auth.error }

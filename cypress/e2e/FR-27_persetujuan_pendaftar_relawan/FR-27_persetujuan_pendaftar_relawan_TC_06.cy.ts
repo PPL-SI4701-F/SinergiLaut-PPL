@@ -1,35 +1,33 @@
-describe('FR-27: Persetujuan Pendaftar Relawan', () => {
-    beforeEach(() => {
-        cy.clearCookies();
-        cy.clearLocalStorage();
-        cy.login('owner1@example.com', 'Password@2026'); // comm1
-    });
-    // ─────────────────────────────────────────────
-    // Edge Case 1: Kuota penuh - Setujui relawan ke-51
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 2: Kuota tersedia - Persetujuan normal berhasil
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 3: Penolakan relawan (negative path)
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // Edge Case 4: Daftar relawan kosong (zero state)
-    // Override beforeEach intercept di dalam test untuk mengembalikan array kosong
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // New: Detail relawan pending tampil lengkap
-    // ─────────────────────────────────────────────
-    it('Harus menampilkan nama dan status "pending" setiap relawan yang menunggu keputusan', () => {
-        cy.task('getActivityIdByTitle', 'Rehabilitasi Terumbu Karang Menjangan').then((id) => cy.visit(`/community/dashboard/activities/${id}/volunteers`));
-        cy.wait(1000);
+describe('FR-27: Persetujuan Pendaftar Relawan - TC-06', () => {
+  beforeEach(() => {
+    cy.task('resetVolunteerStatus', { activityTitle: 'Rehabilitasi Terumbu Karang Menjangan', status: 'pending' });
+  });
 
-        cy.contains('Dian Rahmawati').should('be.visible');
-        cy.contains('Fajar Nugroho').should('be.visible');
-        cy.contains(/pending|menunggu/i).should('be.visible');
-    });
+  it('Menampilkan nama dan status pending setiap relawan yang menunggu keputusan', () => {
+    // 1. Login sebagai komunitas
+    cy.visit('/login');
+    cy.get('input#email').clear().type('owner1@example.com');
+    cy.get('input#password').clear().type('Password@2026');
+    cy.get('button[type="submit"]').click();
 
-    // ─────────────────────────────────────────────
-    // New: Tombol aksi tersedia untuk setiap relawan pending
-    // ─────────────────────────────────────────────
+    cy.url().should('include', '/community/dashboard');
+
+    // 2 & 3. Masuk ke halaman daftar relawan
+    cy.contains('h3', 'Rehabilitasi Terumbu Karang Menjangan')
+      .parents('div.rounded-xl')
+      .find('a')
+      .contains('Kelola Relawan')
+      .click({ force: true });
+
+    // 4 & 5. Verifikasi nama relawan pending tampil dan statusnya Menunggu Keputusan
+    const pendingVolunteers = ['Dian Rahmawati', 'Fajar Nugroho'];
+    
+    pendingVolunteers.forEach((name) => {
+      cy.contains('td', name)
+        .parent('tr')
+        .within(() => {
+          cy.contains('span', /Menunggu|Pending/i).should('be.visible');
+        });
+    });
+  });
 });

@@ -267,6 +267,92 @@ export default defineConfig({
           }
           return data?.id || null;
         },
+        async approveVolunteer({ email, activityTitle }: { email: string, activityTitle: string }) {
+          const supabase = createSupabaseAdminClient();
+          
+          const { data: user } = await supabase.from('profiles').select('id').eq('email', email).single();
+          if (!user) throw new Error('User not found');
+          
+          const { data: activity } = await supabase.from('activities').select('id').eq('title', activityTitle).single();
+          if (!activity) throw new Error('Activity not found');
+
+          const { data: updated, error } = await supabase
+            .from('volunteer_registrations')
+            .update({ status: 'approved' })
+            .eq('user_id', user.id)
+            .eq('activity_id', activity.id)
+            .select();
+
+          if (error) throw new Error(error.message);
+          if (!updated || updated.length === 0) {
+              throw new Error(`Row not found for update! User: ${user.id}, Activity: ${activity.id}`);
+          }
+          
+          // MANUAL UPDATE: Karena Prisma db:reset menghapus trigger dari schema.sql di local, 
+          // kita harus menaikkan volunteer_count secara manual saat E2E testing
+          await supabase.rpc('increment_volunteer_count', { activity_id_param: activity.id }).catch(async () => {
+             // Fallback jika RPC tidak ada
+             const { data: act } = await supabase.from('activities').select('volunteer_count').eq('id', activity.id).single();
+             if (act) {
+               await supabase.from('activities').update({ volunteer_count: (act.volunteer_count || 0) + 1 }).eq('id', activity.id);
+             }
+          });
+          
+          return true;
+        },
+        async deleteVolunteer({ email, activityTitle }: { email: string, activityTitle: string }) {
+          const supabase = createSupabaseAdminClient();
+          
+          const { data: user } = await supabase.from('profiles').select('id').eq('email', email).single();
+          if (!user) return true;
+          
+          const { data: activity } = await supabase.from('activities').select('id').eq('title', activityTitle).single();
+          if (!activity) return true;
+
+          const { data: existing } = await supabase
+            .from('volunteer_registrations')
+            .select('status')
+            .eq('user_id', user.id)
+            .eq('activity_id', activity.id)
+            .single();
+
+          const { error } = await supabase
+            .from('volunteer_registrations')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('activity_id', activity.id);
+
+          if (error) throw new Error(error.message);
+
+          // MANUAL DECREMENT jika status yang dihapus ternyata approved (karena trigger schema.sql mati di local)
+          if (existing && (existing.status === 'approved' || existing.status === 'attended')) {
+            const { data: act } = await supabase.from('activities').select('volunteer_count').eq('id', activity.id).single();
+            if (act && act.volunteer_count > 0) {
+              await supabase.from('activities').update({ volunteer_count: act.volunteer_count - 1 }).eq('id', activity.id);
+            }
+          }
+
+          return true;
+        },
+        async bumpFunding({ activityTitle, amount }: { activityTitle: string, amount: number }) {
+          const supabase = createSupabaseAdminClient();
+          const { data } = await supabase.from('activities').select('id, funding_raised').eq('title', activityTitle).single();
+          if (!data) return false;
+          await supabase.from('activities').update({ funding_raised: data.funding_raised + amount }).eq('id', data.id);
+          return true;
+        },
+        async resetVolunteerStatus({ activityTitle, status }: { activityTitle: string, status: string }) {
+          const supabase = createSupabaseAdminClient();
+          const { data: activity } = await supabase.from('activities').select('id').eq('title', activityTitle).single();
+          if (!activity) return false;
+          
+          await supabase
+            .from('volunteer_registrations')
+            .update({ status: status })
+            .eq('activity_id', activity.id);
+            
+          return true;
+        }
       });
 
       return config;

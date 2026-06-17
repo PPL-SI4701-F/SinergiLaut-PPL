@@ -38,8 +38,8 @@ Cypress.Commands.add('login', (email = 'approved1@user.com', password = 'Passwor
     });
   });
 
-  // Wait for redirect to complete
-  cy.url({ timeout: 15000 }).should('not.include', '/login')
+  // Wait for redirect to complete (increased timeout to 30000 to handle Next.js compilation delay)
+  cy.url({ timeout: 30000 }).should('not.include', '/login')
 })
 
 export {}

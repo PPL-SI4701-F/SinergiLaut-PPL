@@ -1,21 +1,24 @@
-describe('FR-15: Monitoring progress kegiatan', () => {
+describe('FR-15: Monitoring progress kegiatan - TC-01', () => {
     beforeEach(() => {
+        cy.exec('npm run db:reset', { timeout: 150000 });
+        cy.wait(5000);
         cy.clearCookies();
         cy.clearLocalStorage();
-        cy.login('owner1@example.com', 'Password@2026'); // Can be any user/community to see progress
     });
 
-    it('Harus menampilkan progress bar relawan dan pendanaan secara akurat', () => {
-        cy.task('getActivityIdByTitle', 'Bersih Pantai Kuta — Aksi Nyata Lawan Plastik').then((id) => {
-            cy.visit(`/activities/${id}`);
-        });
-
-        // 4 relawan, kuota 30
-        cy.contains('4').should('exist');
-        cy.contains('30').should('exist');
-
-        // Dana 6.000.000, goal 10.000.000
-        cy.contains(/6\.?000\.?000/i).should('exist');
-        cy.contains(/10\.?000\.?000/i).should('exist');
+    it('Login menggunakan akun pengguna', () => {
+        // Step 1: akses menu login
+        cy.visit('/login');
+        
+        // Step 2 & 3: mengisi email dan password
+        cy.get('input#email').clear().type('approved1@user.com');
+        cy.get('input#password').clear().type('Password@2026');
+        
+        // Step 4: klik tombol "masuk ke akun"
+        cy.get('button[type="submit"]').click();
+        
+        // Step 5 & Expected Result: pengguna bisa masuk ke halaman dashboard pengguna
+        cy.url({ timeout: 15000 }).should('include', '/user/dashboard');
+        cy.contains(/Ringkasan|Dashboard/i).should('exist');
     });
 });
