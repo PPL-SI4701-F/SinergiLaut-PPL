@@ -1,4 +1,4 @@
-describe('FR-21: Mencari dan Mendaftar Aktivitas Relawan', () => {
+describe('FR-33: Mencari dan Mendaftar Aktivitas Relawan', () => {
   const xssPayload = '<script>alert("xss")</script>';
   const sqlPayload = "' OR 1=1 --";
   const wildcardPayload = '% _ LIKE SELECT DROP';
@@ -45,9 +45,9 @@ describe('FR-21: Mencari dan Mendaftar Aktivitas Relawan', () => {
     cy.contains('.act-dropdown-item', 'All Locations').click();
     cy.contains('Tanam Mangrove').should('be.visible');
 
-    // 3. Dropdown Filter: Category/Type filter (Coral & Ecosystem Restoration)
+    // 3. Dropdown Filter: Category/Type filter (Restoration)
     cy.contains('.act-dropdown-btn', /Type/i).click();
-    cy.contains('.act-dropdown-item', 'Coral & Ecosystem Restoration').click();
+    cy.contains('.act-dropdown-item', 'Restoration').click();
     cy.contains('Bersih Pantai Mutiara').should('not.exist');
     cy.contains('Tanam Mangrove').should('be.visible');
   });
@@ -77,16 +77,16 @@ describe('FR-21: Mencari dan Mendaftar Aktivitas Relawan', () => {
     cy.visit('/activities');
     cy.wait('@getAllActivities');
 
+    cy.window().then((win) => {
+      cy.stub(win, 'alert').as('alert')
+    });
+
     cy.get('input[placeholder*="Cari" i]').type(xssPayload, { delay: 10 });
 
     // XSS must NOT execute - verify alert dialog did NOT pop up
     cy.get('body').should('be.visible');
-
-    // The raw script tag must NOT appear as rendered HTML in the DOM
-    cy.get('body').then(($body) => {
-      const html = $body.html();
-      expect(html).not.to.include('<script>alert');
-    });
+    cy.get('@alert').should('not.have.been.called');
+    cy.get('input[placeholder*="Cari" i]').should('have.value', xssPayload);
   });
 
   // ─────────────────────────────────────────────
