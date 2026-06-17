@@ -82,3 +82,11 @@ test-case/
 # Cypress
 cypress/screenshots/
 cypress/videos/
+
+# Temporary Scripts
+*_tests.js
+fix_grants.js
+inject_seed.js
+patch_*.js
+remove_mocks.js
+rename_*.js
