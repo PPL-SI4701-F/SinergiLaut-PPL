@@ -728,66 +728,75 @@ export async function getPlatformMonitoringStats() {
 }
 
 export async function getAdminAuditLog() {
-  const isE2E = await getE2EMock()
-  if (isE2E) {
-    return {
-      reports: [
-        { id: 'report-1', title: 'Laporan Bersih Pantai Mutiara', status: 'validated', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
-        { id: 'report-2', title: 'Laporan Konservasi Terumbu Karang', status: 'rejected', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Pesisir Hijau' } },
-      ],
-      communities: [
-        { id: 'community-1', name: 'Komunitas Laut Lestari', verification_status: 'approved', updated_at: new Date().toISOString() },
-        { id: 'community-2', name: 'Komunitas Mangrove Asri', verification_status: 'suspended', updated_at: new Date().toISOString() },
-      ],
-      activities: [
-        { id: 'activity-1', title: 'Bersih Pantai Mutiara', status: 'published', updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
-        { id: 'activity-2', title: 'Edukasi Konservasi Mangrove', status: 'draft', updated_at: new Date().toISOString(), community: { name: 'Komunitas Mangrove Asri' } },
-      ],
-      volunteers: [
-        { id: 'volunteer-1', full_name: 'Budi Santoso', volunteer_status: 'approved', updated_at: new Date().toISOString() },
-        { id: 'volunteer-2', full_name: 'Ani Wijaya', volunteer_status: 'rejected', updated_at: new Date().toISOString() },
-      ],
+  try {
+    const isE2E = await getE2EMock()
+    if (isE2E) {
+      return {
+        reports: [
+          { id: 'report-1', title: 'Laporan Bersih Pantai Mutiara', status: 'validated', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
+          { id: 'report-2', title: 'Laporan Konservasi Terumbu Karang', status: 'rejected', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Pesisir Hijau' } },
+        ],
+        communities: [
+          { id: 'community-1', name: 'Komunitas Laut Lestari', verification_status: 'approved', updated_at: new Date().toISOString() },
+          { id: 'community-2', name: 'Komunitas Mangrove Asri', verification_status: 'rejected', updated_at: new Date().toISOString() },
+        ],
+        activities: [
+          { id: 'activity-1', title: 'Bersih Pantai Mutiara', status: 'published', updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
+          { id: 'activity-2', title: 'Edukasi Konservasi Mangrove', status: 'draft', updated_at: new Date().toISOString(), community: { name: 'Komunitas Mangrove Asri' } },
+        ],
+        volunteers: [
+          { id: 'volunteer-1', full_name: 'Budi Santoso', volunteer_status: 'approved', updated_at: new Date().toISOString() },
+          { id: 'volunteer-2', full_name: 'Ani Wijaya', volunteer_status: 'rejected', updated_at: new Date().toISOString() },
+        ],
+      }
     }
-  }
 
-  const auth = await requireAdmin()
-  if (!auth.authorized) return { reports: [], communities: [], activities: [], volunteers: [] }
+    const auth = await requireAdmin()
+    if (!auth.authorized) return { reports: [], communities: [], activities: [], volunteers: [] }
 
-  const adminSupabase = await createAdminClient()
+    const adminSupabase = await createAdminClient()
 
-  const [reportsRes, communitiesRes, activitiesRes, volunteersRes] = await Promise.all([
-    adminSupabase
-      .from("reports")
-      .select("id, title, status, reviewed_at, updated_at, community:communities(name)")
-      .in("status", ["validated", "rejected"])
-      .order("updated_at", { ascending: false })
-      .limit(30),
-    adminSupabase
-      .from("communities")
-      .select("id, name, verification_status, updated_at")
-      .in("verification_status", ["approved", "rejected", "suspended"])
-      .order("updated_at", { ascending: false })
-      .limit(30),
-    adminSupabase
-      .from("activities")
-      .select("id, title, status, updated_at, community:communities(name)")
-      .in("status", ["published", "draft"])
-      .not("published_at", "is", null)
-      .order("updated_at", { ascending: false })
-      .limit(30),
-    adminSupabase
-      .from("profiles")
-      .select("id, full_name, volunteer_status, updated_at")
-      .in("volunteer_status", ["approved", "rejected"])
-      .order("updated_at", { ascending: false })
-      .limit(30),
-  ])
+    const [reportsRes, communitiesRes, activitiesRes, volunteersRes] = await Promise.all([
+      adminSupabase
+        .from("reports")
+        .select("id, title, status, reviewed_at, updated_at, community:communities(name)")
+        .in("status", ["validated", "rejected"])
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      adminSupabase
+        .from("communities")
+        .select("id, name, verification_status, is_suspended, updated_at")
+        .or("verification_status.in.(approved,rejected),is_suspended.eq.true")
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      adminSupabase
+        .from("activities")
+        .select("id, title, status, updated_at, community:communities(name)")
+        .in("status", ["published", "draft", "cancelled", "completed", "pending_review"])
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      adminSupabase
+        .from("profiles")
+        .select("id, full_name, volunteer_status, updated_at")
+        .in("volunteer_status", ["approved", "rejected"])
+        .order("updated_at", { ascending: false })
+        .limit(30),
+    ])
 
-  return {
-    reports: reportsRes.data ?? [],
-    communities: communitiesRes.data ?? [],
-    activities: activitiesRes.data ?? [],
-    volunteers: volunteersRes.data ?? [],
+    if (reportsRes.error) console.error("Reports error:", reportsRes.error)
+    if (communitiesRes.error) console.error("Communities error:", communitiesRes.error)
+    if (activitiesRes.error) console.error("Activities error:", activitiesRes.error)
+    if (volunteersRes.error) console.error("Volunteers error:", volunteersRes.error)
+
+    return {
+      reports: reportsRes.data ?? [],
+      communities: communitiesRes.data ?? [],
+      activities: activitiesRes.data ?? [],
+      volunteers: volunteersRes.data ?? [],
+    }
+  } catch (err: any) {
+    console.error("Unhandled error in getAdminAuditLog:", err.message, err.stack)
+    return { error: err.message, stack: err.stack, reports: [], communities: [], activities: [], volunteers: [] }
   }
 }
 

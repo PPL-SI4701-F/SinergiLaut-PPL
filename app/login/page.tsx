@@ -32,6 +32,7 @@ function LoginContent() {
     if (redirectedFrom) formData.append("redirectedFrom", redirectedFrom)
 
     const result = await login(formData)
+    alert(JSON.stringify(result));
 
     if (result?.error) {
       setError(result.error === "Invalid login credentials"

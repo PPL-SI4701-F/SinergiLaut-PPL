@@ -189,18 +189,26 @@ export async function registerCommunity(formData: FormData) {
       .replace(/[\s_-]+/g, "-")
       .replace(/^-+|-+$/g, "") + "-" + Date.now()  // tambah timestamp supaya unik
 
+    // Ensure the profile exists explicitly, bypassing any trigger delays or failures
+    const { error: profileError } = await adminSupabase.from("profiles").upsert({
+      id: authData.user.id,
+      email: email,
+      full_name: adminName,
+      role: "community",
+      phone: phone || null,
+    });
+
+    if (profileError) {
+      console.error("[registerCommunity] Failed to upsert profile:", profileError);
+      return { error: "Terjadi kesalahan sinkronisasi data profil pengguna (" + profileError.message + "). Silakan coba lagi." };
+    }
+
     const { data: communityData, error: commError } = await adminSupabase.from("communities").insert({
       owner_id: authData.user.id,
       name: communityName,
       slug,
       description: shortDescription,
       logo_url: logoUrl,
-      website: website || null,
-      email: email || null,
-      phone: phone || null,
-      instagram: instagram || null,
-      facebook: facebook || null,
-      twitter: twitter || null,
       location: region + (operationalArea ? ` - ${operationalArea}` : ""),
       focus_areas: selectedActivities,
       verification_status: "pending",

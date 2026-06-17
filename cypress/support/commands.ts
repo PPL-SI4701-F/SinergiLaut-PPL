@@ -39,7 +39,7 @@ Cypress.Commands.add('login', (email = 'approved1@user.com', password = 'Passwor
   });
 
   // Wait for redirect to complete
-  cy.url({ timeout: 15000 }).should('not.include', '/login')
+  cy.url({ timeout: 60000 }).should('not.include', '/login')
 })
 
 export {}

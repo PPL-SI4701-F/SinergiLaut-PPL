@@ -254,6 +254,154 @@ export default defineConfig({
 
           return loginSeedUser;
         },
+        async seedPendingVolunteer(data: { name: string, email: string }) {
+          const supabase = createSupabaseAdminClient();
+          let userId = null;
+          const { data: existingUser } = await supabase.from("profiles").select("id").eq("email", data.email).maybeSingle();
+          
+          if (existingUser) {
+             userId = existingUser.id;
+          } else {
+             const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+               email: data.email,
+               password: "Password@2026",
+               email_confirm: true,
+               user_metadata: { full_name: data.name, role: "user", phone: "08123456789" },
+             });
+             if (createUserError) throw new Error(createUserError.message);
+             userId = createdUser.user?.id;
+          }
+          
+          if (!userId) throw new Error("Supabase did not return a user id.");
+          await sleep(500);
+
+          const { error: upsertError } = await supabase.from("profiles").upsert({
+            id: userId,
+            email: data.email,
+            full_name: data.name,
+            role: "user",
+            nik: "3201234567890001",
+            date_of_birth: "1990-01-01",
+            gender: "male",
+            address: "Jl. Relawan No. 1",
+            phone: "08123456789",
+            volunteer_status: "pending"
+          });
+
+          if (upsertError) throw new Error(upsertError.message);
+          return { id: userId, email: data.email };
+        },
+        async seedPendingReport(data: { title: string, communityName: string }) {
+          const supabase = createSupabaseAdminClient();
+          const uniqueId = Date.now().toString().slice(-6);
+          const email = `reportuser_${uniqueId}@test.com`;
+
+          // 1. Create Profile
+          const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+            email,
+            password: "Password@2026",
+            email_confirm: true,
+            user_metadata: { full_name: "Report User", role: "user" },
+          });
+          if (createUserError) throw new Error(createUserError.message);
+          const userId = createdUser.user?.id;
+
+          await supabase.from("profiles").upsert({
+            id: userId,
+            email,
+            full_name: "Report User",
+            role: "user",
+          });
+
+          // 2. Create Community
+          const { data: community, error: commError } = await supabase.from("communities").insert({
+            name: data.communityName,
+            slug: data.communityName.toLowerCase().replace(/ /g, "-") + uniqueId,
+            description: "Desc",
+            is_verified: true,
+            owner_id: userId
+          }).select().single();
+          if (commError) throw new Error(commError.message);
+
+          // 3. Create Activity
+          const { data: activity, error: actError } = await supabase.from("activities").insert({
+            community_id: community.id,
+            title: "Activity for Report " + uniqueId,
+            slug: "activity-for-report-" + uniqueId,
+            description: "Desc",
+            location: "Location",
+            start_date: "2026-10-10",
+            status: "completed"
+          }).select().single();
+          if (actError) throw new Error(actError.message);
+
+          // 4. Create Report
+          const { error: repError } = await supabase.from("reports").insert({
+            activity_id: activity.id,
+            community_id: community.id,
+            submitted_by: userId,
+            title: data.title,
+            summary: "Report Summary",
+            status: "submitted",
+          });
+          if (repError) throw new Error(repError.message);
+
+          return { success: true };
+        },
+        async seedPendingCommunity(data: { name: string, email: string }) {
+          const supabase = createSupabaseAdminClient();
+
+          // 1. Create User or find existing
+          let userId = null;
+          const { data: existingUser } = await supabase.from("profiles").select("id").eq("email", data.email).maybeSingle();
+          if (existingUser) {
+             userId = existingUser.id;
+          } else {
+             const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+               email: data.email,
+               password: "Password@2026",
+               email_confirm: true,
+               user_metadata: { full_name: "Admin " + data.name, role: "community", phone: "08123456789" },
+             });
+             if (createUserError) throw new Error(createUserError.message);
+             userId = createdUser.user?.id;
+          }
+          
+          if (!userId) throw new Error("Supabase did not return a user id.");
+          await sleep(500);
+
+          // 2. Ensure profile exists
+          const { data: profileFromTrigger } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
+          if (!profileFromTrigger) {
+            await supabase.from("profiles").insert({
+              id: userId, email: data.email, full_name: "Admin " + data.name, phone: "08123456789", role: "community",
+            });
+          } else {
+             await supabase.from("profiles").update({ role: "community" }).eq("id", userId);
+          }
+
+          // 3. Create Community
+          const { data: existingComm } = await supabase.from("communities").select("*").eq("owner_id", userId).maybeSingle();
+          if (existingComm) {
+             // Reset status
+             await supabase.from("communities").update({ verification_status: "pending", is_verified: false, is_suspended: false, is_banned: false }).eq("id", existingComm.id);
+             return existingComm;
+          }
+
+          const slug = data.name.toLowerCase().replace(/[\s_-]+/g, "-") + "-" + Date.now();
+          const { data: comm, error: commError } = await supabase.from("communities").insert({
+            owner_id: userId,
+            name: data.name,
+            slug,
+            description: "Deskripsi " + data.name,
+            verification_status: "pending",
+            is_verified: false,
+            location: "Jakarta",
+          }).select().single();
+
+          if (commError) throw new Error(commError.message);
+          return comm;
+        },
         async getActivityIdByTitle(title: string) {
           const supabase = createSupabaseAdminClient();
           const { data, error } = await supabase
