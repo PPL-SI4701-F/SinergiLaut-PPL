@@ -205,7 +205,7 @@ export default async function UserDashboardPage(props: { searchParams: Promise<{
           ))}
         </div>
 
-        <DashboardClient volunteers={volunteers as any} donations={donations as any} />
+        <DashboardClient volunteers={volunteers as any} donations={(donations as any).filter((d: any) => d.status !== 'pending')} />
 
       </div>
     </main>

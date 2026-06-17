@@ -32,8 +32,14 @@ export function VolunteerManagementTab({ activity, volunteerPercent, setActivity
 
   const approvedCount = volunteers.filter(v => v.status === "approved").length;
   const pendingCount = volunteers.filter(v => v.status === "pending").length;
+  const isQuotaFull = activity?.volunteer_count >= activity?.volunteer_quota;
 
   const handleAction = async (id: string, action: "approved" | "rejected") => {
+    if (action === "approved" && isQuotaFull) {
+      toast.error("Kuota penuh. Kapasitas maksimum relawan telah tercapai.");
+      return;
+    }
+
     // Optimistic UI update
     setVolunteers(prev => prev.map(v => v.id === id ? { ...v, status: action } : v));
     
@@ -130,7 +136,12 @@ export function VolunteerManagementTab({ activity, volunteerPercent, setActivity
 
                   {v.status === "pending" && (
                     <div className="flex gap-2 pt-2">
-                      <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleAction(v.id, "approved")}>
+                      <Button 
+                        size="sm" 
+                        className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50" 
+                        disabled={isQuotaFull}
+                        onClick={() => handleAction(v.id, "approved")}
+                      >
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Setujui
                       </Button>
                       <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleAction(v.id, "rejected")}>

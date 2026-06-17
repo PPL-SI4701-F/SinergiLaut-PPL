@@ -326,21 +326,6 @@ docker-compose up -d
 
 ---
 
-## Tim Pengembang
-
-| Nama | Peran | NIM |
-|------|-------|-----|
-| Adilio Adaha | Dashboard Komunitas | - |
-| Habibi Budiman | Homepage & Autentikasi Login | - |
-| Keysha Aulia | Autentikasi & Login Komunitas | - |
-| Malvin | Manajemen Hak Akses (RBAC) | - |
-
-**Mata Kuliah:** Pengembangan Perangkat Lunak (PPL) — SI4701  
-**Universitas:** Telkom University  
-**Semester:** 6 (Genap 2025/2026)
-
----
-
 ## Lisensi
 
 Proyek ini dikembangkan untuk keperluan akademis mata kuliah PPL di Telkom University.

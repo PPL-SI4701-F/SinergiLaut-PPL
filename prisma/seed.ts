@@ -158,6 +158,9 @@ async function main() {
   // Rejected volunteers
   const userRejected1 = await createAuthUser('rejected1@user.com', 'Hendra Santoso', 'user')
   const userRejected2 = await createAuthUser('rejected2@user.com', 'Lina Wijaya', 'user')
+  const userRegular1 = await createAuthUser('regular1@user.com', 'Budi Santoso', 'user')
+
+  console.log('✅ Akun pengguna dibuat:')
   await prisma.profiles.updateMany({
     where: { id: { in: [userRejected1.id, userRejected2.id] } },
     data: {
@@ -235,6 +238,28 @@ async function main() {
       location: 'Ambon, Maluku',
       focus_areas: ['research', 'monitoring'],
       bank: 'BCA',
+      owner: owner3,
+      status: 'pending' as verification_status,
+      is_suspended: false,
+      logo: null,
+    },
+    {
+      name: 'Pahlawan Pesisir Jawa',
+      slug: 'pahlawan-pesisir-jawa',
+      location: 'Semarang, Jawa Tengah',
+      focus_areas: ['cleanup', 'education'],
+      bank: 'BRI',
+      owner: owner3,
+      status: 'pending' as verification_status,
+      is_suspended: false,
+      logo: null,
+    },
+    {
+      name: 'Pelindung Karang Sulawesi',
+      slug: 'pelindung-karang-sulawesi',
+      location: 'Manado, Sulawesi Utara',
+      focus_areas: ['restoration'],
+      bank: 'Mandiri',
       owner: owner3,
       status: 'pending' as verification_status,
       is_suspended: false,
@@ -571,8 +596,8 @@ async function main() {
       items: itemsNeededRestoration,
       fundingGoal: 20_000_000,
       fundingRaised: 5_000_000,
-      volunteerQuota: 20,
-      volunteerCount: 3,
+      volunteerQuota: 1,
+      volunteerCount: 1,
       reviewedBy: 'admin2',
     },
 
@@ -734,7 +759,7 @@ async function main() {
         email: u.email,
         phone: '08123456789',
         reason: 'Ingin melihat atol Takabonerate dan bantu transplantasi karang.',
-        status: i < 2 ? 'approved' : 'pending',
+        status: i === 0 ? 'approved' : i === 1 ? 'rejected' : 'pending',
         agreed_to_terms: true,
         skills: ['diving'],
       },

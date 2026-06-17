@@ -38,7 +38,7 @@ function buildAuditLog(data: Awaited<ReturnType<typeof getAdminAuditLog>>): Audi
       type: "community",
       label: c.name,
       sub: "Komunitas",
-      status: c.verification_status,
+      status: (c as any).is_suspended ? "suspended" : c.verification_status,
     })
   }
   for (const a of data.activities) {
@@ -74,6 +74,7 @@ function StatusBadge({ status }: { status: string }) {
     draft:      { label: "Ditolak",     cls: "bg-rose-100 text-rose-700 border-rose-200" },
     suspended:  { label: "Disuspend",   cls: "bg-orange-100 text-orange-700 border-orange-200" },
     pending:    { label: "Pending",     cls: "bg-yellow-100 text-yellow-700 border-yellow-200" },
+    cancelled:  { label: "Dibatalkan",  cls: "bg-rose-100 text-rose-700 border-rose-200" },
   }
   const s = map[status] ?? { label: status, cls: "bg-slate-100 text-slate-600 border-slate-200" }
   return (
@@ -104,7 +105,10 @@ export default function AdminMonitoringPage() {
 
   const load = useCallback(async () => {
     setIsLoading(true)
-    const audit = await getAdminAuditLog()
+    const audit = await getAdminAuditLog() as any
+    if (audit.error) {
+      alert("Error: " + audit.error + "\n" + audit.stack)
+    }
     setAuditLog(buildAuditLog(audit))
     setIsLoading(false)
   }, [])

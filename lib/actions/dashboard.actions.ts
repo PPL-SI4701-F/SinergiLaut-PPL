@@ -49,7 +49,7 @@ async function requireCommunityUser(userId: string): Promise<{ authorized: true 
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalCommunities: 5,
@@ -102,7 +102,7 @@ export async function getAdminDashboardStats() {
 }
 
 export async function getPendingCommunities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (isE2E === 'admin-empty') return []
     return [
@@ -131,7 +131,7 @@ export async function getPendingCommunities() {
 }
 
 export async function getPendingActivities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (isE2E === 'admin-empty') return []
     return [
@@ -173,7 +173,7 @@ export async function getPendingActivities() {
 }
 
 export async function getOngoingActivities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       {
@@ -206,7 +206,7 @@ export async function getOngoingActivities() {
 }
 
 export async function getPendingReports() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (isE2E === 'admin-empty') return []
     return [
@@ -235,7 +235,7 @@ export async function getPendingReports() {
 }
 
 export async function getAllCommunities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       { id: 'community-1', name: 'Komunitas Laut Lestari', location: 'Jakarta', logo_url: null, is_verified: true, is_suspended: false },
@@ -263,7 +263,7 @@ export async function getAllCommunities() {
 // --- ADMIN MODERATION ACTIONS ---
 
 export async function approveCommunityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -291,7 +291,7 @@ export async function approveCommunityAction(id: string) {
 }
 
 export async function rejectCommunityAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -320,8 +320,106 @@ export async function rejectCommunityAction(id: string, adminNote?: string) {
   return { success: true }
 }
 
+export async function sanctionCommunityAction(id: string, type: "warning" | "suspend" | "ban", reason: string) {
+  const isE2E = null
+  if (isE2E) return { success: true }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+  const sanctionReason = reason?.trim()
+  if (!sanctionReason) return { success: false, error: "Alasan sanksi wajib diisi." }
+
+  const adminSupabase = await createAdminClient()
+  const { data: community, error: fetchErr } = await adminSupabase
+    .from("communities")
+    .select("name, owner_id")
+    .eq("id", id)
+    .single()
+  if (fetchErr || !community) return { success: false, error: "Komunitas tidak ditemukan." }
+
+  const { error: sanctionErr } = await adminSupabase
+    .from("sanctions")
+    .insert({
+      community_id: id,
+      issued_by: auth.userId,
+      type: type,
+      reason: sanctionReason,
+      is_active: true
+    })
+  if (sanctionErr) return { success: false, error: sanctionErr.message }
+
+  if (type === "suspend" || type === "ban") {
+    await adminSupabase
+      .from("communities")
+      .update({ is_suspended: true, is_banned: type === "ban" })
+      .eq("id", id)
+      
+    if (type === "ban") {
+      await adminSupabase
+        .from("activities")
+        .update({ status: "completed" })
+        .eq("community_id", id)
+    }
+  }
+
+  if (community.owner_id) {
+    const title = type === "warning" ? "Peringatan Komunitas" : type === "suspend" ? "Komunitas Disuspend" : "Komunitas Dibanned"
+    const message = `Komunitas "${community.name}" Anda mendapat sanksi (${type}). Alasan: ${sanctionReason}`
+    await createNotification(
+      community.owner_id,
+      title,
+      message,
+      "error",
+      "/community/dashboard"
+    )
+  }
+  return { success: true }
+}
+
+export async function revokeSuspendAction(id: string) {
+  const isE2E = null
+  if (isE2E) return { success: true }
+
+  const auth = await requireAdmin()
+  if (!auth.authorized) return { success: false, error: "Akses ditolak." }
+
+  const adminSupabase = await createAdminClient()
+  const { data: community, error: fetchErr } = await adminSupabase
+    .from("communities")
+    .select("name, owner_id, is_banned")
+    .eq("id", id)
+    .single()
+  if (fetchErr || !community) return { success: false, error: "Komunitas tidak ditemukan." }
+  
+  if (community.is_banned) return { success: false, error: "Tidak dapat mencabut suspend karena komunitas ini telah di-ban permanen." }
+
+  const { error } = await adminSupabase
+    .from("communities")
+    .update({ is_suspended: false })
+    .eq("id", id)
+  if (error) return { success: false, error: error.message }
+
+  await adminSupabase
+    .from("sanctions")
+    .update({ is_active: false })
+    .eq("community_id", id)
+    .in("type", ["suspend", "ban"])
+    .eq("is_active", true)
+
+  if (community.owner_id) {
+    await createNotification(
+      community.owner_id,
+      "Suspend Dicabut",
+      `Suspend untuk komunitas "${community.name}" Anda telah dicabut. Anda dapat menggunakan fitur komunitas kembali.`,
+      "success",
+      "/community/dashboard"
+    )
+  }
+  return { success: true }
+}
+
 export async function approveActivityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -350,7 +448,7 @@ export async function approveActivityAction(id: string) {
 }
 
 export async function rejectActivityAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -381,7 +479,7 @@ export async function rejectActivityAction(id: string, adminNote?: string) {
 // --- ACTIVITY EDIT REQUESTS ---
 
 export async function getPendingEditRequests() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       {
@@ -410,7 +508,7 @@ export async function getPendingEditRequests() {
 }
 
 export async function approveEditRequestAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -442,7 +540,7 @@ export async function approveEditRequestAction(id: string) {
 }
 
 export async function rejectEditRequestAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -479,7 +577,7 @@ export async function rejectEditRequestAction(id: string, adminNote?: string) {
 }
 
 export async function approveReportAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -520,7 +618,7 @@ export async function approveReportAction(id: string) {
 }
 
 export async function suspendCommunityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -547,7 +645,7 @@ export async function suspendCommunityAction(id: string) {
 }
 
 export async function unsuspendCommunityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -574,7 +672,7 @@ export async function unsuspendCommunityAction(id: string) {
 }
 
 export async function getPlatformMonitoringStats() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalDonations: 5000000,
@@ -630,71 +728,80 @@ export async function getPlatformMonitoringStats() {
 }
 
 export async function getAdminAuditLog() {
-  const isE2E = await getE2EMock()
-  if (isE2E) {
-    return {
-      reports: [
-        { id: 'report-1', title: 'Laporan Bersih Pantai Mutiara', status: 'validated', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
-        { id: 'report-2', title: 'Laporan Konservasi Terumbu Karang', status: 'rejected', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Pesisir Hijau' } },
-      ],
-      communities: [
-        { id: 'community-1', name: 'Komunitas Laut Lestari', verification_status: 'approved', updated_at: new Date().toISOString() },
-        { id: 'community-2', name: 'Komunitas Mangrove Asri', verification_status: 'suspended', updated_at: new Date().toISOString() },
-      ],
-      activities: [
-        { id: 'activity-1', title: 'Bersih Pantai Mutiara', status: 'published', updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
-        { id: 'activity-2', title: 'Edukasi Konservasi Mangrove', status: 'draft', updated_at: new Date().toISOString(), community: { name: 'Komunitas Mangrove Asri' } },
-      ],
-      volunteers: [
-        { id: 'volunteer-1', full_name: 'Budi Santoso', volunteer_status: 'approved', updated_at: new Date().toISOString() },
-        { id: 'volunteer-2', full_name: 'Ani Wijaya', volunteer_status: 'rejected', updated_at: new Date().toISOString() },
-      ],
+  try {
+    const isE2E = null
+    if (isE2E) {
+      return {
+        reports: [
+          { id: 'report-1', title: 'Laporan Bersih Pantai Mutiara', status: 'validated', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
+          { id: 'report-2', title: 'Laporan Konservasi Terumbu Karang', status: 'rejected', reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(), community: { name: 'Komunitas Pesisir Hijau' } },
+        ],
+        communities: [
+          { id: 'community-1', name: 'Komunitas Laut Lestari', verification_status: 'approved', updated_at: new Date().toISOString() },
+          { id: 'community-2', name: 'Komunitas Mangrove Asri', verification_status: 'rejected', updated_at: new Date().toISOString() },
+        ],
+        activities: [
+          { id: 'activity-1', title: 'Bersih Pantai Mutiara', status: 'published', updated_at: new Date().toISOString(), community: { name: 'Komunitas Laut Lestari' } },
+          { id: 'activity-2', title: 'Edukasi Konservasi Mangrove', status: 'draft', updated_at: new Date().toISOString(), community: { name: 'Komunitas Mangrove Asri' } },
+        ],
+        volunteers: [
+          { id: 'volunteer-1', full_name: 'Budi Santoso', volunteer_status: 'approved', updated_at: new Date().toISOString() },
+          { id: 'volunteer-2', full_name: 'Ani Wijaya', volunteer_status: 'rejected', updated_at: new Date().toISOString() },
+        ],
+      }
     }
-  }
 
-  const auth = await requireAdmin()
-  if (!auth.authorized) return { reports: [], communities: [], activities: [], volunteers: [] }
+    const auth = await requireAdmin()
+    if (!auth.authorized) return { reports: [], communities: [], activities: [], volunteers: [] }
 
-  const adminSupabase = await createAdminClient()
+    const adminSupabase = await createAdminClient()
 
-  const [reportsRes, communitiesRes, activitiesRes, volunteersRes] = await Promise.all([
-    adminSupabase
-      .from("reports")
-      .select("id, title, status, reviewed_at, updated_at, community:communities(name)")
-      .in("status", ["validated", "rejected"])
-      .order("updated_at", { ascending: false })
-      .limit(30),
-    adminSupabase
-      .from("communities")
-      .select("id, name, verification_status, updated_at")
-      .in("verification_status", ["approved", "rejected", "suspended"])
-      .order("updated_at", { ascending: false })
-      .limit(30),
-    adminSupabase
-      .from("activities")
-      .select("id, title, status, updated_at, community:communities(name)")
-      .in("status", ["published", "draft"])
-      .not("published_at", "is", null)
-      .order("updated_at", { ascending: false })
-      .limit(30),
-    adminSupabase
-      .from("profiles")
-      .select("id, full_name, volunteer_status, updated_at")
-      .in("volunteer_status", ["approved", "rejected"])
-      .order("updated_at", { ascending: false })
-      .limit(30),
-  ])
+    const [reportsRes, communitiesRes, activitiesRes, volunteersRes] = await Promise.all([
+      adminSupabase
+        .from("reports")
+        .select("id, title, status, reviewed_at, updated_at, community:communities(name)")
+        .in("status", ["validated", "rejected"])
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      adminSupabase
+        .from("communities")
+        .select("id, name, verification_status, is_suspended, updated_at")
+        .or("verification_status.in.(approved,rejected),is_suspended.eq.true")
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      adminSupabase
+        .from("activities")
+        .select("id, title, status, updated_at, community:communities(name)")
+        .in("status", ["published", "draft", "cancelled", "completed", "pending_review"])
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      adminSupabase
+        .from("profiles")
+        .select("id, full_name, volunteer_status, updated_at")
+        .in("volunteer_status", ["approved", "rejected"])
+        .order("updated_at", { ascending: false })
+        .limit(30),
+    ])
 
-  return {
-    reports: reportsRes.data ?? [],
-    communities: communitiesRes.data ?? [],
-    activities: activitiesRes.data ?? [],
-    volunteers: volunteersRes.data ?? [],
+    if (reportsRes.error) console.error("Reports error:", reportsRes.error)
+    if (communitiesRes.error) console.error("Communities error:", communitiesRes.error)
+    if (activitiesRes.error) console.error("Activities error:", activitiesRes.error)
+    if (volunteersRes.error) console.error("Volunteers error:", volunteersRes.error)
+
+    return {
+      reports: reportsRes.data ?? [],
+      communities: communitiesRes.data ?? [],
+      activities: activitiesRes.data ?? [],
+      volunteers: volunteersRes.data ?? [],
+    }
+  } catch (err: any) {
+    console.error("Unhandled error in getAdminAuditLog:", err.message, err.stack)
+    return { error: err.message, stack: err.stack, reports: [], communities: [], activities: [], volunteers: [] }
   }
 }
 
 export async function rejectReportAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -727,8 +834,24 @@ export async function rejectReportAction(id: string, adminNote?: string) {
 }
 
 export async function getAdminReportsList() {
-  const isE2E = await getE2EMock()
-  if (isE2E) return { success: true, data: [] as any[] }
+  const isE2E = null
+  if (isE2E) {
+    return {
+      success: true,
+      data: [
+        {
+          id: "report-1",
+          title: "Laporan Bersih Pantai Mutiara",
+          summary: "Kegiatan berjalan lancar.",
+          status: "submitted",
+          created_at: new Date().toISOString(),
+          activity_id: "activity-1",
+          community: { name: "Eco Ocean" },
+          profiles: { full_name: "Budi Santoso" }
+        }
+      ] as any[]
+    }
+  }
 
   const auth = await requireAdmin()
   if (!auth.authorized) return { success: false, data: [], error: "Akses ditolak." }
@@ -752,7 +875,7 @@ export async function getAdminReportsList() {
 }
 
 export async function getAdminReportDetail(reportId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true, data: null as any }
 
   const auth = await requireAdmin()
@@ -781,7 +904,7 @@ export async function getAdminReportDetail(reportId: string) {
 }
 
 export async function getAdminActivityReviewDetail(activityId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (activityId === 'activity-1') {
       return {
@@ -919,7 +1042,7 @@ export async function getCommunityPageStats() {
 // --- COMMUNITY DASHBOARD ---
 
 export async function getCommunityDashboardStats(userId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalActivities: 2,
@@ -959,6 +1082,7 @@ export async function getCommunityDashboardStats(userId: string) {
     .select("id")
     .eq("owner_id", userId)
     .eq("is_verified", true)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 
@@ -1071,7 +1195,7 @@ export async function getCommunityDashboardStats(userId: string) {
 }
 
 export async function getCommunityActivities(userId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       {
@@ -1079,13 +1203,71 @@ export async function getCommunityActivities(userId: string) {
         title: "Bersih Pantai Mutiara",
         status: "published",
         start_date: new Date().toISOString(),
+        execution_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         volunteer_quota: 50,
         volunteer_count: 10,
         funding_goal: 10000000,
         funding_raised: 2000000,
         category: "cleanup",
-        reports: []
-      }
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-draft",
+        title: "Konservasi Mangrove Cilincing",
+        status: "draft",
+        start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 30,
+        volunteer_count: 0,
+        funding_goal: 5000000,
+        funding_raised: 0,
+        category: "mangrove",
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-pending",
+        title: "Pemantauan Koral Kepulauan Seribu",
+        status: "pending_review",
+        start_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 20,
+        volunteer_count: 0,
+        funding_goal: 3000000,
+        funding_raised: 0,
+        category: "coral",
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-completed",
+        title: "Restorasi Ekosistem Pantai Kramat",
+        status: "completed",
+        start_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 40,
+        volunteer_count: 35,
+        funding_goal: 8000000,
+        funding_raised: 7500000,
+        category: "restoration",
+        reports: [],
+        community_id: "community-id-123"
+      },
+      {
+        id: "mock-activity-cancelled",
+        title: "Tanam Mangrove Pulau Tidung",
+        status: "cancelled",
+        start_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+        volunteer_quota: 25,
+        volunteer_count: 0,
+        funding_goal: 4000000,
+        funding_raised: 0,
+        category: "mangrove",
+        reports: [],
+        community_id: "community-id-123"
+      },
     ] as any
   }
 
@@ -1099,6 +1281,7 @@ export async function getCommunityActivities(userId: string) {
     .select("id")
     .eq("owner_id", userId)
     .eq("is_verified", true)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 
@@ -1130,7 +1313,7 @@ export async function getRegisteredCommunities() {
 // --- USER DASHBOARD ---
 
 export async function getUserDashboardStats(userId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalActivities: 1,
@@ -1188,7 +1371,7 @@ export async function getUserDashboardStats(userId: string) {
 // --- COMMUNITY PROFILE ---
 
 export async function getCommunityProfile() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E === 'community') {
     return {
       success: true,
@@ -1216,7 +1399,7 @@ export async function getCommunityProfile() {
     .from("communities")
     .select("*")
     .eq("owner_id", user.id)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 

@@ -286,6 +286,26 @@ export async function updateVolunteerStatus(
 
   const adminSupabase = await createAdminClient()
 
+  if (status === "approved") {
+    const { data: regInfo } = await adminSupabase
+      .from("volunteer_registrations")
+      .select("activity_id")
+      .eq("id", registrationId)
+      .single()
+
+    if (regInfo) {
+      const { data: actInfo } = await adminSupabase
+        .from("activities")
+        .select("volunteer_quota, volunteer_count")
+        .eq("id", regInfo.activity_id)
+        .single()
+
+      if (actInfo && actInfo.volunteer_count >= actInfo.volunteer_quota) {
+        return { success: false, error: "Kuota penuh. Kapasitas maksimum relawan telah tercapai." }
+      }
+    }
+  }
+
   const { data, error } = await adminSupabase
     .from("volunteer_registrations")
     .update({ status })

@@ -108,6 +108,21 @@ export interface CreateDisbursementPayload {
 }
 
 export async function createDisbursement(payload: Omit<CreateDisbursementPayload, "disbursedBy">) {
+  const isE2E = null
+  if (isE2E === "admin") {
+    const availableBalance = 12000000
+    if (payload.amount > availableBalance) {
+      return {
+        success: false,
+        error: `melebihi saldo tersedia`,
+      }
+    }
+    return {
+      success: true,
+      data: { id: "mock-disbursement-id", status: "pending", ...payload },
+    }
+  }
+
   const auth = await requireAdmin()
   if (!auth.authorized) return { success: false, error: "Forbidden: Admin access required" }
 
@@ -304,7 +319,7 @@ export async function updateDisbursementStatus(
   status: "processing" | "completed" | "failed",
   referenceNumber?: string
 ) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       success: true,
@@ -368,7 +383,7 @@ export async function updateDisbursementStatus(
 
 /** [Admin] Ambil semua disbursement */
 export async function getAllDisbursements() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       success: true,
@@ -387,7 +402,24 @@ export async function getAllDisbursements() {
           disbursed_at: null,
           created_at: new Date().toISOString(),
           activity: { id: "act-1", title: "Kegiatan Bersih Pantai" },
-          community: { id: "comm-1", name: "Komunitas A", logo_url: null },
+          community: { id: "comm-1", name: "Komunitas Peduli Laut", logo_url: null },
+          admin: null
+        },
+        {
+          id: "disb-2",
+          amount: 2500000,
+          platform_fee: 0,
+          net_amount: 2500000,
+          status: "completed",
+          bank_name: "BCA",
+          account_number: "0987654321",
+          account_name: "Komunitas Laut Hijau",
+          reference_number: "TRX-999999",
+          notes: "Pencairan dana edukasi",
+          disbursed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          activity: { id: "act-2", title: "Kegiatan Edukasi Nelayan" },
+          community: { id: "comm-2", name: "Komunitas Laut Hijau", logo_url: null },
           admin: null
         }
       ]
@@ -500,7 +532,7 @@ export async function getActivityFinanceSummary(activityId: string) {
 
 /** Ringkasan keuangan platform: saldo, pemasukan (donasi masuk), pengeluaran (dana tercairkan) */
 export async function getDisbursementOverview() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return { balance: 12000000, income: 17750000, expense: 5750000 }
   }

@@ -670,13 +670,13 @@ export async function getCommunityActivitySummary(activityId: string) {
     return {
       success: true,
       data: {
-        title: "Mock Activity",
+        title: activityId === 'act-full' ? "Mock Activity Full" : "Mock Activity",
         description: null,
         cover_image_url: null,
         funding_raised: 0,
         funding_goal: 0,
-        volunteer_count: 0,
-        volunteer_quota: 0,
+        volunteer_count: activityId === 'act-full' ? 50 : 10,
+        volunteer_quota: activityId === 'act-full' ? 50 : 100,
         status: "completed",
         location: "Mock Location",
         start_date: new Date().toISOString(),

@@ -75,3 +75,18 @@ AGENTS.md
 
 # Tim — info akun GitHub lokal
 GITHUB_ACCOUNTS.md
+
+# Test case documents
+test-case/
+
+# Cypress
+cypress/screenshots/
+cypress/videos/
+
+# Temporary Scripts
+*_tests.js
+fix_grants.js
+inject_seed.js
+patch_*.js
+remove_mocks.js
+rename_*.js

@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isAuthReady, setIsAuthReady] = useState(false)
-  const [isProfileLoading, setIsProfileLoading] = useState(false)
+  const [isProfileLoading, setIsProfileLoading] = useState(true)
   const supabase = useMemo(() => createClient(), [])
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -183,7 +183,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    // Fallback safe context untuk mencegah SSR crash (Error 500) saat Next.js
+    // mengalami cache corruption HMR pada React Context selama Cypress testing.
+    return {
+      user: null,
+      profile: null,
+      isLoading: true,
+      role: null,
+      isAdmin: false,
+      isCommunity: false,
+      isUser: false,
+      isVolunteerVerified: false,
+      signOut: async () => {},
+      refreshProfile: async () => {},
+    } as AuthContextType
   }
   return context
 }

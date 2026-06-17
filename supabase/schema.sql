@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS communities (
   is_verified BOOLEAN NOT NULL DEFAULT false,
   verification_status verification_status NOT NULL DEFAULT 'pending',
   is_suspended BOOLEAN NOT NULL DEFAULT false,
+  is_banned BOOLEAN NOT NULL DEFAULT false,
   -- Bank account info for disbursement
   bank_name TEXT,
   bank_account_number TEXT,

@@ -23,7 +23,7 @@ import { getVolunteersPendingVerification } from "@/lib/actions/volunteer-verifi
 const DEFAULT_ADMIN_STATS = {
   totalCommunities: 0,
   totalUsers: 0,
-  totalActivities: 0,
+  activeActivities: 0,
   totalDonations: 0,
 }
 
@@ -76,7 +76,7 @@ export default function AdminDashboardPage() {
   const statCards = [
     { label: "Total Komunitas", value: stats.totalCommunities, icon: Building2, color: "text-primary" },
     { label: "Pengguna Aktif", value: stats.totalUsers, icon: Users, color: "text-blue-600" },
-    { label: "Kegiatan Aktif", value: stats.totalActivities, icon: Activity, color: "text-green-600" },
+    { label: "Kegiatan Aktif", value: stats.activeActivities, icon: Activity, color: "text-green-600" },
     { label: "Total Donasi Terkumpul", value: formatCurrency(stats.totalDonations), icon: Banknote, color: "text-amber-600" },
   ]
 

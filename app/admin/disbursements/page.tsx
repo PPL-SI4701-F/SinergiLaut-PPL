@@ -364,31 +364,31 @@ export default function AdminDisbursementsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Jumlah Pencairan (Rp) *</Label>
-                <Input type="number" min={0} value={createForm.amount} onChange={e => setCreateForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" />
+                <Input name="amount" type="number" min={0} value={createForm.amount} onChange={e => setCreateForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" />
               </div>
               <div className="space-y-1.5">
                 <Label>Platform Fee (Rp)</Label>
-                <Input type="number" min={0} value={createForm.platformFee} onChange={e => setCreateForm(f => ({ ...f, platformFee: e.target.value }))} placeholder="0" />
+                <Input name="platformFee" type="number" min={0} value={createForm.platformFee} onChange={e => setCreateForm(f => ({ ...f, platformFee: e.target.value }))} placeholder="0" />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Bank Tujuan *</Label>
-              <Input value={createForm.bankName} onChange={e => setCreateForm(f => ({ ...f, bankName: e.target.value }))} placeholder="Contoh: BCA, Mandiri, BRI..." />
+              <Input name="bank_name" value={createForm.bankName} onChange={e => setCreateForm(f => ({ ...f, bankName: e.target.value }))} placeholder="Contoh: BCA, Mandiri, BRI..." />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>No. Rekening *</Label>
-                <Input value={createForm.accountNumber} onChange={e => setCreateForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="1234567890" />
+                <Input name="account_number" value={createForm.accountNumber} onChange={e => setCreateForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="1234567890" />
               </div>
               <div className="space-y-1.5">
                 <Label>Nama Pemilik *</Label>
-                <Input value={createForm.accountName} onChange={e => setCreateForm(f => ({ ...f, accountName: e.target.value }))} placeholder="Nama rekening" />
+                <Input name="account_name" value={createForm.accountName} onChange={e => setCreateForm(f => ({ ...f, accountName: e.target.value }))} placeholder="Nama rekening" />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Catatan (opsional)</Label>
-              <Textarea value={createForm.notes} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} placeholder='Contoh: "Dana Abadi" atau catatan transfer...' rows={2} />
+              <Textarea name="notes" value={createForm.notes} onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))} placeholder='Contoh: "Dana Abadi" atau catatan transfer...' rows={2} />
             </div>
 
             <div className="flex gap-3 pt-2">
