@@ -108,7 +108,7 @@ export interface CreateDisbursementPayload {
 }
 
 export async function createDisbursement(payload: Omit<CreateDisbursementPayload, "disbursedBy">) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E === "admin") {
     const availableBalance = 12000000
     if (payload.amount > availableBalance) {
@@ -319,7 +319,7 @@ export async function updateDisbursementStatus(
   status: "processing" | "completed" | "failed",
   referenceNumber?: string
 ) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       success: true,
@@ -383,7 +383,7 @@ export async function updateDisbursementStatus(
 
 /** [Admin] Ambil semua disbursement */
 export async function getAllDisbursements() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       success: true,
@@ -532,7 +532,7 @@ export async function getActivityFinanceSummary(activityId: string) {
 
 /** Ringkasan keuangan platform: saldo, pemasukan (donasi masuk), pengeluaran (dana tercairkan) */
 export async function getDisbursementOverview() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return { balance: 12000000, income: 17750000, expense: 5750000 }
   }

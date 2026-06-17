@@ -158,6 +158,9 @@ async function main() {
   // Rejected volunteers
   const userRejected1 = await createAuthUser('rejected1@user.com', 'Hendra Santoso', 'user')
   const userRejected2 = await createAuthUser('rejected2@user.com', 'Lina Wijaya', 'user')
+  const userRegular1 = await createAuthUser('regular1@user.com', 'Budi Santoso', 'user')
+
+  console.log('✅ Akun pengguna dibuat:')
   await prisma.profiles.updateMany({
     where: { id: { in: [userRejected1.id, userRejected2.id] } },
     data: {
@@ -235,6 +238,28 @@ async function main() {
       location: 'Ambon, Maluku',
       focus_areas: ['research', 'monitoring'],
       bank: 'BCA',
+      owner: owner3,
+      status: 'pending' as verification_status,
+      is_suspended: false,
+      logo: null,
+    },
+    {
+      name: 'Pahlawan Pesisir Jawa',
+      slug: 'pahlawan-pesisir-jawa',
+      location: 'Semarang, Jawa Tengah',
+      focus_areas: ['cleanup', 'education'],
+      bank: 'BRI',
+      owner: owner3,
+      status: 'pending' as verification_status,
+      is_suspended: false,
+      logo: null,
+    },
+    {
+      name: 'Pelindung Karang Sulawesi',
+      slug: 'pelindung-karang-sulawesi',
+      location: 'Manado, Sulawesi Utara',
+      focus_areas: ['restoration'],
+      bank: 'Mandiri',
       owner: owner3,
       status: 'pending' as verification_status,
       is_suspended: false,

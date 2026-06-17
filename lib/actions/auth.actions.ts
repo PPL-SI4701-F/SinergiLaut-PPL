@@ -43,7 +43,8 @@ export async function login(formData: FormData) {
   revalidatePath("/", "layout");
   
   if (data?.user) {
-    const { data: profile, error: profileError } = await supabase
+    const adminSupabase = await createAdminClient();
+    const { data: profile, error: profileError } = await adminSupabase
       .from("profiles")
       .select("role")
       .eq("id", data.user.id)

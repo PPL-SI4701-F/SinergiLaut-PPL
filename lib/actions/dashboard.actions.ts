@@ -49,7 +49,7 @@ async function requireCommunityUser(userId: string): Promise<{ authorized: true 
 // --- ADMIN DASHBOARD ---
 
 export async function getAdminDashboardStats() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalCommunities: 5,
@@ -102,7 +102,7 @@ export async function getAdminDashboardStats() {
 }
 
 export async function getPendingCommunities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (isE2E === 'admin-empty') return []
     return [
@@ -131,7 +131,7 @@ export async function getPendingCommunities() {
 }
 
 export async function getPendingActivities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (isE2E === 'admin-empty') return []
     return [
@@ -173,7 +173,7 @@ export async function getPendingActivities() {
 }
 
 export async function getOngoingActivities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       {
@@ -206,7 +206,7 @@ export async function getOngoingActivities() {
 }
 
 export async function getPendingReports() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (isE2E === 'admin-empty') return []
     return [
@@ -235,7 +235,7 @@ export async function getPendingReports() {
 }
 
 export async function getAllCommunities() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       { id: 'community-1', name: 'Komunitas Laut Lestari', location: 'Jakarta', logo_url: null, is_verified: true, is_suspended: false },
@@ -263,7 +263,7 @@ export async function getAllCommunities() {
 // --- ADMIN MODERATION ACTIONS ---
 
 export async function approveCommunityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -291,7 +291,7 @@ export async function approveCommunityAction(id: string) {
 }
 
 export async function rejectCommunityAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -321,7 +321,7 @@ export async function rejectCommunityAction(id: string, adminNote?: string) {
 }
 
 export async function sanctionCommunityAction(id: string, type: "warning" | "suspend" | "ban", reason: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -377,7 +377,7 @@ export async function sanctionCommunityAction(id: string, type: "warning" | "sus
 }
 
 export async function revokeSuspendAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -419,7 +419,7 @@ export async function revokeSuspendAction(id: string) {
 }
 
 export async function approveActivityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -448,7 +448,7 @@ export async function approveActivityAction(id: string) {
 }
 
 export async function rejectActivityAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -479,7 +479,7 @@ export async function rejectActivityAction(id: string, adminNote?: string) {
 // --- ACTIVITY EDIT REQUESTS ---
 
 export async function getPendingEditRequests() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       {
@@ -508,7 +508,7 @@ export async function getPendingEditRequests() {
 }
 
 export async function approveEditRequestAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -540,7 +540,7 @@ export async function approveEditRequestAction(id: string) {
 }
 
 export async function rejectEditRequestAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -577,7 +577,7 @@ export async function rejectEditRequestAction(id: string, adminNote?: string) {
 }
 
 export async function approveReportAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -618,7 +618,7 @@ export async function approveReportAction(id: string) {
 }
 
 export async function suspendCommunityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -645,7 +645,7 @@ export async function suspendCommunityAction(id: string) {
 }
 
 export async function unsuspendCommunityAction(id: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -672,7 +672,7 @@ export async function unsuspendCommunityAction(id: string) {
 }
 
 export async function getPlatformMonitoringStats() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalDonations: 5000000,
@@ -729,7 +729,7 @@ export async function getPlatformMonitoringStats() {
 
 export async function getAdminAuditLog() {
   try {
-    const isE2E = await getE2EMock()
+    const isE2E = null
     if (isE2E) {
       return {
         reports: [
@@ -801,7 +801,7 @@ export async function getAdminAuditLog() {
 }
 
 export async function rejectReportAction(id: string, adminNote?: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true }
 
   const auth = await requireAdmin()
@@ -834,7 +834,7 @@ export async function rejectReportAction(id: string, adminNote?: string) {
 }
 
 export async function getAdminReportsList() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       success: true,
@@ -875,7 +875,7 @@ export async function getAdminReportsList() {
 }
 
 export async function getAdminReportDetail(reportId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) return { success: true, data: null as any }
 
   const auth = await requireAdmin()
@@ -904,7 +904,7 @@ export async function getAdminReportDetail(reportId: string) {
 }
 
 export async function getAdminActivityReviewDetail(activityId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     if (activityId === 'activity-1') {
       return {
@@ -1042,7 +1042,7 @@ export async function getCommunityPageStats() {
 // --- COMMUNITY DASHBOARD ---
 
 export async function getCommunityDashboardStats(userId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalActivities: 2,
@@ -1195,7 +1195,7 @@ export async function getCommunityDashboardStats(userId: string) {
 }
 
 export async function getCommunityActivities(userId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return [
       {
@@ -1313,7 +1313,7 @@ export async function getRegisteredCommunities() {
 // --- USER DASHBOARD ---
 
 export async function getUserDashboardStats(userId: string) {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E) {
     return {
       totalActivities: 1,
@@ -1371,7 +1371,7 @@ export async function getUserDashboardStats(userId: string) {
 // --- COMMUNITY PROFILE ---
 
 export async function getCommunityProfile() {
-  const isE2E = await getE2EMock()
+  const isE2E = null
   if (isE2E === 'community') {
     return {
       success: true,
