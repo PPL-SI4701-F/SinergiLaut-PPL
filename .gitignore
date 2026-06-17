@@ -78,3 +78,7 @@ GITHUB_ACCOUNTS.md
 
 # Test case documents
 test-case/
+
+# Cypress
+cypress/screenshots/
+cypress/videos/
