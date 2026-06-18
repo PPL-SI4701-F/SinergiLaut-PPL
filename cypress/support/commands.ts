@@ -23,23 +23,34 @@ declare global {
 
 Cypress.Commands.add('login', (email = 'approved1@user.com', password = 'Password@2026') => {
   cy.visit('/login')
-  cy.get('input#email').clear().type(email)
-  cy.get('input#password').clear().type(password)
-  cy.get('button[type="submit"]').click()
-  
-  // Check if an error appears and fail immediately if it does
-  cy.get('body').then($body => {
-    // Wait a brief moment for any server action to return
-    cy.wait(500).then(() => {
-      const $error = cy.$$('.sl-login-error');
-      if ($error.length > 0) {
-        throw new Error(`Login failed with UI error: ${$error.text()}`);
-      }
-    });
-  });
+
+  cy.get('input#email', { timeout: 30000 })
+    .should('be.visible')
+    .and('be.enabled')
+    .clear()
+    .type(email)
+
+  cy.get('input#password', { timeout: 30000 })
+    .should('be.visible')
+    .and('be.enabled')
+    .clear()
+    .type(password)
+
+  cy.get('button[type="submit"]', { timeout: 30000 })
+    .should('be.visible')
+    .and('be.enabled')
+    .click()
+
+  cy.wait(500)
+  cy.get('body').then(() => {
+    const $error = cy.$$('.sl-error')
+    if ($error.length > 0) {
+      throw new Error(`Login failed with UI error: ${$error.text()}`)
+    }
+  })
 
   // Wait for redirect to complete
-  cy.url({ timeout: 60000 }).should('not.include', '/login')
+  cy.url({ timeout: 30000 }).should('not.include', '/login')
 })
 
 export {}
