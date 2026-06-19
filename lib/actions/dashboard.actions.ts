@@ -1053,6 +1053,8 @@ export async function getCommunityDashboardStats(userId: string) {
       activeVolunteers: 8,
       totalDonations: 5000000,
       activeDonations: 3000000,
+      totalItemDonations: 20,
+      activeItemDonations: 15,
       verifiedReports: "1/2",
       totalBalance: 4500000,
     }
@@ -1069,6 +1071,8 @@ export async function getCommunityDashboardStats(userId: string) {
       activeVolunteers: 0,
       totalDonations: 0,
       activeDonations: 0,
+      totalItemDonations: 0,
+      activeItemDonations: 0,
       verifiedReports: "0/0",
       totalBalance: 0,
     }
@@ -1096,6 +1100,8 @@ export async function getCommunityDashboardStats(userId: string) {
       activeVolunteers: 0,
       totalDonations: 0,
       activeDonations: 0,
+      totalItemDonations: 0,
+      activeItemDonations: 0,
       verifiedReports: "0/0",
       totalBalance: 0,
     }
@@ -1133,6 +1139,8 @@ export async function getCommunityDashboardStats(userId: string) {
   let activeVolunteers = 0
   let totalDonations = 0
   let activeDonations = 0
+  let totalItemDonations = 0
+  let activeItemDonations = 0
 
   if (activityIds.length > 0) {
     const [{ data: volunteerRows }, { data: donationRows }] = await Promise.all([
@@ -1143,18 +1151,29 @@ export async function getCommunityDashboardStats(userId: string) {
         .in("status", ["approved", "attended"]),
       adminSupabase
         .from("donations")
-        .select("activity_id, amount")
+        .select("activity_id, type, amount, donation_items(quantity)")
         .in("activity_id", activityIds)
-        .eq("type", "money")
         .eq("status", "completed"),
     ])
 
     totalVolunteers = volunteerRows?.length || 0
     activeVolunteers = volunteerRows?.filter(v => activeActivityIds.includes(v.activity_id)).length || 0
-    totalDonations = donationRows?.reduce((sum, donation) => sum + Number(donation.amount || 0), 0) || 0
-    activeDonations = donationRows
-      ?.filter(donation => activeActivityIds.includes(donation.activity_id))
-      .reduce((sum, donation) => sum + Number(donation.amount || 0), 0) || 0
+
+    donationRows?.forEach(donation => {
+      if (donation.type === "money") {
+        const amt = Number(donation.amount || 0)
+        totalDonations += amt
+        if (activeActivityIds.includes(donation.activity_id)) {
+          activeDonations += amt
+        }
+      } else if (donation.type === "item") {
+        const qty = donation.donation_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0
+        totalItemDonations += qty
+        if (activeActivityIds.includes(donation.activity_id)) {
+          activeItemDonations += qty
+        }
+      }
+    })
   }
 
   // Reports
@@ -1189,6 +1208,8 @@ export async function getCommunityDashboardStats(userId: string) {
     activeVolunteers,
     totalDonations,
     activeDonations,
+    totalItemDonations,
+    activeItemDonations,
     verifiedReports: `${verifiedReports || 0}/${totalReports || 0}`,
     totalBalance,
   }
