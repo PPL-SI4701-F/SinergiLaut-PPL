@@ -157,7 +157,11 @@ export default function ActivityDetailPage() {
       } else {
         const result = await completeFulfillmentDonation(paymentSim.donationId, activity.id);
         if (result.success && result.updatedItems) {
-          setActivity(prev => prev ? { ...prev, items_needed: result.updatedItems } : prev);
+          setActivity(prev => prev ? {
+            ...prev,
+            items_needed: result.updatedItems,
+            funding_raised: result.funding_raised ?? prev.funding_raised,
+          } : prev);
         }
       }
     } catch (err) {
@@ -333,6 +337,7 @@ export default function ActivityDetailPage() {
   const now = new Date();
   const timeDiff = deadlineDate.getTime() - now.getTime();
   const daysLeft = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+  const isDonationOpen = timeDiff > 0;
 
   // ── Handle feedback submit ───────────────────────────────────
   async function handleFeedbackSubmit(e: React.FormEvent) {
@@ -762,7 +767,7 @@ export default function ActivityDetailPage() {
               )}
 
               {/* ── Tab: Donate Form ─────────────────────────── */}
-              {activeTab === "donate" && (
+              {activeTab === "donate" && isDonationOpen && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Heart className="h-5 w-5" /> Donasi untuk Kegiatan Ini</CardTitle>
@@ -1234,8 +1239,8 @@ export default function ActivityDetailPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 mt-1 text-sm bg-orange-50 dark:bg-orange-950/30 p-2 rounded-md border border-orange-100 dark:border-orange-900/50">
-                      <Clock className={`h-4 w-4 ${daysLeft > 0 ? "text-orange-500" : "text-red-500"}`} />
-                      {daysLeft > 0 ? (
+                      <Clock className={`h-4 w-4 ${isDonationOpen ? "text-orange-500" : "text-red-500"}`} />
+                      {isDonationOpen ? (
                         <span className="text-orange-600 dark:text-orange-400 font-medium tracking-tight">Sisa waktu pengumpulan: {daysLeft} hari lagi</span>
                       ) : (
                         <span className="text-red-600 dark:text-red-400 font-medium tracking-tight">Batas waktu pengumpulan habis</span>
@@ -1328,10 +1333,10 @@ export default function ActivityDetailPage() {
                       variant="outline" 
                       className="w-full" 
                       onClick={() => setActiveTab("donate")}
-                      disabled={daysLeft <= 0}
+                      disabled={!isDonationOpen}
                     >
                       <Heart className="mr-2 h-4 w-4" /> 
-                      {daysLeft > 0 ? "Donasi Sekarang" : "Batas Waktu Habis"}
+                      {isDonationOpen ? "Donasi Sekarang" : "Batas Waktu Habis"}
                     </Button>
                   </div>
                   )}

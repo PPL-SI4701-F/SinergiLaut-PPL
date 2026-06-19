@@ -1,4 +1,11 @@
-import { activityCard, fr05Activities, loginAsFR05Community, visitCommunityDashboard } from './fr05.helpers';
+import {
+  activityCard,
+  fr05Activities,
+  fr05ActivitySlugs,
+  loginAsFR05Community,
+  visitCommunityDashboard,
+  waitForFR05Activity,
+} from './fr05.helpers';
 
 describe('FR-05: Manajemen kegiatan konservasi', () => {
   beforeEach(() => {
@@ -21,7 +28,11 @@ describe('FR-05: Manajemen kegiatan konservasi', () => {
     cy.contains('Kelola Kegiatan', { timeout: 30000 }).should('be.visible');
     cy.contains(fr05Activities.cancelled).should('not.exist');
 
-    cy.task('getActivityByTitle', fr05Activities.cancelled).then((activity) => {
+    waitForFR05Activity(
+      fr05ActivitySlugs.cancelled,
+      (activity) => activity === null,
+      'kegiatan terhapus dari database',
+    ).then((activity) => {
       expect(activity, 'deleted activity row in Supabase testing').to.equal(null);
     });
   });

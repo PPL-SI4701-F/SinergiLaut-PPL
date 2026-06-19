@@ -87,6 +87,20 @@ const fr09DonorUser = {
   phone: "081234567898",
 };
 
+const fr10DonorUser = {
+  email: "fr10.donor@test.local",
+  password: "Password@2026",
+  fullName: "Alya Donatur FR10",
+  phone: "081234567810",
+};
+
+const fr10CommunityOwner = {
+  email: "fr10.owner@test.local",
+  password: "Password@2026",
+  fullName: "Pemilik Komunitas FR10",
+  phone: "081234567811",
+};
+
 const fr33VolunteerUser = {
   email: "fr33.volunteer@test.local",
   password: "Password@2026",
@@ -299,6 +313,21 @@ const fr09Activity = {
   coverImageUrl: "/images/activities/activity-template-1.png",
 };
 
+const fr10Activities = {
+  active: {
+    title: "FR10 Donasi Aktif Konservasi Mangrove",
+    slug: "fr10-donasi-aktif-konservasi-mangrove",
+    startDaysFromNow: -2,
+    endDaysFromNow: 14,
+  },
+  expired: {
+    title: "FR10 Donasi Berakhir Bersih Pantai",
+    slug: "fr10-donasi-berakhir-bersih-pantai",
+    startDaysFromNow: -20,
+    endDaysFromNow: -1,
+  },
+};
+
 const fr33Activities = [
   {
     title: "FR33 Aksi Bersih Pantai Losari",
@@ -369,7 +398,12 @@ function createSupabaseAdminClient() {
 export default defineConfig({
   allowCypressEnv: false,
   e2e: {
-    baseUrl: process.env.CYPRESS_BASE_URL ?? "http://localhost:3000",
+    specPattern: process.env.CYPRESS_SEED_ONLY === "true"
+      ? "cypress/seeds/**/*.cy.ts"
+      : "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
+    baseUrl: process.env.CYPRESS_SEED_ONLY === "true"
+      ? undefined
+      : process.env.CYPRESS_BASE_URL ?? "http://localhost:3000",
     // Pages take 25-35s to compile with Turbopack on first load
     defaultCommandTimeout: 30000,   // 30s for element assertions (cy.contains, cy.get, etc.)
     pageLoadTimeout: 120000,        // 120s for page navigation (cy.visit)
@@ -768,6 +802,26 @@ export default defineConfig({
             },
           });
         },
+        async getFR05ActivityBySlug(slug: string) {
+          const prisma = createPrismaClient();
+
+          return prisma.activities.findFirst({
+            where: {
+              slug,
+              community: {
+                owner: {
+                  email: fr05SeedUser.email,
+                },
+              },
+            },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              status: true,
+            },
+          });
+        },
         async getFR06ActivityByTitle(title: string) {
           const prisma = createPrismaClient();
 
@@ -1111,7 +1165,6 @@ export default defineConfig({
           await prisma.volunteer_registrations.deleteMany({
             where: {
               activity_id: activity.id,
-              user_id: volunteer.id,
             },
           });
 
@@ -1437,6 +1490,283 @@ export default defineConfig({
             select: {
               id: true,
               title: true,
+            },
+          });
+        },
+        async resetFR10Data() {
+          const prisma = createPrismaClient();
+          const supabase = createSupabaseAdminClient();
+
+          const ensureAuthUser = async (
+            seed: typeof fr10DonorUser,
+            role: "user" | "community",
+          ) => {
+            const { data: authUsers, error: listUsersError } = await supabase.auth.admin.listUsers({
+              page: 1,
+              perPage: 1000,
+            });
+
+            if (listUsersError) {
+              throw new Error(listUsersError.message);
+            }
+
+            let authUser = authUsers.users.find((user) => user.email === seed.email);
+
+            if (authUser) {
+              const { data: updatedUser, error: updateUserError } = await supabase.auth.admin.updateUserById(authUser.id, {
+                password: seed.password,
+                email_confirm: true,
+                user_metadata: {
+                  full_name: seed.fullName,
+                  role,
+                  phone: seed.phone,
+                },
+              });
+
+              if (updateUserError) {
+                throw new Error(updateUserError.message);
+              }
+
+              authUser = updatedUser.user;
+            } else {
+              const { data: createdUser, error: createUserError } = await supabase.auth.admin.createUser({
+                email: seed.email,
+                password: seed.password,
+                email_confirm: true,
+                user_metadata: {
+                  full_name: seed.fullName,
+                  role,
+                  phone: seed.phone,
+                },
+              });
+
+              if (createUserError) {
+                if (!createUserError.message.toLowerCase().includes("already been registered")) {
+                  throw new Error(createUserError.message);
+                }
+
+                const { data: refreshedUsers, error: refreshedUsersError } = await supabase.auth.admin.listUsers({
+                  page: 1,
+                  perPage: 1000,
+                });
+
+                if (refreshedUsersError) {
+                  throw new Error(refreshedUsersError.message);
+                }
+
+                const existingUser = refreshedUsers.users.find((user) => user.email === seed.email);
+                if (!existingUser) {
+                  throw new Error(`FR-06 auth user exists but could not be loaded for ${seed.email}.`);
+                }
+
+                const { data: updatedUser, error: updateUserError } = await supabase.auth.admin.updateUserById(existingUser.id, {
+                  password: seed.password,
+                  email_confirm: true,
+                  user_metadata: {
+                    full_name: seed.fullName,
+                    role,
+                    phone: seed.phone,
+                  },
+                });
+
+                if (updateUserError) {
+                  throw new Error(updateUserError.message);
+                }
+
+                authUser = updatedUser.user;
+              } else {
+                authUser = createdUser.user;
+              }
+            }
+
+            if (!authUser?.id) {
+              throw new Error(`FR-10 auth user could not be prepared for ${seed.email}.`);
+            }
+
+            await prisma.profiles.upsert({
+              where: { id: authUser.id },
+              update: {
+                email: seed.email,
+                full_name: seed.fullName,
+                phone: seed.phone,
+                role,
+                is_active: true,
+              },
+              create: {
+                id: authUser.id,
+                email: seed.email,
+                full_name: seed.fullName,
+                phone: seed.phone,
+                role,
+                is_active: true,
+              },
+            });
+
+            return authUser;
+          };
+
+          const owner = await ensureAuthUser(fr10CommunityOwner, "community");
+          await ensureAuthUser(fr10DonorUser, "user");
+
+          const community = await prisma.communities.upsert({
+            where: { slug: "komunitas-batas-waktu-donasi-fr10" },
+            update: {
+              owner_id: owner.id,
+              name: "Komunitas Batas Waktu Donasi FR10",
+              description: "Komunitas khusus automated testing FR-10.",
+              location: "Surabaya, Jawa Timur",
+              focus_areas: ["cleanup", "restoration"],
+              verification_status: "approved" as any,
+              is_verified: true,
+              is_suspended: false,
+              logo_url: "/images/partner-1.jpg",
+            },
+            create: {
+              owner_id: owner.id,
+              name: "Komunitas Batas Waktu Donasi FR10",
+              slug: "komunitas-batas-waktu-donasi-fr10",
+              description: "Komunitas khusus automated testing FR-10.",
+              location: "Surabaya, Jawa Timur",
+              focus_areas: ["cleanup", "restoration"],
+              verification_status: "approved" as any,
+              is_verified: true,
+              is_suspended: false,
+              logo_url: "/images/partner-1.jpg",
+            },
+            select: { id: true },
+          });
+
+          const activityIds: string[] = [];
+
+          for (const [key, activity] of Object.entries(fr10Activities)) {
+            const payload = {
+              community_id: community.id,
+              title: activity.title,
+              description: `Kegiatan ${key} khusus automated testing batas waktu donasi FR-10.`,
+              category: (key === "active" ? "restoration" : "cleanup") as any,
+              status: "published" as any,
+              start_date: addDays(activity.startDaysFromNow),
+              end_date: addDays(activity.endDaysFromNow),
+              execution_date: addDays(Math.max(activity.endDaysFromNow + 10, 30)),
+              location: "Surabaya, Jawa Timur",
+              volunteer_quota: 20,
+              volunteer_count: 0,
+              funding_goal: BigInt(10000000),
+              funding_raised: BigInt(0),
+              allow_item_donation: false,
+              cover_image_url: "/images/activities/activity-template-1.png",
+              published_at: addDays(-5),
+              admin_note: null,
+            };
+
+            const seededActivity = await prisma.activities.upsert({
+              where: {
+                community_id_slug: {
+                  community_id: community.id,
+                  slug: activity.slug,
+                },
+              },
+              update: payload,
+              create: {
+                ...payload,
+                slug: activity.slug,
+              },
+              select: { id: true },
+            });
+
+            activityIds.push(seededActivity.id);
+          }
+
+          await prisma.donations.deleteMany({
+            where: {
+              activity_id: {
+                in: activityIds,
+              },
+            },
+          });
+
+          return true;
+        },
+        async getFR10Activities() {
+          const prisma = createPrismaClient();
+          const activities = await prisma.activities.findMany({
+            where: {
+              slug: {
+                in: Object.values(fr10Activities).map((activity) => activity.slug),
+              },
+            },
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              start_date: true,
+              end_date: true,
+            },
+          });
+
+          return Object.fromEntries(
+            Object.entries(fr10Activities).map(([key, seed]) => {
+              const activity = activities.find((candidate) => candidate.slug === seed.slug);
+              return [
+                key,
+                activity
+                  ? {
+                      id: activity.id,
+                      title: activity.title,
+                      startDate: activity.start_date.toISOString(),
+                      endDate: activity.end_date?.toISOString() ?? null,
+                    }
+                  : null,
+              ];
+            }),
+          );
+        },
+        async getFR10LatestDonation() {
+          const prisma = createPrismaClient();
+          const donation = await prisma.donations.findFirst({
+            where: {
+              activity: {
+                slug: fr10Activities.active.slug,
+              },
+              user: {
+                email: fr10DonorUser.email,
+              },
+            },
+            orderBy: {
+              created_at: "desc",
+            },
+            select: {
+              donor_name: true,
+              donor_email: true,
+              type: true,
+              amount: true,
+              status: true,
+              activity: {
+                select: {
+                  funding_raised: true,
+                },
+              },
+            },
+          });
+
+          if (!donation) return null;
+
+          return {
+            donorName: donation.donor_name,
+            donorEmail: donation.donor_email,
+            type: donation.type,
+            amount: donation.amount?.toString() ?? null,
+            status: donation.status,
+            fundingRaised: donation.activity.funding_raised.toString(),
+          };
+        },
+        async countFR10ExpiredDonations() {
+          const prisma = createPrismaClient();
+          return prisma.donations.count({
+            where: {
+              activity: {
+                slug: fr10Activities.expired.slug,
+              },
             },
           });
         },

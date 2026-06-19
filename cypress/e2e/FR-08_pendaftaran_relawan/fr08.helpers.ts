@@ -43,9 +43,14 @@ export function fillVolunteerForm({
   phone = fr08User.phone,
   agree = true,
 } = {}) {
-  cy.get('input[placeholder="Nama lengkap"]').clear().type(name);
-  cy.get('input[placeholder="Umur (tahun)"]').clear().type(age);
-  cy.get('input[placeholder="+62 8xx xxxx xxxx"]').clear().type(phone);
+  const fillInput = (selector: string, value: string) => {
+    cy.get(selector).should('be.visible').and('be.enabled').clear();
+    cy.get(selector).should('be.visible').and('be.enabled').type(value);
+  };
+
+  fillInput('input[placeholder="Nama lengkap"]', name);
+  fillInput('input[placeholder="Umur (tahun)"]', age);
+  fillInput('input[placeholder="+62 8xx xxxx xxxx"]', phone);
 
   if (agree) {
     cy.get('#agreed').check({ force: true });

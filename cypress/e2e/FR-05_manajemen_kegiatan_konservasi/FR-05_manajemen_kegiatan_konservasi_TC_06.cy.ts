@@ -1,4 +1,11 @@
-import { activityCard, fr05Activities, loginAsFR05Community, visitCommunityDashboard } from './fr05.helpers';
+import {
+  activityCard,
+  fr05Activities,
+  fr05ActivitySlugs,
+  loginAsFR05Community,
+  visitCommunityDashboard,
+  waitForFR05Activity,
+} from './fr05.helpers';
 
 describe('FR-05: Manajemen kegiatan konservasi', () => {
   beforeEach(() => {
@@ -20,9 +27,13 @@ describe('FR-05: Manajemen kegiatan konservasi', () => {
       cy.contains('button', 'Hapus').should('be.visible');
     });
 
-    cy.task('getActivityByTitle', fr05Activities.pendingReview).then((activity: any) => {
+    waitForFR05Activity(
+      fr05ActivitySlugs.pendingReview,
+      (activity) => activity?.status === 'cancelled',
+      'status kegiatan berubah menjadi cancelled',
+    ).then((activity) => {
       expect(activity, 'activity row in Supabase testing').to.not.equal(null);
-      expect(activity.status).to.equal('cancelled');
+      expect(activity!.status).to.equal('cancelled');
     });
   });
 });

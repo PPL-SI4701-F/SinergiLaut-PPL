@@ -17,6 +17,7 @@
         "db:generate": "prisma generate",
         "db:push": "prisma db push",
         "db:seed": "prisma db seed",
+        "db:seed:pbi": "node scripts/run-with-env.mjs .env.test.local cross-env CYPRESS_SEED_ONLY=true cypress run --spec cypress/seeds/seed-all-pbi.cy.ts --browser electron && node scripts/run-with-env.mjs .env.test.local node scripts/fix-supabase-grants.js",
         "db:studio": "prisma studio",
         "db:reset": "prisma db push --force-reset && prisma db seed && node scripts/fix-supabase-grants.js",
         "cypress:open": "cypress open",

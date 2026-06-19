@@ -2,7 +2,6 @@ import { fr05Activities, loginAsFR05Community, visitCommunityDashboard } from '.
 
 describe('FR-05: Manajemen kegiatan konservasi', () => {
   beforeEach(() => {
-    cy.task('resetFR05Data');
     loginAsFR05Community();
   });
 

@@ -1,4 +1,11 @@
-import { activityCard, fr05Activities, loginAsFR05Community, visitCommunityDashboard } from './fr05.helpers';
+import {
+  activityCard,
+  fr05Activities,
+  fr05ActivitySlugs,
+  loginAsFR05Community,
+  visitCommunityDashboard,
+  waitForFR05Activity,
+} from './fr05.helpers';
 
 describe('FR-05: Manajemen kegiatan konservasi', () => {
   beforeEach(() => {
@@ -18,9 +25,13 @@ describe('FR-05: Manajemen kegiatan konservasi', () => {
     cy.contains('button', 'Tidak').click();
     cy.contains(fr05Activities.pendingReview).should('be.visible');
 
-    cy.task('getActivityByTitle', fr05Activities.pendingReview).then((activity: any) => {
+    waitForFR05Activity(
+      fr05ActivitySlugs.pendingReview,
+      (activity) => activity?.status === 'pending_review',
+      'status kegiatan tetap pending_review',
+    ).then((activity) => {
       expect(activity, 'activity row in Supabase testing').to.not.equal(null);
-      expect(activity.status).to.equal('pending_review');
+      expect(activity!.status).to.equal('pending_review');
     });
   });
 });

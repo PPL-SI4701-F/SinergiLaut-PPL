@@ -71,6 +71,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 
 const statusFilterOptions = [
   { value: "all", label: "Semua Status" },
+  { value: "draft", label: "Draft" },
   { value: "pending_review", label: "Menunggu Review" },
   { value: "published", label: "Aktif" },
   { value: "ongoing", label: "Sedang Berlangsung" },

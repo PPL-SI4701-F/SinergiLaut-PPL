@@ -79,6 +79,30 @@ async function requireCommunityOrAdminDonationAccess(donationId: string) {
 /** Markup biaya operasional yang dikenakan ke donatur untuk donasi barang (lihat MARKUP_PERCENT di app/activities/[id]/page.tsx) */
 const MARKUP_PERCENT = 10
 
+async function validateDonationWindow(activityId: string) {
+  const adminSupabase = await createAdminClient()
+  const { data: activity, error } = await adminSupabase
+    .from("activities")
+    .select("id, end_date, published_at, created_at")
+    .eq("id", activityId)
+    .maybeSingle()
+
+  if (error || !activity) {
+    return { valid: false as const, error: "Kegiatan tidak ditemukan." }
+  }
+
+  const publishedAt = activity.published_at ?? activity.created_at
+  const deadline = activity.end_date
+    ? new Date(activity.end_date)
+    : new Date(new Date(publishedAt).setMonth(new Date(publishedAt).getMonth() + 6))
+
+  if (Number.isNaN(deadline.getTime()) || deadline.getTime() <= Date.now()) {
+    return { valid: false as const, error: "Batas waktu pengumpulan donasi telah berakhir." }
+  }
+
+  return { valid: true as const }
+}
+
 async function getE2EMock() {
   if (process.env.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_E2E_TESTING !== 'true') return null
   try {
@@ -131,6 +155,11 @@ interface ActivityWithCommunity {
  * Panggil completeMoneyDonation() setelah user konfirmasi pembayaran.
  */
 export async function createMoneyDonation(payload: CreateMoneyDonationPayload) {
+  const donationWindow = await validateDonationWindow(payload.activityId)
+  if (!donationWindow.valid) {
+    return { success: false as const, error: donationWindow.error }
+  }
+
   const adminSupabase = await createAdminClient()
 
   const { data: donation, error } = await adminSupabase
@@ -177,6 +206,15 @@ export async function completeMoneyDonation(donationId: string) {
     return { success: false as const, error: "Donasi tidak ditemukan atau sudah diproses." }
   }
 
+  const { data: activityBeforeUpdate } = await adminSupabase
+    .from("activities")
+    .select("funding_raised")
+    .eq("id", donation.activity_id)
+    .single()
+
+  const previousFundingRaised = Number(activityBeforeUpdate?.funding_raised ?? 0)
+  const donationAmount = Number(donation.amount ?? 0)
+
   // Update status → completed (DB trigger on_donation_status_change akan update funding_raised)
   const { error: updateError } = await adminSupabase
     .from("donations")
@@ -189,11 +227,27 @@ export async function completeMoneyDonation(donationId: string) {
   }
 
   // Ambil funding_raised terbaru (sudah diupdate oleh trigger) + data notifikasi
-  const { data: activity } = await adminSupabase
+  let { data: activity } = await adminSupabase
     .from("activities")
     .select("title, funding_raised, communities(owner_id)")
     .eq("id", donation.activity_id)
     .single() as { data: ActivityWithCommunity | null }
+
+  const expectedFundingRaised = previousFundingRaised + donationAmount
+  if (activity && Number(activity.funding_raised ?? 0) < expectedFundingRaised) {
+    const { data: fallbackActivity, error: fallbackError } = await adminSupabase
+      .from("activities")
+      .update({ funding_raised: expectedFundingRaised })
+      .eq("id", donation.activity_id)
+      .select("title, funding_raised, communities(owner_id)")
+      .single() as { data: ActivityWithCommunity | null, error: { message?: string } | null }
+
+    if (fallbackError) {
+      console.error("[completeMoneyDonation] fallback funding update error:", fallbackError)
+    } else if (fallbackActivity) {
+      activity = fallbackActivity
+    }
+  }
 
   const activityTitle = activity?.title ?? "kegiatan"
   const formattedAmount = new Intl.NumberFormat("id-ID", {
@@ -235,6 +289,11 @@ export async function completeMoneyDonation(donationId: string) {
 export async function createItemDonation(payload: CreateItemDonationPayload) {
   if (!payload.items || payload.items.length === 0) {
     return { success: false as const, error: "Harus ada minimal 1 item untuk donasi barang." }
+  }
+
+  const donationWindow = await validateDonationWindow(payload.activityId)
+  if (!donationWindow.valid) {
+    return { success: false as const, error: donationWindow.error }
   }
 
   const adminSupabase = await createAdminClient()
@@ -350,7 +409,7 @@ export async function completeFulfillmentDonation(
   // Ambil items_needed saat ini dari DB
   const { data: activity, error: activityFetchError } = await adminSupabase
     .from("activities")
-    .select("items_needed")
+    .select("items_needed, funding_raised")
     .eq("id", activityId)
     .single()
 
@@ -363,6 +422,8 @@ export async function completeFulfillmentDonation(
   if (!Array.isArray(currentItems)) {
     return { success: false as const, error: "Data barang kegiatan tidak valid." }
   }
+
+  const previousFundingRaised = Number(activity.funding_raised ?? 0)
 
   // Hitung nilai donasi (harga + markup operasional) berdasarkan unit_price dari DB
   const fulfillmentValue = currentItems.reduce((sum: number, item: { item_name: string; unit_price?: number }) => {
@@ -404,7 +465,32 @@ export async function completeFulfillmentDonation(
     return { success: false as const, error: "Gagal memperbarui data barang kegiatan." }
   }
 
-  return { success: true as const, updatedItems }
+  let finalFundingRaised = previousFundingRaised
+  const { data: activityAfterCompletion } = await adminSupabase
+    .from("activities")
+    .select("funding_raised")
+    .eq("id", activityId)
+    .single()
+
+  finalFundingRaised = Number(activityAfterCompletion?.funding_raised ?? previousFundingRaised)
+  const expectedFundingRaised = previousFundingRaised + fulfillmentValue
+
+  if (finalFundingRaised < expectedFundingRaised) {
+    const { data: fallbackActivity, error: fallbackError } = await adminSupabase
+      .from("activities")
+      .update({ funding_raised: expectedFundingRaised })
+      .eq("id", activityId)
+      .select("funding_raised")
+      .single()
+
+    if (fallbackError) {
+      console.error("[completeFulfillmentDonation] fallback funding update error:", fallbackError)
+    } else {
+      finalFundingRaised = Number(fallbackActivity?.funding_raised ?? expectedFundingRaised)
+    }
+  }
+
+  return { success: true as const, updatedItems, funding_raised: finalFundingRaised }
 }
 
 /**

@@ -13,19 +13,17 @@ Cypress.on('uncaught:exception', (err, runnable) => {
 
 // Global hook: run a clean database reset once before each test file
 before(() => {
-  const isFR05ManagementSpec = Cypress.spec.relative.includes('FR-05_manajemen_kegiatan_konservasi');
-  const isFR06StatusSpec = Cypress.spec.relative.includes('FR-06_manajemen_status_kegiatan');
-  const isFR08VolunteerRegistrationSpec = Cypress.spec.relative.includes('FR-08_pendaftaran_relawan');
-  const isFR09DonationManagementSpec = Cypress.spec.relative.includes('FR-09_manajemen_donasi');
-  const isFR33VolunteerActivitySpec = Cypress.spec.relative.includes('FR-33_mencari_aktivitas_relawan');
+  const specPath = Cypress.spec.relative.replace(/\\/g, '/');
+  const usesScopedPBISeed = [
+    'FR-05_manajemen_kegiatan_konservasi',
+    'FR-06_manajemen_status_kegiatan',
+    'FR-08_pendaftaran_relawan',
+    'FR-09_manajemen_donasi',
+    'FR-10_manajemen_batas_waktu_donasi',
+    'FR-33_mencari_aktivitas_relawan',
+  ].some((folder) => specPath.includes(folder));
 
-  if (
-    isFR05ManagementSpec ||
-    isFR06StatusSpec ||
-    isFR08VolunteerRegistrationSpec ||
-    isFR09DonationManagementSpec ||
-    isFR33VolunteerActivitySpec
-  ) {
+  if (usesScopedPBISeed || specPath.includes('cypress/seeds/')) {
     return;
   }
 
