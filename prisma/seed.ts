@@ -144,7 +144,7 @@ async function main() {
   })
 
   // Approved volunteers — data lengkap, siap daftar kegiatan
-  const userApproved1 = await createAuthUser('approved1@user.com', 'Dian Rahmawati', 'user')
+  const userApproved1 = await createAuthUser('approved1@user.com', 'Muhamad Habibi Budiman', 'user')
   const userApproved2 = await createAuthUser('approved2@user.com', 'Fajar Nugroho', 'user')
   const userApproved3 = await createAuthUser('approved3@user.com', 'Maya Sari', 'user')
   const userApproved4 = await createAuthUser('approved4@user.com', 'Rizky Aditya', 'user')

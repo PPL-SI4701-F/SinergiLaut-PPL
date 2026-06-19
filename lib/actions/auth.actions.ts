@@ -59,6 +59,7 @@ export async function login(formData: FormData) {
     }
 
     const role = profile.role;
+    console.log("ROLE IN LOGIN:", role, "ID:", data.user.id);
     let redirectTo = "/user/dashboard";
     if (role === "admin") {
       redirectTo = "/admin/dashboard";

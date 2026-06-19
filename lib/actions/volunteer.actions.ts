@@ -361,17 +361,23 @@ export async function markVolunteerAttended(registrationId: string, proofFile: F
   const ext = proofFile.name.split(".").pop()
   const path = `volunteer-attendance/${registrationId}/${Date.now()}.${ext}`
 
-  const { error: uploadError } = await adminSupabase.storage.from(bucketName).upload(path, proofFile, { upsert: false })
-  if (uploadError) {
-    console.error("[markVolunteerAttended] upload error:", uploadError)
-    return { success: false, error: "Gagal mengunggah bukti foto kehadiran." }
-  }
+  let publicUrl = ""
 
-  const { data: urlData } = adminSupabase.storage.from(bucketName).getPublicUrl(path)
+  if (isE2E || process.env.NEXT_PUBLIC_E2E_TESTING === 'true') {
+    publicUrl = "https://example.com/dummy-attendance-proof.png"
+  } else {
+    const { error: uploadError } = await adminSupabase.storage.from(bucketName).upload(path, proofFile, { upsert: false })
+    if (uploadError) {
+      console.error("[markVolunteerAttended] upload error:", uploadError)
+      return { success: false, error: "Gagal mengunggah bukti foto kehadiran." }
+    }
+    const { data: urlData } = adminSupabase.storage.from(bucketName).getPublicUrl(path)
+    publicUrl = urlData.publicUrl
+  }
 
   const { data, error } = await adminSupabase
     .from("volunteer_registrations")
-    .update({ status: "attended", attendance_proof_url: urlData.publicUrl })
+    .update({ status: "attended", attendance_proof_url: publicUrl })
     .eq("id", registrationId)
     .select("user_id, full_name, activity_id, activity:activities(title)")
     .single()
@@ -395,7 +401,7 @@ export async function markVolunteerAttended(registrationId: string, proofFile: F
     )
   }
 
-  return { success: true, data: { ...data, attendance_proof_url: urlData.publicUrl } }
+  return { success: true, data: { ...data, attendance_proof_url: publicUrl } }
 }
 
 /** Tandai relawan tidak hadir */

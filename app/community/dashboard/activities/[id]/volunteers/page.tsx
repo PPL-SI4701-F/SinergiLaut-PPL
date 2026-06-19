@@ -100,7 +100,8 @@ export default function VolunteersManagementPage() {
       if (result.success && result.data) {
         setActivity(result.data)
       } else {
-        toast.error(result.error ?? "Gagal memuat ringkasan kegiatan.")
+        toast.error(result.error ?? "Kegiatan tidak ditemukan atau bukan milik komunitas Anda.")
+        router.push("/community/dashboard")
       }
     }
 

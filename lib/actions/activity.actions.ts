@@ -17,7 +17,7 @@ async function getE2EMock() {
 async function getCurrentVerifiedCommunity() {
   const isE2E = await getE2EMock()
   if (isE2E === 'community') {
-    return { authorized: true as const, communityId: 'community-id-123' }
+    return { authorized: true as const, communityIds: ['community-id-123'] }
   }
 
   const supabase = await createClient()
@@ -35,19 +35,17 @@ async function getCurrentVerifiedCommunity() {
     return { authorized: false as const, error: "Akses hanya untuk komunitas." }
   }
 
-  const { data: community } = await adminSupabase
+  const { data: communities } = await adminSupabase
     .from("communities")
     .select("id")
     .eq("owner_id", user.id)
     .eq("is_verified", true)
-    .limit(1)
-    .maybeSingle()
 
-  if (!community) {
+  if (!communities || communities.length === 0) {
     return { authorized: false as const, error: "Komunitas Anda belum terverifikasi." }
   }
 
-  return { authorized: true as const, communityId: community.id }
+  return { authorized: true as const, communityIds: communities.map(c => c.id) }
 }
 
 async function requireOwnedActivity(activityId: string) {
@@ -57,16 +55,16 @@ async function requireOwnedActivity(activityId: string) {
   const adminSupabase = await createAdminClient()
   const { data: activity } = await adminSupabase
     .from("activities")
-    .select("id")
+    .select("id, community_id")
     .eq("id", activityId)
-    .eq("community_id", communityAuth.communityId)
+    .in("community_id", communityAuth.communityIds)
     .maybeSingle()
 
   if (!activity) {
     return { authorized: false as const, error: "Kegiatan tidak ditemukan atau bukan milik komunitas Anda." }
   }
 
-  return { authorized: true as const, communityId: communityAuth.communityId }
+  return { authorized: true as const, communityId: activity.community_id }
 }
  
 export async function createActivity(formData: FormData) {
@@ -575,7 +573,7 @@ export async function getCommunityActiveEditRequests(communityId: string) {
 
   const communityAuth = await getCurrentVerifiedCommunity()
   if (!communityAuth.authorized) return { success: false, data: {}, error: communityAuth.error }
-  if (communityAuth.communityId !== communityId) {
+  if (!communityAuth.communityIds.includes(communityId)) {
     return { success: false, data: {}, error: "Anda tidak memiliki akses ke data komunitas ini." }
   }
 

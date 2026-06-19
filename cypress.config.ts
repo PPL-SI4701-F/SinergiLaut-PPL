@@ -290,13 +290,14 @@ export default defineConfig({
           
           // MANUAL UPDATE: Karena Prisma db:reset menghapus trigger dari schema.sql di local, 
           // kita harus menaikkan volunteer_count secara manual saat E2E testing
-          await supabase.rpc('increment_volunteer_count', { activity_id_param: activity.id }).catch(async () => {
+          const { error: rpcError } = await supabase.rpc('increment_volunteer_count', { activity_id_param: activity.id });
+          if (rpcError) {
              // Fallback jika RPC tidak ada
              const { data: act } = await supabase.from('activities').select('volunteer_count').eq('id', activity.id).single();
              if (act) {
                await supabase.from('activities').update({ volunteer_count: (act.volunteer_count || 0) + 1 }).eq('id', activity.id);
              }
-          });
+          }
           
           return true;
         },
@@ -351,6 +352,48 @@ export default defineConfig({
             .update({ status: status })
             .eq('activity_id', activity.id);
             
+          return true;
+        },
+        async updateActivityStatus({ activityTitle, status }: { activityTitle: string, status: string }) {
+          const supabase = createSupabaseAdminClient();
+          const { data: activity } = await supabase.from('activities').select('id').eq('title', activityTitle).single();
+          if (!activity) return false;
+          
+          await supabase
+            .from('activities')
+            .update({ status: status })
+            .eq('id', activity.id);
+            
+          return true;
+        },
+        async registerVolunteer({ email, activityTitle }: { email: string, activityTitle: string }) {
+          const supabase = createSupabaseAdminClient();
+          
+          const { data: user } = await supabase.from('profiles').select('id, full_name, phone').eq('email', email).single();
+          if (!user) throw new Error('User not found');
+          
+          const { data: activity } = await supabase.from('activities').select('id').eq('title', activityTitle).single();
+          if (!activity) throw new Error('Activity not found');
+
+          // Delete existing just in case
+          await supabase
+            .from('volunteer_registrations')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('activity_id', activity.id);
+
+          const { error } = await supabase
+            .from('volunteer_registrations')
+            .insert({
+              user_id: user.id,
+              activity_id: activity.id,
+              full_name: user.full_name || 'Volunteer Name',
+              email: email,
+              phone: user.phone || '08123456789',
+              status: 'pending'
+            });
+
+          if (error) throw new Error(error.message);
           return true;
         }
       });

@@ -1,17 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-config({ path: ".env.test.local" });
-config({ path: ".env.local" });
-config({ path: ".env" });
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-async function check() {
-  const { data: activities } = await supabase.from('activities').select('id, title, volunteer_count');
-  
-  console.log("\n== ACTIVITIES ==");
-  console.log(activities?.filter(a => a.title.includes('Edukasi Pesisir')));
+async function main() {
+    const p = await prisma.profiles.findFirst({ where: { email: 'owner2@example.com' } });
+    console.log(p);
 }
 
-check();
+main().catch(console.error).finally(() => prisma.$disconnect());

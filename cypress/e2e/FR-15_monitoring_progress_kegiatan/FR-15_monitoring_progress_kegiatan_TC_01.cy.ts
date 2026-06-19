@@ -1,6 +1,6 @@
 describe('FR-15: Monitoring progress kegiatan - TC-01', () => {
     beforeEach(() => {
-        cy.exec('npm run db:reset', { timeout: 150000 });
+        cy.exec('npm run db:reset:e2e', { timeout: 150000 });
         cy.wait(5000);
         cy.clearCookies();
         cy.clearLocalStorage();
