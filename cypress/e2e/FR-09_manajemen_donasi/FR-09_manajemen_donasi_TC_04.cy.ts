@@ -1,23 +1,39 @@
 import {
-  fr09Activity,
-  loginAsFR09CommunityOwner,
+  completeSimulatedPayment,
+  openFR09DonationForm,
+  openPaymentSimulation,
+  setMoneyAmount,
+  waitForFR09Donation,
 } from './fr09.helpers';
 
-describe('FR-09: Manajemen donasi oleh komunitas', () => {
+describe('FR-09: Manajemen donasi', () => {
   beforeEach(() => {
-    loginAsFR09CommunityOwner();
+    openFR09DonationForm();
   });
 
-  it('TC-FR09-004 - Komunitas dapat memantau donasi yang masuk', () => {
-    cy.visit('/community/dashboard');
+  it('TC-FR09-004 - Harus berhasil melakukan donasi anonim', () => {
+    cy.get('#anon').check();
+    cy.get('input[placeholder="Nama Anda"]').should('be.disabled');
 
-    cy.contains('Kelola Kegiatan').should('be.visible');
-    cy.contains(fr09Activity.title)
-      .parents('.border-border')
-      .first()
-      .within(() => {
-        cy.contains(/Rp\s*350\.000/).should('be.visible');
-        cy.contains('button, a', /Kelola/i).should('be.visible');
-      });
+    setMoneyAmount('50000');
+    openPaymentSimulation();
+    cy.contains(/Rp\s*50\.000/).should('be.visible');
+    completeSimulatedPayment();
+
+    waitForFR09Donation(
+      'money',
+      (donation) => donation.status === 'completed'
+        && donation.amount === '50000'
+        && donation.isAnonymous
+        && donation.fundingRaised === '50000',
+      'donasi anonim selesai dan tersimpan di database',
+    ).then((donation) => {
+      expect(donation.donorName).to.equal('Donatur Anonim');
+      expect(donation.donorEmail).to.equal('fr09.donor@test.local');
+      expect(donation.amount).to.equal('50000');
+      expect(donation.status).to.equal('completed');
+      expect(donation.isAnonymous).to.equal(true);
+      expect(donation.fundingRaised).to.equal('50000');
+    });
   });
 });

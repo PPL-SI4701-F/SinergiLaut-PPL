@@ -26,9 +26,9 @@ export function searchFR33Activity(keyword: string) {
   cy.get('input[placeholder="Cari kegiatan konservasi..."]').clear().type(keyword);
 }
 
-export function selectFR33Location(location: string) {
-  cy.contains('button.act-dropdown-btn', /All Locations|Pantai Losari|Pantai Sukamade|Surabaya/).click();
-  cy.contains('button.act-dropdown-item', location).click();
+export function selectFR33Province(province: string) {
+  cy.contains('button.act-dropdown-btn', /Semua Provinsi|Bali|Jawa Timur|Sulawesi Selatan/).click();
+  cy.contains('button.act-dropdown-item', province).click();
 }
 
 export function selectFR33Type(type: string) {

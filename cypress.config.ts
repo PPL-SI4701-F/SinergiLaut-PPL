@@ -1741,6 +1741,7 @@ export default defineConfig({
               type: true,
               amount: true,
               status: true,
+              is_anonymous: true,
               activity: {
                 select: {
                   funding_raised: true,
@@ -1757,6 +1758,7 @@ export default defineConfig({
             type: donation.type,
             amount: donation.amount?.toString() ?? null,
             status: donation.status,
+            isAnonymous: donation.is_anonymous,
             fundingRaised: donation.activity.funding_raised.toString(),
           };
         },

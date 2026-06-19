@@ -26,6 +26,24 @@ const howItWorks = [
   { step: "03", title: "Buat Perubahan Nyata", desc: "Kontribusimu langsung berdampak pada ekosistem laut dan menginspirasi lebih banyak orang untuk peduli." },
 ]
 
+const PROVINCE_ALIASES = [
+  { province: "Bali", aliases: ["bali", "denpasar", "badung", "karangasem", "buleleng", "nusa penida", "menjangan"] },
+  { province: "Jawa Tengah", aliases: ["jawa tengah", "semarang", "solo", "surakarta"] },
+  { province: "Jawa Timur", aliases: ["jawa timur", "surabaya", "banyuwangi", "malang"] },
+  { province: "Nusa Tenggara Barat", aliases: ["nusa tenggara barat", "ntb", "lombok", "senggigi"] },
+  { province: "Sulawesi Selatan", aliases: ["sulawesi selatan", "makassar", "takabonerate"] },
+  { province: "Sulawesi Tenggara", aliases: ["sulawesi tenggara", "wakatobi", "kendari"] },
+  { province: "Sulawesi Utara", aliases: ["sulawesi utara", "manado", "bunaken"] },
+  { province: "Papua Barat Daya", aliases: ["papua barat daya", "raja ampat"] },
+] as const
+
+function getProvinceFromLocation(location?: string | null) {
+  const normalizedLocation = (location || "").toLowerCase()
+  return PROVINCE_ALIASES.find(({ aliases }) =>
+    aliases.some((alias) => normalizedLocation.includes(alias))
+  )?.province ?? "Lainnya"
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ActivityCard({ activity, variant }: { activity: any; variant: 'active' | 'completed' }) {
   const pct = activity.fundingGoal > 0
@@ -35,7 +53,11 @@ function ActivityCard({ activity, variant }: { activity: any; variant: 'active' 
   const accent = isCompleted ? '#64748b' : '#06958a'
 
   return (
-    <Link href={`/activities/${activity.id}`} className={`act-card${isCompleted ? ' grayscale-[0.3]' : ''}`}>
+    <Link
+      href={`/activities/${activity.id}`}
+      className={`act-card${isCompleted ? ' grayscale-[0.3]' : ''}`}
+      data-province={activity.province}
+    >
       <div className="act-card-img-wrap">
         <Image src={activity.image} alt={activity.title} fill className="object-cover" />
         <span className={`act-card-badge${isCompleted ? ' bg-slate-700/80' : ''}`}>{activity.type}</span>
@@ -228,13 +250,13 @@ const activitiesPageStyles = `
 export default function ActivitiesPage() {
   const { isUser } = useAuth()
   const [searchQuery, setSearchQuery]           = useState("")
-  const [selectedLocation, setSelectedLocation] = useState("All Locations")
+  const [selectedProvince, setSelectedProvince] = useState("Semua Provinsi")
   const [selectedType, setSelectedType]         = useState("All Types")
   const [locationOpen, setLocationOpen]         = useState(false)
   const [typeOpen, setTypeOpen]                 = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [supabaseActivities, setSupabaseActivities] = useState<any[]>([])
-  const [availableLocations, setAvailableLocations] = useState<string[]>([])
+  const [availableProvinces, setAvailableProvinces] = useState<string[]>([])
   const [availableTypes, setAvailableTypes]         = useState<string[]>([])
 
   useEffect(() => {
@@ -255,6 +277,7 @@ export default function ActivitiesPage() {
           image: d.cover_image_url || "/placeholder.jpg",
           date: formatDate(d.start_date || new Date().toISOString()),
           location: d.location || "Online",
+          province: getProvinceFromLocation(d.location),
           type: d.category || "other",
           volunteers: d.volunteer_count || 0,
           slots: d.volunteer_quota || 0,
@@ -266,8 +289,10 @@ export default function ActivitiesPage() {
         setSupabaseActivities(mapped)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const locs = Array.from(new Set(data.map((d: any) => d.location).filter(Boolean))).sort() as string[]
-        setAvailableLocations(locs)
+        const provinces = Array.from(
+          new Set(data.map((d: any) => getProvinceFromLocation(d.location)))
+        ).sort() as string[]
+        setAvailableProvinces(provinces)
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const types = Array.from(new Set(data.map((d: any) => d.category || "other"))) as string[]
@@ -290,17 +315,17 @@ export default function ActivitiesPage() {
     }
   }, [supabaseActivities])
 
-  const locations       = ["All Locations", ...availableLocations]
+  const provinces       = ["Semua Provinsi", ...availableProvinces]
   const typeOptions     = ["All Types", ...availableTypes]
 
   const filteredActivities = supabaseActivities.filter((activity) => {
     const matchesSearch   = (activity.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                             (activity.description || "").toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesLocation = selectedLocation === "All Locations" ||
-                            (activity.location || "").toLowerCase() === selectedLocation.toLowerCase()
+    const matchesProvince = selectedProvince === "Semua Provinsi" ||
+                            activity.province === selectedProvince
     const matchesType     = selectedType === "All Types" ||
                             (activity.type || "").toLowerCase() === selectedType.toLowerCase()
-    return matchesSearch && matchesLocation && matchesType
+    return matchesSearch && matchesProvince && matchesType
   })
 
   const activeActivities = filteredActivities.filter(a => a.status === "published")
@@ -325,14 +350,14 @@ export default function ActivitiesPage() {
         <div className="act-dropdown-wrap">
           <button className="act-dropdown-btn" onClick={() => { setLocationOpen(!locationOpen); setTypeOpen(false) }}>
             <MapPin style={{ width: 15, height: 15 }} />
-            {selectedLocation}
+            {selectedProvince}
             <ChevronDown style={{ width: 14, height: 14, opacity: 0.7 }} />
           </button>
           {locationOpen && (
             <div className="act-dropdown-menu">
-              {locations.map((loc) => (
-                <button key={loc} className="act-dropdown-item" onClick={() => { setSelectedLocation(loc); setLocationOpen(false) }}>
-                  {loc}
+              {provinces.map((province) => (
+                <button key={province} className="act-dropdown-item" onClick={() => { setSelectedProvince(province); setLocationOpen(false) }}>
+                  {province}
                 </button>
               ))}
             </div>
@@ -357,7 +382,7 @@ export default function ActivitiesPage() {
           )}
         </div>
 
-        {filteredActivities.length > 0 && (selectedLocation !== "All Locations" || selectedType !== "All Types" || searchQuery !== "") && (
+        {filteredActivities.length > 0 && (selectedProvince !== "Semua Provinsi" || selectedType !== "All Types" || searchQuery !== "") && (
           <span className="act-results-count">{filteredActivities.length} kegiatan ditemukan</span>
         )}
       </div>
