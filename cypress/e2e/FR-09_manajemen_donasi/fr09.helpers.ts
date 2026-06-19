@@ -10,11 +10,6 @@ export const fr09CommunityOwner = {
   password: 'Password@2026',
 };
 
-export const fr09Admin = {
-  email: 'admin1@sinergilaut.id',
-  password: 'Password@2026',
-};
-
 export const fr09Activity = {
   title: 'FR09 Konservasi Pesisir Nusantara',
 };

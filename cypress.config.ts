@@ -1873,34 +1873,6 @@ export default defineConfig({
 
           return donation ?? null;
         },
-        async getFR09AdminDonationSummary() {
-          const prisma = createPrismaClient();
-
-          const completedMoney = await prisma.donations.findMany({
-            where: {
-              type: "money",
-              status: "completed",
-            },
-            select: {
-              amount: true,
-            },
-          });
-
-          const fr09DonationCount = await prisma.donations.count({
-            where: {
-              activity: {
-                slug: fr09Activity.slug,
-              },
-            },
-          });
-
-          return {
-            totalCompletedMoney: completedMoney
-              .reduce((total, donation) => total + (donation.amount ?? BigInt(0)), BigInt(0))
-              .toString(),
-            fr09DonationCount,
-          };
-        },
         async getFR09LatestDonation(type: "money" | "item") {
           const prisma = createPrismaClient();
 
