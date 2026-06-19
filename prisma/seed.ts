@@ -52,9 +52,9 @@ async function main() {
 
     const { data: list, error: listError } = await supabase.auth.admin.listUsers()
     if (listError) throw listError
-    
+
     const existing = list.users.find(u => u.email === email)
-    
+
     if (existing) {
       userId = existing.id
       await supabase.auth.admin.updateUserById(userId, {
@@ -144,8 +144,8 @@ async function main() {
   console.log('📋 Membuat kegiatan...')
   const approvedComm = comms.find(c => c.verification_status === 'approved')!
   const activityStatuses: activity_status[] = ['draft', 'pending_review', 'published', 'cancelled', 'completed']
-  const activities = []
-  
+  const activities: any[] = []
+
   const activityImages = [
     '/images/activities/activity-template-1.png',
     '/images/activities/activity-template-2.png',
@@ -160,7 +160,7 @@ async function main() {
       const isCompleted = status === 'completed'
       const goal = 10000000
       const quota = 20
-      
+
       const act = await prisma.activities.create({
         data: {
           community_id: approvedComm.id,
@@ -176,7 +176,7 @@ async function main() {
           funding_goal: goal,
           funding_raised: isCompleted ? goal : 0,
           allow_item_donation: true,
-          items_needed: [{ item_name: 'Gloves', target: 50, donated: isCompleted ? 50 : 0 }],
+          items_needed: [{ item_name: 'Gloves', target: 50, donated: isCompleted ? 50 : 0 }] as any,
           cover_image_url: activityImages[imgIdx],
           images: isCompleted ? [
             '/images/reports/completed-1.png',
@@ -198,7 +198,7 @@ async function main() {
   const activeAct = activities.find(a => a.status === 'published')!
   const regStatuses: volunteer_status[] = ['pending', 'approved', 'rejected', 'attended']
   const testUsers = [userApproved1, userApproved2, userPending1, userPending2, userRejected1, userRejected2, admin1, admin2]
-  
+
   let userIdx = 0
   for (const rStatus of regStatuses) {
     for (let i = 1; i <= 2; i++) {
@@ -270,7 +270,7 @@ async function main() {
   // ============================================
   console.log('📄 Membuat laporan...')
   const completedActivitiesSeed = activities.filter(a => a.status === 'completed')
-  
+
   // Add one EXTRA completed activity as requested
   const extraCompleted = await prisma.activities.create({
     data: {
@@ -293,7 +293,7 @@ async function main() {
   completedActivitiesSeed.push(extraCompleted)
 
   const rStatuses: report_status[] = ['draft', 'submitted', 'validated', 'rejected']
-  
+
   for (const [idx, act] of completedActivitiesSeed.entries()) {
     // Each completed activity gets at least one validated report
     const report = await prisma.reports.create({
@@ -349,7 +349,6 @@ async function main() {
     ],
   })
   console.log('   ✅ Journey milestones di-seed.')
-
   console.log('\n✅ SEED SELESAI!\n')
 }
 

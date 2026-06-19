@@ -4,6 +4,7 @@
     "private":  true,
     "scripts":  {
                     "dev":  "next dev --turbo",
+                    "dev:e2e": "node scripts/dev-e2e.js",
                     "build":  "next build",
                     "start":  "next start",
                     "lint":  "eslint .",
@@ -11,7 +12,7 @@
                     "db:push":  "prisma db push",
                     "db:seed":  "prisma db seed",
                     "db:studio":  "prisma studio",
-                    "db:reset":  "prisma db push --force-reset \u0026\u0026 prisma db seed",
+                    "db:reset":  "prisma db push --force-reset && prisma db seed",
                     "cypress:open": "cypress open",
                     "cypress:run": "cypress run"
                 },

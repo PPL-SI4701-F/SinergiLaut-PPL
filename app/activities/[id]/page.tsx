@@ -282,13 +282,17 @@ export default function ActivityDetailPage() {
   const totalItemDonated = activity.items_needed?.reduce((acc: number, cur: any) => acc + (cur.donated || 0), 0) || 0;
   const itemPercent = totalItemNeeded > 0 ? calcPercentage(totalItemDonated, totalItemNeeded) : 0;
 
-  // Donation timeframe: 6 months from published/created date
-  const publishedDateStr = activity.published_at || activity.created_at || new Date().toISOString();
-  const publishedDate = new Date(publishedDateStr);
-  const deadlineDate = new Date(publishedDate);
-  deadlineDate.setMonth(deadlineDate.getMonth() + 6);
-  
+  // Donation timeframe: use end_date from activity if available, otherwise fallback to 6 months from published date
   const now = new Date();
+  let deadlineDate: Date;
+  if (activity.end_date) {
+    deadlineDate = new Date(activity.end_date);
+  } else {
+    const publishedDateStr = activity.published_at || activity.created_at || new Date().toISOString();
+    const publishedDate = new Date(publishedDateStr);
+    deadlineDate = new Date(publishedDate);
+    deadlineDate.setMonth(deadlineDate.getMonth() + 6);
+  }
   const timeDiff = deadlineDate.getTime() - now.getTime();
   const daysLeft = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
 
@@ -1240,9 +1244,15 @@ export default function ActivityDetailPage() {
                         {alreadyRegistered ? `Terdaftar (${alreadyRegistered.status})` : "Daftar Relawan"}
                       </Button>
                     )}
-                    <Button variant="outline" className="w-full" onClick={() => setActiveTab("donate")}>
-                      <Heart className="mr-2 h-4 w-4" /> Donasi Sekarang
-                    </Button>
+                    {daysLeft > 0 ? (
+                      <Button variant="outline" className="w-full" onClick={() => setActiveTab("donate")}>
+                        <Heart className="mr-2 h-4 w-4" /> Donasi Sekarang
+                      </Button>
+                    ) : (
+                      <Button variant="outline" className="w-full" disabled>
+                        <Heart className="mr-2 h-4 w-4" /> Batas Waktu Habis
+                      </Button>
+                    )}
                   </div>
                   )}
                 </CardContent>

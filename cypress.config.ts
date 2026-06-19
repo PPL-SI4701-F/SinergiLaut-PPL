@@ -1,4 +1,5 @@
 import { defineConfig } from "cypress";
+import { prisma } from "./lib/prisma";
 
 export default defineConfig({
   e2e: {
@@ -12,7 +13,20 @@ export default defineConfig({
     viewportHeight: 720,
     chromeWebSecurity: false,       // Allow cross-origin requests in tests
     setupNodeEvents(on, config) {
-      // implement node event listeners here
+      on('task', {
+        async getActivityIdByTitle(title: string) {
+          try {
+            const activity = await prisma.activities.findFirst({
+              where: { title },
+              select: { id: true }
+            });
+            return activity ? activity.id : null;
+          } catch (error) {
+            console.error("Error in getActivityIdByTitle task:", error);
+            return null;
+          }
+        }
+      });
     },
     supportFile: "cypress/support/e2e.ts",
   },
